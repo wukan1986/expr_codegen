@@ -64,3 +64,50 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 ## 贡献代码
 1. 还有很多函数没有添加，需要大家提交代码一起完善
 2. 目前公式样式优先向WorldQuant 的 Alpha101 靠齐
+
+## 示例片段
+需要转译的部分公式，详细代码请参考[demo_cn.py](examples/demo_cn.py)
+```python
+origin_exprs = {
+    "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - ts_mean(CLOSE, 10),
+    "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
+    "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
+}
+```
+
+转译后的代码片段，详细代码请参考[output.py](examples/output.py)
+```python
+def func_2_cl(df: pl.DataFrame):
+    df = df.with_columns(
+        # expr_2 = -x_1 + x_2
+        expr_2=(-pl.col("x_1") + pl.col("x_2")),
+    )
+    return df
+
+
+def func_2_ts(df: pl.DataFrame):
+    df = df.with_columns(
+        # expr_3 = ts_mean(x_2, 10)
+        expr_3=(pl.col("x_2").rolling_mean(10)),
+    )
+    return df
+
+
+def func_2_cs(df: pl.DataFrame):
+    df = df.with_columns(
+        # expr_4 = cs_rank(x_5)
+        expr_4=(expr_rank_pct(pl.col("x_5"))),
+    )
+    return df
+
+
+logger.info("start...")
+
+
+# step 0
+df = df.sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True).apply(func_0_ts)
+df = df.sort(by=[DATE]).groupby(by=[DATE], maintain_order=False).apply(func_0_cs)
+# step 1
+df = df.sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True).apply(func_1_ts)
+```
