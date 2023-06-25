@@ -1,2 +1,66 @@
-# sympy_polars
+# sympy_polars 符号表达式转polars代码工具
+
 symbol expression to polars expression
+
+## 项目背景
+
+polars语法不同于pandas,也不同于常见的表达式，导致学习难度大，转译还容易出错。所以创建此项目为解决以下问题：
+
+1. 提取公共表达式，减少代码量和重复计算
+2. 对表达式进行化简，便于人理解
+3. 时序与横截面表达式自动进行分离，解决人难于处理多层嵌套表达式问题
+
+## 使用方法
+
+由于每位用户的使用场景都各有不同，所以不提供安装包，更多是教会大家如何进行二次开发。
+
+1. 通过`git clone --depth=1 https://github.com/wukan1986/sympy_polars.git` 或 手工下载zip 到本地
+2. 进入到目录中，通过`pip install -r requirements.txt`安装依赖
+3. 使用IDE(例如PyCharm)，打开项目，按需定制
+4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存即可
+
+## 目录结构
+
+```commandline
+│  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
+├─examples
+│      demo_cn.py # 示例。主要修改此文件。建议修改前先备份
+│      output.py # 结果输出。之后需修改加载数据加载和保存部分
+└─sympy_polars
+    │  polars.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
+    │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
+    │  tool.py # 核心工具代码。一般不需修改
+```
+
+## 工作原理
+
+本项目主于依赖于`sympy`项目。所用到的主要函数如下：
+
+1. `simplify`: 对复杂表达式进行化简
+2. `cse`: 多个表达式提取公共子表达式
+3. `StrPrinter`: 根据不同的函数输出不同字符串。定制此代码可以支持其它语种或库
+
+因为`groupby`,`sort`都比较占用时间。如果提前将公式分类，不同的类别使用不同的`groupby`，可以减少计算时间。
+
+1. ts_xxx(ts_xxx): 可在同一`groupby`中进行计算
+2. cs_xxx(cs_xxx): 可在同一`groupby`中进行计算
+3. ts_xxx(cs_xxx): 需在不同`groupby`中进行计算
+4. cs_xxx(ts_xxx(cs_xxx)): 需三不同`groupby`中进行计算
+
+所以
+
+1. 需要有一个函数能获取当前函数的类别(get_curr_expr_type)和子函数的类别(get_depth_expr_type)
+2. 如果当前类别与子类别不同就可以提取出短公式(extract)。不同层的同类别函数有先后关系，不能放同一`groupby`
+3. 利用`cse`的特点，将长公式替换成前期提取出来的短公式。自动完成了时序、横截面等子公式的分离
+4. 同时分离后列表顺序自然形成了分层，只要整理，然后生成代码(codegen)即可
+
+## 二次开发
+
+1. 备份后编辑`demo_cn.py`,先修改`origin_exprs`的定义，添加多个公式，并设置好相应的输出列名
+2. 观察`origin_exprs`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
+3. 然后`printer.py`添加对应函数的打印代码。
+    - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号
+
+## 贡献代码
+1. 还有很多函数没有添加，需要大家提交代码一起完善
+2. 目前公式样式优先向WorldQuant 的 Alpha101 靠齐

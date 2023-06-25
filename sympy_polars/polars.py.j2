@@ -1,0 +1,80 @@
+import re
+
+import polars as pl
+import polars.selectors as cs
+
+from loguru import logger
+
+# TODO: load data
+df = pl.DataFrame()
+
+ASSET = 'asset'
+DATE = 'date'
+
+def expr_rank_pct(expr):
+    """rank(pct=True)"""
+    return expr.rank() / (expr.len() - expr.null_count())
+
+{% for row in rows %}
+# step {{ loop.index0-}}
+{% if row[0] %}
+def func_{{ loop.index0 }}_cl(df: pl.DataFrame):
+    df = df.with_columns(
+        {{ row[0]|join('\n') }}
+    )
+    return df
+{%-endif-%}
+
+{% if row[1] %}
+def func_{{ loop.index0 }}_ts(df: pl.DataFrame):
+    df = df.with_columns(
+        {{ row[1]|join('\n') }}
+    )
+    return df
+{%-endif-%}
+
+{% if row[2] %}
+def func_{{ loop.index0 }}_cs(df: pl.DataFrame):
+    df = df.with_columns(
+        {{ row[2]|join('\n') }}
+    )
+    return df
+{%-endif-%}
+{% endfor %}
+
+logger.info('start...')
+
+{% for row in rows %}
+# step {{ loop.index0-}}
+{% if row[0] %}
+df = func_{{ loop.index0 }}_cl(df)
+{%-endif-%}
+{% if row[1] %}
+df = df.sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True).apply(func_{{ loop.index0 }}_ts)
+{%-endif-%}
+{% if row[2] %}
+df = df.sort(by=[DATE]).groupby(by=[DATE], maintain_order=False).apply(func_{{ loop.index0 }}_cs)
+{%-endif-%}
+{% endfor %}
+
+{% for expr in exprs %}
+# {{ expr[0] }} = {{ expr[1]-}}
+{% endfor %}
+{% for key, value in origin.items() %}
+# {{ key }} = {{ value-}}
+{% endfor %}
+
+# drop intermediate column
+# import re
+# df = df.drop(filter(lambda x: re.search(r'^x_\d+', x), df.columns))
+
+# shrink
+df = df.select(cs.all().shrink_dtype())
+df = df.shrink_to_fit()
+
+logger.info('done')
+
+# save
+# df.write_parquet('output.parquet', compression='zstd')
+
+print(df.tail(5))
