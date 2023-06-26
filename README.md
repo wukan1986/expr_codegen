@@ -27,6 +27,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 │      demo_cn.py # 示例。主要修改此文件。建议修改前先备份
 │      output.py # 结果输出。之后需修改加载数据加载和保存部分
 └─sympy_polars
+    │  expr.py # 表达式处理基本函数
     │  polars.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
     │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
     │  tool.py # 核心工具代码。一般不需修改
@@ -42,72 +43,78 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 因为`groupby`,`sort`都比较占用时间。如果提前将公式分类，不同的类别使用不同的`groupby`，可以减少计算时间。
 
-1. ts_xxx(ts_xxx): 可在同一`groupby`中进行计算
-2. cs_xxx(cs_xxx): 可在同一`groupby`中进行计算
-3. ts_xxx(cs_xxx): 需在不同`groupby`中进行计算
-4. cs_xxx(ts_xxx(cs_xxx)): 需三不同`groupby`中进行计算
+1. `ts_xxx(ts_xxx)`: 可在同一`groupby`中进行计算
+2. `cs_xxx(cs_xxx)`: 可在同一`groupby`中进行计算
+3. `ts_xxx(cs_xxx)`: 需在不同`groupby`中进行计算
+4. `cs_xxx(ts_xxx(cs_xxx))`: 需三不同`groupby`中进行计算
+5. `gp_xxx(aa, )+gp_xxx(bb, ))`: 因`aa`,`bb`不同，需两不同`groupby`中进行计算
 
 所以
 
-1. 需要有一个函数能获取当前函数的类别(get_curr_expr_type)和子函数的类别(get_depth_expr_type)
-2. 如果当前类别与子类别不同就可以提取出短公式(extract)。不同层的同类别函数有先后关系，不能放同一`groupby`
+1. 需要有一个函数能获取当前函数的类别(`get_curr_expr_tuple`)和子函数的类别(`get_childen_expr_tuple`)
+2. 如果当前类别与子类别不同就可以提取出短公式(`extract`)。不同层的同类别函数有先后关系，不能放同一`groupby`
 3. 利用`cse`的特点，将长公式替换成前期提取出来的短公式。自动完成了时序、横截面等子公式的分离
-4. 同时分离后列表顺序自然形成了分层，只要整理，然后生成代码(codegen)即可
+4. 同时分离后列表顺序自然形成了分层，只要整理，然后生成代码(`codegen`)即可
+
+隐含信息
+
+1. `ts_`: sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True)
+2. `cs_`: sort(by=[DATE]).groupby(by=[DATE], maintain_order=False)
+3. `gp_`: sort(by=[DATE, GROUP]).groupby(by=[DATE, GROUP], maintain_order=False)
+
+即
+
+1. 时序函数隐藏了两个字段`ASSET, DATE`，横截面函数了隐藏了一个字段`DATE`。
+2. 分组函数转入了一个字段`GROUP`，同时隐藏了一个字段`DATE`。
 
 ## 二次开发
 
-1. 备份后编辑`demo_cn.py`,先修改`origin_exprs`的定义，添加多个公式，并设置好相应的输出列名
-2. 观察`origin_exprs`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
+1. 备份后编辑`demo_cn.py`,先修改`exprs_src`的定义，添加多个公式，并设置好相应的输出列名
+2. 观察`exprs_src`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
 3. 然后`printer.py`添加对应函数的打印代码。
     - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号
 
 ## 贡献代码
+
 1. 还有很多函数没有添加，需要大家提交代码一起完善
 2. 目前公式样式优先向WorldQuant 的 Alpha101 靠齐
 
 ## 示例片段
+
 需要转译的部分公式，详细代码请参考[demo_cn.py](examples/demo_cn.py)
+
 ```python
-origin_exprs = {
+exprs_src = {
     "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - ts_mean(CLOSE, 10),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),
     "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
+    "expr_5": -ts_corr(OPEN, CLOSE, 10),
 }
 ```
 
 转译后的代码片段，详细代码请参考[output.py](examples/output.py)
+
 ```python
-def func_2_cl(df: pl.DataFrame):
+def func_2_cs__date(df: pl.DataFrame):
     df = df.with_columns(
-        # expr_2 = -x_1 + x_2
-        expr_2=(-pl.col("x_1") + pl.col("x_2")),
+        # expr_4 = cs_rank(x_7)
+        expr_4=(expr_rank_pct(pl.col("x_7"))),
     )
     return df
 
 
-def func_2_ts(df: pl.DataFrame):
+def func_3_ts__asset__date(df: pl.DataFrame):
     df = df.with_columns(
-        # expr_3 = ts_mean(x_2, 10)
-        expr_3=(pl.col("x_2").rolling_mean(10)),
-    )
-    return df
-
-
-def func_2_cs(df: pl.DataFrame):
-    df = df.with_columns(
-        # expr_4 = cs_rank(x_5)
-        expr_4=(expr_rank_pct(pl.col("x_5"))),
+        # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+        expr_5=(-pl.rolling_corr(pl.col("OPEN"), pl.col("CLOSE"), window_size=10)),
     )
     return df
 
 
 logger.info("start...")
 
-
-# step 0
-df = df.sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True).apply(func_0_ts)
-df = df.sort(by=[DATE]).groupby(by=[DATE], maintain_order=False).apply(func_0_cs)
-# step 1
-df = df.sort(by=[ASSET, DATE]).groupby(by=[ASSET], maintain_order=True).apply(func_1_ts)
+df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date)
+df = df.sort(by=["date"]).groupby(by=["date"], maintain_order=False).apply(func_0_cs__date)
+df = func_0_cl(df)
 ```

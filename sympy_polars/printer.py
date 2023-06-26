@@ -59,6 +59,13 @@ class PolarsStrPrinter(StrPrinter):
         else:
             return "%s.%s(%s)" % (self._print(expr.args[0]), func_name, self._print(expr.args[1]))
 
+    def _print_one_args(self, expr, func_name):
+        prec = precedence(expr)
+        if precedence(expr.args[0]) < prec:
+            return "(%s).%s()" % (self._print(expr.args[0]), func_name)
+        else:
+            return "%s.%s()" % (self._print(expr.args[0]), func_name)
+
     def _print_ts_mean(self, expr):
         return self._print_two_args(expr, 'rolling_mean')
 
@@ -72,5 +79,18 @@ class PolarsStrPrinter(StrPrinter):
         return "pl.rolling_corr(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_cs_rank(self, expr):
-        # 此处最好有官方的解决方法
+        # TODO: 此处最好有官方的解决方法
         return "expr_rank_pct(%s)" % (self._print(expr.args[0]),)
+
+    def _print_log(self, expr):
+        return self._print_one_args(expr, 'log')
+
+    def _print_abs(self, expr):
+        return self._print_one_args(expr, 'abs')
+
+    def _print_sign(self, expr):
+        return self._print_one_args(expr, 'sign')
+
+    def _print_gp_rank(self, expr):
+        # TODO: 此处最好有官方的解决方法
+        return "expr_rank_pct(%s)" % (self._print(expr.args[1]),)
