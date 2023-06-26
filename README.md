@@ -83,7 +83,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 ## 示例片段
 
-需要转译的部分公式，详细代码请参考[demo_cn.py](examples/demo_polars_cn.py)
+需要转译的部分公式，详细代码请参考[demo](examples/demo_polars_cn.py)
 
 ```python
 exprs_src = {
@@ -95,7 +95,7 @@ exprs_src = {
 }
 ```
 
-转译后的代码片段，详细代码请参考[output.py](examples/output.py)
+转译后的代码片段，详细代码请参考[output](examples/output.py)
 
 ```python
 def func_2_cs__date(df: pl.DataFrame):
