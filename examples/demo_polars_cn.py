@@ -3,6 +3,7 @@ import os
 from sympy import symbols, Symbol, Function, numbered_symbols
 
 from sympy_polars.tool import ExprTool
+from sympy_polars.polars.code import codegen
 
 # !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
 
@@ -44,7 +45,7 @@ exprs_dst = tool.merge(**exprs_src)
 exprs_ldl = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 
 # 生成代码
-codes = tool.codegen(exprs_ldl, exprs_src)
+codes = codegen(exprs_ldl, exprs_src)
 
 # 保存
 with open('output.py', 'w') as f:

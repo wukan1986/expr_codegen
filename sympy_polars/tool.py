@@ -1,12 +1,8 @@
-import os
 from functools import reduce
 
-import jinja2
-from jinja2 import FileSystemLoader
 from sympy import simplify, cse
 
-from sympy_polars.expr import get_childen_expr_tuple, ListDictList, get_childen_expr_key, get_groupby_from_tuple
-from sympy_polars.printer import PolarsStrPrinter
+from sympy_polars.expr import get_childen_expr_tuple, ListDictList, get_childen_expr_key
 
 
 class ExprTool:
@@ -60,33 +56,3 @@ class ExprTool:
             exprs_ldl.append(key, (variable, expr))
 
         return exprs_ldl
-
-    def codegen(self, exprs_ldl: ListDictList, exprs_src, filename='polars.py.j2'):
-        """基于模板的代码生成"""
-        # 打印Polars风格代码
-        p = PolarsStrPrinter()
-
-        # polars风格代码
-        funcs = {}
-        # 分组应用代码
-        groupbys = {}
-        # 处理过后的表达式
-        exprs_dst = {}
-
-        for i, row in enumerate(exprs_ldl.values()):
-            for k, vv in row.items():
-                # 函数名
-                func_name = f'func_{i}_{"__".join(k)}'
-                func_code = []
-                for va, ex in vv:
-                    exprs_dst[va] = ex
-                    func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
-                # polars风格代码列表
-                funcs[func_name] = func_code
-                # 分组应用代码
-                groupbys[func_name] = get_groupby_from_tuple(k, func_name)
-
-        env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
-        template = env.get_template(filename)
-        return template.render(funcs=funcs, groupbys=groupbys,
-                               exprs_src=exprs_src, exprs_dst=exprs_dst)

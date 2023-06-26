@@ -17,20 +17,22 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 1. 通过`git clone --depth=1 https://github.com/wukan1986/sympy_polars.git` 或 手工下载zip 到本地
 2. 进入到目录中，通过`pip install -r requirements.txt`安装依赖
 3. 使用IDE(例如PyCharm)，打开项目，按需定制
-4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存即可
+4. 运行`demo_polars_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存即可
 
 ## 目录结构
 
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 ├─examples
-│      demo_cn.py # 示例。主要修改此文件。建议修改前先备份
+│      demo_polars_cn.py # 示例。主要修改此文件。建议修改前先备份
 │      output.py # 结果输出。之后需修改加载数据加载和保存部分
 └─sympy_polars
     │  expr.py # 表达式处理基本函数
-    │  polars.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
-    │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
     │  tool.py # 核心工具代码。一般不需修改
+    ├─polars
+    │  │  code.py # 针对polars语法的代码生成功能
+    │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
+    │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
 ```
 
 ## 工作原理
@@ -69,7 +71,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 ## 二次开发
 
-1. 备份后编辑`demo_cn.py`,先修改`exprs_src`的定义，添加多个公式，并设置好相应的输出列名
+1. 备份后编辑`demo_polars_cn.py`,先修改`exprs_src`的定义，添加多个公式，并设置好相应的输出列名
 2. 观察`exprs_src`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
 3. 然后`printer.py`添加对应函数的打印代码。
     - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号
@@ -81,7 +83,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 ## 示例片段
 
-需要转译的部分公式，详细代码请参考[demo_cn.py](examples/demo_cn.py)
+需要转译的部分公式，详细代码请参考[demo_cn.py](examples/demo_polars_cn.py)
 
 ```python
 exprs_src = {

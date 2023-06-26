@@ -31,24 +31,6 @@ def get_curr_expr_tuple(expr, date, asset):
     return CL,
 
 
-def get_groupby_from_tuple(tup, func_name):
-    """从传入的元组中生成分组运行代码"""
-    prefix2, *_ = tup
-
-    if prefix2 == TS:
-        # 组内需要按时间进行排序，需要维持顺序
-        prefix2, asset, date = tup
-        return f'df = df.sort(by={[asset, date]}).groupby(by={[asset]}, maintain_order=True).apply({func_name})'
-    if prefix2 == CS:
-        prefix2, date = tup
-        return f'df = df.sort(by={[date]}).groupby(by={[date]}, maintain_order=False).apply({func_name})'
-    if prefix2 == GP:
-        prefix2, date, group = tup
-        return f'df = df.sort(by={[date, group]}).groupby(by={[date, group]}, maintain_order=False).apply({func_name})'
-
-    return f'df = {func_name}(df)'
-
-
 def get_childen_expr_tuple(expr, output_exprs, output_symbols, date, asset):
     """当前表达式元组集合
 
