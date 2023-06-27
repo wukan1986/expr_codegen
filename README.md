@@ -1,6 +1,6 @@
-# sympy_polars 符号表达式转polars代码工具
+# expr_codegen 符号表达式代码生成器
 
-symbol expression to polars expression
+一个将表达式转成其它代码的工具
 
 ## 项目背景
 
@@ -10,14 +10,16 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 2. 对表达式进行化简，便于人理解
 3. 时序与横截面表达式自动进行分离，解决人难于处理多层嵌套表达式问题
 
+第一阶段开发完成后，发现此项目其实也可以用于生成其它库的代码或语言。所以又重新更名和调整代码
+
 ## 使用方法
 
 由于每位用户的使用场景都各有不同，所以不提供安装包，更多是教会大家如何进行二次开发。
 
-1. 通过`git clone --depth=1 https://github.com/wukan1986/sympy_polars.git` 或 手工下载zip 到本地
+1. 通过`git clone --depth=1 https://github.com/wukan1986/expr_codegen.git` 或 `手工下载zip` 到本地
 2. 进入到目录中，通过`pip install -r requirements.txt`安装依赖
-3. 使用IDE(例如PyCharm)，打开项目，按需定制
-4. 运行`demo_polars_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存即可
+3. 使用IDE(例如PyCharm或VSCode)，打开项目，按需定制
+4. 运行`demo_polars_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存等部分即可
 
 ## 目录结构
 
@@ -25,8 +27,8 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 ├─examples
 │      demo_polars_cn.py # 示例。主要修改此文件。建议修改前先备份
-│      output.py # 结果输出。之后需修改加载数据加载和保存部分
-└─sympy_polars
+│      output.py # 结果输出。之后需修改数据加载和保存等部分
+└─expr_codegen
     │  expr.py # 表达式处理基本函数
     │  tool.py # 核心工具代码。一般不需修改
     ├─polars
@@ -83,7 +85,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 ## 示例片段
 
-需要转译的部分公式，详细代码请参考[demo](examples/demo_polars_cn.py)
+需要转译的部分公式，详细代码请参考[Polars版](examples/demo_polars_cn.py)
 
 ```python
 exprs_src = {
@@ -95,7 +97,7 @@ exprs_src = {
 }
 ```
 
-转译后的代码片段，详细代码请参考[output](examples/output.py)
+转译后的代码片段，详细代码请参考[Polars版](examples/output.py)
 
 ```python
 def func_2_cs__date(df: pl.DataFrame):

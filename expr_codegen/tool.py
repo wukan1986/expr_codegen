@@ -2,7 +2,7 @@ from functools import reduce
 
 from sympy import simplify, cse
 
-from sympy_polars.expr import get_childen_expr_tuple, ListDictList, get_childen_expr_key
+from expr_codegen.expr import get_childen_expr_tuple, ListDictList, get_childen_expr_key
 
 
 class ExprTool:

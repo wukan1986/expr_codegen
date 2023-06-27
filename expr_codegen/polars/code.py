@@ -3,8 +3,8 @@ import os
 import jinja2
 from jinja2 import FileSystemLoader
 
-from sympy_polars.expr import TS, CS, GP, ListDictList
-from sympy_polars.polars.printer import PolarsStrPrinter
+from expr_codegen.expr import TS, CS, GP, ListDictList
+from expr_codegen.polars.printer import PolarsStrPrinter
 
 
 def get_groupby_from_tuple(tup, func_name):

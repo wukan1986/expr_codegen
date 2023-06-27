@@ -4,11 +4,11 @@ with open("README.md", "r", encoding='utf-8') as fp:
     long_description = fp.read()
 
 version = {}
-with open("sympy_polars/_version.py", encoding="utf-8") as fp:
+with open("expr_codegen/_version.py", encoding="utf-8") as fp:
     exec(fp.read(), version)
 
 setuptools.setup(
-    name="sympy_polars",
+    name="expr_codegen",
     version=version['__version__'],
     author="wukan",
     author_email="wu-kan@163.com",
