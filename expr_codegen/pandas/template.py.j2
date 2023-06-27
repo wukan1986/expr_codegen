@@ -1,0 +1,40 @@
+import re
+
+import numpy as np
+import pandas as pd
+
+from loguru import logger
+
+# TODO: load data
+df = pd.DataFrame()
+
+
+{% for key, value in funcs.items() %}
+def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
+{{ value|join('\n') }}
+    return df
+{% endfor %}
+
+logger.info("start...")
+
+{% for key, value in groupbys.items() %}
+{{ value-}}
+{% endfor %}
+
+{% for key, value in exprs_dst.items() %}
+# {{ key }} = {{ value-}}
+{% endfor %}
+{% for key, value in exprs_src.items() %}
+# {{ key }} = {{ value-}}
+{% endfor %}
+
+# drop intermediate columns
+df = df.drop(columns=filter(lambda x: re.search(r'^x_\d+', x), df.columns))
+
+
+logger.info('done')
+
+# save
+# df.to_parquet('output.parquet', compression='zstd')
+
+print(df.tail(5))

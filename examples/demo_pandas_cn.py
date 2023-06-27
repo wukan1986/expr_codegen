@@ -2,7 +2,7 @@ import os
 
 from sympy import symbols, Symbol, Function, numbered_symbols
 
-from expr_codegen.polars.code import codegen
+from expr_codegen.pandas.code import codegen
 from expr_codegen.tool import ExprTool
 
 # !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
@@ -26,7 +26,7 @@ gp_rank, = symbols('gp_rank, ', cls=Function)
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
     "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),  # + gp_rank(OPEN, CLOSE),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),# + gp_rank(OPEN, CLOSE),
     "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),
@@ -49,8 +49,8 @@ exprs_ldl = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_red
 codes = codegen(exprs_ldl, exprs_src)
 
 # 保存
-with open('output_polars.py', 'w') as f:
+with open('output_pandas.py', 'w') as f:
     f.write(codes)
 
 # reformat
-os.system('python -m black -l 240 output_polars.py')
+os.system('python -m black -l 240 output_pandas.py')

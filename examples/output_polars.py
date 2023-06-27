@@ -45,18 +45,26 @@ def func_0_cl(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
+def func_0_gp__date__sw_l1(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.with_columns(
+        # x_5 = gp_rank(sw_l1, CLOSE)
+        x_5=(expr_rank_pct(pl.col("CLOSE"))),
+    )
+    return df
+
+
 def func_1_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
-        # x_5 = cs_rank(OPEN)
-        x_5=(expr_rank_pct(pl.col("OPEN"))),
+        # x_6 = cs_rank(OPEN)
+        x_6=(expr_rank_pct(pl.col("OPEN"))),
     )
     return df
 
 
 def func_1_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
-        # x_6 = ts_mean(x_5, 10)
-        x_6=(pl.col("x_5").rolling_mean(10)),
+        # x_7 = ts_mean(x_6, 10)
+        x_7=(pl.col("x_6").rolling_mean(10)),
         # expr_1 = -ts_corr(x_2, x_3, 10)
         expr_1=(-pl.rolling_corr(pl.col("x_2"), pl.col("x_3"), window_size=10)),
     )
@@ -65,8 +73,8 @@ def func_1_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
 
 def func_1_cl(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
-        # expr_2 = x_2 - x_4
-        expr_2=(pl.col("x_2") - pl.col("x_4")),
+        # expr_2 = x_2 - x_4 + x_5
+        expr_2=(pl.col("x_2") - pl.col("x_4") + pl.col("x_5")),
     )
     return df
 
@@ -81,8 +89,8 @@ def func_2_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
 
 def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
-        # expr_4 = cs_rank(x_6)
-        expr_4=(expr_rank_pct(pl.col("x_6"))),
+        # expr_4 = cs_rank(x_7)
+        expr_4=(expr_rank_pct(pl.col("x_7"))),
     )
     return df
 
@@ -91,6 +99,8 @@ def func_3_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
         # expr_5 = -ts_corr(OPEN, CLOSE, 10)
         expr_5=(-pl.rolling_corr(pl.col("OPEN"), pl.col("CLOSE"), window_size=10)),
+        # expr_6 = ts_delta(OPEN, 10)
+        expr_6=(pl.col("OPEN").diff(10)),
     )
     return df
 
@@ -101,6 +111,7 @@ logger.info("start...")
 df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date)
 df = df.sort(by=["date"]).groupby(by=["date"], maintain_order=False).apply(func_0_cs__date)
 df = func_0_cl(df)
+df = df.sort(by=["date", "sw_l1"]).groupby(by=["date", "sw_l1"], maintain_order=False).apply(func_0_gp__date__sw_l1)
 df = df.sort(by=["date"]).groupby(by=["date"], maintain_order=False).apply(func_1_cs__date)
 df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_1_ts__asset__date)
 df = func_1_cl(df)
@@ -114,19 +125,22 @@ df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).ap
 # x_2 = cs_rank(x_0)
 # x_3 = cs_rank(x_1)
 # x_4 = abs(log(x_1))
-# x_5 = cs_rank(OPEN)
-# x_6 = ts_mean(x_5, 10)
+# x_5 = gp_rank(sw_l1, CLOSE)
+# x_6 = cs_rank(OPEN)
+# x_7 = ts_mean(x_6, 10)
 # expr_1 = -ts_corr(x_2, x_3, 10)
-# expr_2 = x_2 - x_4
+# expr_2 = x_2 - x_4 + x_5
 # expr_3 = ts_mean(x_2, 10)
-# expr_4 = cs_rank(x_6)
+# expr_4 = cs_rank(x_7)
 # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+# expr_6 = ts_delta(OPEN, 10)
 
 # expr_1 = -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10)
-# expr_2 = -abs(log(ts_mean(CLOSE, 10))) + cs_rank(ts_mean(OPEN, 10))
+# expr_2 = -abs(log(ts_mean(CLOSE, 10))) + cs_rank(ts_mean(OPEN, 10)) + gp_rank(sw_l1, CLOSE)
 # expr_3 = ts_mean(cs_rank(ts_mean(OPEN, 10)), 10)
 # expr_4 = cs_rank(ts_mean(cs_rank(OPEN), 10))
 # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+# expr_6 = ts_delta(OPEN, 10)
 
 # drop intermediate columns
 df = df.drop(columns=filter(lambda x: re.search(r"^x_\d+", x), df.columns))

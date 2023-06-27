@@ -21,7 +21,6 @@ setuptools.setup(
         'sympy',
         'Jinja2',
         'black',
-        'polars',
         'loguru',
     ],
     classifiers=[

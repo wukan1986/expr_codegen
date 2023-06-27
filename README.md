@@ -10,7 +10,10 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 2. 对表达式进行化简，便于人理解
 3. 时序与横截面表达式自动进行分离，解决人难于处理多层嵌套表达式问题
 
-第一阶段开发完成后，发现此项目其实也可以用于生成其它库的代码或语言。所以又重新更名和调整代码
+第一阶段开发完成后，发现此项目其实也可以用于生成其它库的代码或语言。所以又重新更名和调整代码。目前已经支持
+1. Polars
+2. Pandas
+还有很多算子还没实现完全，欢迎贡献代码
 
 ## 使用方法
 
@@ -26,8 +29,8 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 ├─examples
-│      demo_polars_cn.py # 示例。主要修改此文件。建议修改前先备份
-│      output.py # 结果输出。之后需修改数据加载和保存等部分
+│      demo_polars_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
+│      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
 └─expr_codegen
     │  expr.py # 表达式处理基本函数
     │  tool.py # 核心工具代码。一般不需修改
@@ -85,7 +88,7 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 
 ## 示例片段
 
-需要转译的部分公式，详细代码请参考[Polars版](examples/demo_polars_cn.py)
+需要转译的部分公式，详细代码请参考 [Polars版](examples/demo_polars_cn.py) [Pandas版](examples/demo_pandas_cn.py)
 
 ```python
 exprs_src = {
@@ -97,7 +100,7 @@ exprs_src = {
 }
 ```
 
-转译后的代码片段，详细代码请参考[Polars版](examples/output.py)
+转译后的代码片段，详细代码请参考[Polars版](examples/output_polars.py)
 
 ```python
 def func_2_cs__date(df: pl.DataFrame):
@@ -115,10 +118,28 @@ def func_3_ts__asset__date(df: pl.DataFrame):
     )
     return df
 
-
-logger.info("start...")
-
 df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date)
 df = df.sort(by=["date"]).groupby(by=["date"], maintain_order=False).apply(func_0_cs__date)
+df = func_0_cl(df)
+```
+
+转译后的代码片段，详细代码请参考[Pandas版](examples/output_pandas.py)
+
+```python
+def func_2_cs__date(df: pd.DataFrame) -> pd.DataFrame:
+    # expr_4 = cs_rank(x_7)
+    df["expr_4"] = (df["x_7"]).rank(pct=True)
+    return df
+
+
+def func_3_ts__asset__date(df: pd.DataFrame) -> pd.DataFrame:
+    # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+    df["expr_5"] = -(df["OPEN"]).rolling(10).corr(df["CLOSE"])
+    # expr_6 = ts_delta(OPEN, 10)
+    df["expr_6"] = df["OPEN"].diff(10)
+    return df
+
+df = df.sort_values(by=["asset", "date"]).groupby(by=["asset"], group_keys=False).apply(func_0_ts__asset__date)
+df = df.groupby(by=["date"], group_keys=False).apply(func_0_cs__date)
 df = func_0_cl(df)
 ```

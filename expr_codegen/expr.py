@@ -8,7 +8,7 @@ from sympy.core.singleton import S
 CL = 'cl'  # 列算子
 TS = 'ts'  # 时序算子
 CS = 'cs'  # 横截面算子
-GP = 'gp'  # 分组算子
+GP = 'gp'  # 分组算子。分组越小，速度越慢
 
 
 def get_curr_expr_tuple(expr, date, asset):
@@ -16,7 +16,7 @@ def get_curr_expr_tuple(expr, date, asset):
 
     用于多个表达式划分到不同分组
     """
-    if hasattr(expr, 'name'):
+    if expr.is_Function:  # hasattr(expr, 'name')
         prefix1 = expr.name[2]
         if prefix1 == '_':
             prefix2 = expr.name[:2]

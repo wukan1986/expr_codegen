@@ -2,9 +2,8 @@ import os
 
 import jinja2
 from jinja2 import FileSystemLoader
-
 from expr_codegen.expr import TS, CS, GP, ListDictList
-from expr_codegen.polars.printer import PolarsStrPrinter
+from expr_codegen.pandas.printer import PandasStrPrinter
 
 
 def get_groupby_from_tuple(tup, func_name):
@@ -14,23 +13,23 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset, date = tup
-        return f'df = df.sort(by={[asset, date]}).groupby(by={[asset]}, maintain_order=True).apply({func_name})'
+        return f'df = df.sort_values(by={[asset, date]}).groupby(by={[asset]}, group_keys=False).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
         # TODO: 这里是否需要sort, 哪种速度更快
-        return f'df = df.sort(by={[date]}).groupby(by={[date]}, maintain_order=False).apply({func_name})'
+        return f'df = df.groupby(by={[date]}, group_keys=False).apply({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
         # TODO: 这里是否需要sort, 哪种速度更快
-        return f'df = df.sort(by={[date, group]}).groupby(by={[date, group]}, maintain_order=False).apply({func_name})'
+        return f'df = df.groupby(by={[date, group]}, group_keys=False).apply({func_name})'
 
     return f'df = {func_name}(df)'
 
 
 def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
     """基于模板的代码生成"""
-    # 打印Polars风格代码
-    p = PolarsStrPrinter()
+    # 打印Pandas风格代码
+    p = PandasStrPrinter()
 
     # polars风格代码
     funcs = {}
@@ -46,7 +45,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
             func_code = []
             for va, ex in vv:
                 exprs_dst[va] = ex
-                func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
+                func_code.append(f"    # {va} = {ex}\n    df['{va}'] = {p.doprint(ex)}")
             # polars风格代码列表
             funcs[func_name] = func_code
             # 分组应用代码
