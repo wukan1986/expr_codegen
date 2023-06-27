@@ -2,7 +2,12 @@ import os
 
 from sympy import symbols, Symbol, Function, numbered_symbols
 
+from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
+# TODO: 生成pandas代码的codegen，多个codegen只保留一个
+# from expr_codegen.pandas.code import codegen
+# TODO: 生成polars代码的codegen，多个codegen只保留一个
 from expr_codegen.polars.code import codegen
+# codegen工具类
 from expr_codegen.tool import ExprTool
 
 # !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
@@ -33,11 +38,18 @@ exprs_src = {
     "expr_6": ts_delta(OPEN, 10),
 }
 
-# 抽取时序与横截面子表达式
-# TODO: 一定要正确设定时间列名和资产列名
-tool = ExprTool(date='date', asset='asset')
+# 根据算子前缀进行算子分类
+inspect1 = ExprInspectByPrefix()
 
-# ############################
+# TODO: 根据算子名称进行算子分类，名称不确定，所以需指定。如没有用到可不管理
+inspect2 = ExprInspectByName(
+    ts_names={ts_delay, ts_delta, ts_mean, ts_corr, },
+    cs_names={cs_rank, },
+    gp_names={gp_rank, },
+)
+
+# TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
+tool = ExprTool(date='date', asset='asset', inspect=inspect1)
 
 # 子表达式在前，原表式在最后
 exprs_dst = tool.merge(**exprs_src)
@@ -48,9 +60,11 @@ exprs_ldl = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_red
 # 生成代码
 codes = codegen(exprs_ldl, exprs_src)
 
-# 保存
-with open('output_polars.py', 'w') as f:
+# TODO: 保存文件
+output_file = 'output_pandas.py'
+output_file = 'output_polars.py'
+with open(output_file, 'w') as f:
     f.write(codes)
 
 # reformat
-os.system('python -m black -l 240 output_polars.py')
+os.system(f'python -m black -l 240 {output_file}')
