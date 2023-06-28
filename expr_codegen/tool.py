@@ -43,6 +43,8 @@ class ExprTool:
         self._inspect.get_children(expr,
                                    output_exprs=exprs, output_symbols=[],
                                    date=self._date, asset=self._asset)
+        print('='*10, expr)
+        print(exprs)
         return exprs
 
     def merge(self, **kwargs):
