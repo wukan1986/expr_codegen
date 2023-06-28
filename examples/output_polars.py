@@ -3,6 +3,7 @@
 
 import re
 
+import numpy as np
 import polars as pl
 import polars.selectors as cs
 
@@ -101,6 +102,8 @@ def func_3_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
         expr_5=(-pl.rolling_corr(pl.col("OPEN"), pl.col("CLOSE"), window_size=10)),
         # expr_6 = ts_delta(OPEN, 10)
         expr_6=(pl.col("OPEN").diff(10)),
+        # expr_7 = ts_delta(OPEN + 1, 10)
+        expr_7=((pl.col("OPEN") + 1).diff(10)),
     )
     return df
 
@@ -134,6 +137,7 @@ df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).ap
 # expr_4 = cs_rank(x_7)
 # expr_5 = -ts_corr(OPEN, CLOSE, 10)
 # expr_6 = ts_delta(OPEN, 10)
+# expr_7 = ts_delta(OPEN + 1, 10)
 
 # expr_1 = -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10)
 # expr_2 = -abs(log(ts_mean(CLOSE, 10))) + cs_rank(ts_mean(OPEN, 10)) + gp_rank(sw_l1, CLOSE)
@@ -141,6 +145,7 @@ df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).ap
 # expr_4 = cs_rank(ts_mean(cs_rank(OPEN), 10))
 # expr_5 = -ts_corr(OPEN, CLOSE, 10)
 # expr_6 = ts_delta(OPEN, 10)
+# expr_7 = ts_delta(OPEN + 1, 10)
 
 # drop intermediate columns
 df = df.drop(columns=filter(lambda x: re.search(r"^x_\d+", x), df.columns))

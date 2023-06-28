@@ -4,7 +4,7 @@ from sympy import symbols, Symbol, Function, numbered_symbols
 
 from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # TODO: 生成pandas代码的codegen，多个codegen只保留一个
-# from expr_codegen.pandas.code import codegen
+from expr_codegen.pandas.code import codegen
 # TODO: 生成polars代码的codegen，多个codegen只保留一个
 from expr_codegen.polars.code import codegen
 # codegen工具类
@@ -36,6 +36,7 @@ exprs_src = {
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),
     "expr_6": ts_delta(OPEN, 10),
+    "expr_7": ts_delta(OPEN+1, 10),
 }
 
 # 根据算子前缀进行算子分类

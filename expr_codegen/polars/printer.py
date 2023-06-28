@@ -52,45 +52,47 @@ class PolarsStrPrinter(StrPrinter):
         # return expr.name
         return f"pl.col('{expr.name}')"
 
-    def _print_two_args(self, expr, func_name):
+    def _precedence_0(self, expr):
+        """算子优先级处理，只处理第0位置"""
         prec = precedence(expr)
         if precedence(expr.args[0]) < prec:
-            return "(%s).%s(%s)" % (self._print(expr.args[0]), func_name, self._print(expr.args[1]))
+            return "(%s)" % self._print(expr.args[0])
         else:
-            return "%s.%s(%s)" % (self._print(expr.args[0]), func_name, self._print(expr.args[1]))
-
-    def _print_one_args(self, expr, func_name):
-        prec = precedence(expr)
-        if precedence(expr.args[0]) < prec:
-            return "(%s).%s()" % (self._print(expr.args[0]), func_name)
-        else:
-            return "%s.%s()" % (self._print(expr.args[0]), func_name)
+            return self._print(expr.args[0])
 
     def _print_ts_mean(self, expr):
-        return self._print_two_args(expr, 'rolling_mean')
+        return "%s.rolling_mean(%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
+
+    def _print_ts_arg_max(self, expr):
+        # TODO: 是否换成bottleneck版
+        return "%s.rolling_apply(np.argmax, window_size=%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
+
+    def _print_ts_arg_min(self, expr):
+        # TODO: 是否换成bottleneck版
+        return "%s.rolling_apply(np.argmin, window_size=%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_delta(self, expr):
-        return self._print_two_args(expr, 'diff')
+        return "%s.diff(%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_delay(self, expr):
-        return self._print_two_args(expr, 'shift')
+        return "%s.shift(%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_corr(self, expr):
         return "pl.rolling_corr(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_cs_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
-        return "expr_rank_pct(%s)" % (self._print(expr.args[0]),)
+        return "expr_rank_pct(%s)" % self._print(expr.args[0])
 
     def _print_log(self, expr):
-        return self._print_one_args(expr, 'log')
+        return "%s.log()" % self._precedence_0(expr)
 
     def _print_abs(self, expr):
-        return self._print_one_args(expr, 'abs')
+        return "%s.abs()" % self._precedence_0(expr)
 
     def _print_sign(self, expr):
-        return self._print_one_args(expr, 'sign')
+        return "%s.sign()" % self._precedence_0(expr)
 
     def _print_gp_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
-        return "expr_rank_pct(%s)" % (self._print(expr.args[1]),)
+        return "expr_rank_pct(%s)" % self._print(expr.args[1])

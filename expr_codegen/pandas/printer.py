@@ -52,50 +52,48 @@ class PandasStrPrinter(StrPrinter):
         # return expr.name
         return f"df['{expr.name}']"
 
-    def _print_two_args(self, expr, func_name):
+    def _precedence_0(self, expr):
+        """算子优先级处理，只处理第0位置"""
         prec = precedence(expr)
         if precedence(expr.args[0]) < prec:
-            return "(%s).%s(%s)" % (self._print(expr.args[0]), func_name, self._print(expr.args[1]))
+            return "(%s)" % self._print(expr.args[0])
         else:
-            return "%s.%s(%s)" % (self._print(expr.args[0]), func_name, self._print(expr.args[1]))
-
-    def _print_rolling_args(self, expr, func_name):
-        prec = precedence(expr)
-        if precedence(expr.args[0]) < prec:
-            return "(%s).rolling(%s).%s()" % (self._print(expr.args[0]), self._print(expr.args[1]), func_name)
-        else:
-            return "%s.rolling(%s).%s()" % (self._print(expr.args[0]), self._print(expr.args[1]), func_name)
-
-    def _print_one_args(self, expr, func_name):
-        prec = precedence(expr)
-        if precedence(expr.args[0]) < prec:
-            return "(%s).%s()" % (self._print(expr.args[0]), func_name)
-        else:
-            return "%s.%s()" % (self._print(expr.args[0]), func_name)
+            return self._print(expr.args[0])
 
     def _print_ts_mean(self, expr):
-        return self._print_rolling_args(expr, 'mean')
+        return "%s.rolling(%s).mean()" % (self._precedence_0(expr), self._print(expr.args[1]))
+
+    def _print_ts_std_dev(self, expr):
+        return "%s.rolling(%s).std(ddof=0)" % (self._precedence_0(expr), self._print(expr.args[1]))
+
+    def _print_ts_arg_max(self, expr):
+        # TODO: 是否换成bottleneck版
+        return "%s.rolling(%s).apply(np.argmax, engine='numba', raw=True)" % (self._precedence_0(expr), self._print(expr.args[1]))
+
+    def _print_ts_arg_min(self, expr):
+        # TODO: 是否换成bottleneck版
+        return "%s.rolling(%s).apply(np.argmin, engine='numba', raw=True)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_delta(self, expr):
-        return self._print_two_args(expr, 'diff')
+        return "%s.diff(%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_delay(self, expr):
-        return self._print_two_args(expr, 'shift')
+        return "%s.shift(%s)" % (self._precedence_0(expr), self._print(expr.args[1]))
 
     def _print_ts_corr(self, expr):
-        return "(%s).rolling(%s).corr(%s)" % (self._print(expr.args[0]), self._print(expr.args[2]), self._print(expr.args[1]))
+        return "%s.rolling(%s).corr(%s)" % (self._precedence_0(expr), self._print(expr.args[2]), self._print(expr.args[1]))
 
     def _print_cs_rank(self, expr):
-        return "(%s).rank(pct=True)" % (self._print(expr.args[0]),)
+        return "%s.rank(pct=True)" % self._precedence_0(expr)
 
     def _print_log(self, expr):
-        return "np.log(%s)" % (self._print(expr.args[0]),)
+        return "np.log(%s)" % self._print(expr.args[0])
 
     def _print_abs(self, expr):
-        return self._print_one_args(expr, 'abs')
+        return "%s.abs()" % self._precedence_0(expr)
 
     def _print_sign(self, expr):
-        return self._print_one_args(expr, 'sign')
+        return "%s.sign()" % self._precedence_0(expr)
 
     def _print_gp_rank(self, expr):
-        return "(%s).rank(pct=True)" % (self._print(expr.args[0]),)
+        return "%s.rank(pct=True)" % self._precedence_0(expr)
