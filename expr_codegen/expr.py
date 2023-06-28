@@ -33,6 +33,8 @@ def append_negative_one(node, output_exprs):
     if isinstance(node, Mul) and node.args[0] is S.NegativeOne:
         # Mul(-1, x) 即 -x
         output_exprs.append(node.args[1])
+    elif node is S.NegativeOne:
+        pass
     else:
         output_exprs.append(node)
     return output_exprs
@@ -100,6 +102,7 @@ class ExprInspect(ABC):
                 # 不在子中即表示不同
                 if curr in child:
                     continue
+
                 output_exprs = append_negative_one(expr.args[i], output_exprs)
 
         # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
@@ -138,9 +141,19 @@ class ExprInspect(ABC):
             # TODO: 取首个是否会有问题？
             return list(tup)[0]
 
+    def get_symbols(self, expr):
+        syms = []
+        for arg in expr.args:
+            if arg.is_Symbol:
+                syms.append(arg.name)
+            else:
+                syms += self.get_symbols(arg)
+        return syms
+
 
 class ExprInspectByPrefix(ExprInspect):
     """表达式识别，按名称前缀"""
+
     def get_current(self, expr, date, asset):
         if expr.is_Function:
             prefix1 = expr.name[2]
@@ -202,8 +215,11 @@ class ListDictList:
     """
 
     def __init__(self):
-        self._list = [{}]
-        self._last_key = None
+        self._list = []
+
+    def next_row(self):
+        """移动到新的一行"""
+        self._list.append({})
 
     def append(self, key, item):
         """
@@ -213,22 +229,15 @@ class ListDictList:
             2. 当前行有同名key,放入下一行
         """
         last_row = self._list[-1]
-        if self._last_key == key:
-            # 本次添加与上次同位置，直接添加
-            last_row[key].append(item)
+        v = last_row.get(key, None)
+        if v is None:
+            # 同一行的新一列
+            last_row[key] = [item]
         else:
-            v = last_row.get(key, None)
-            if v is None:
-                # 同一行的新一列
-                last_row[key] = [item]
-            else:
-                # 同行同列已经用过，换新行
-                self._list.append({key: [item]})
-            # 更新当前列名
-            self._last_key = key
+            last_row[key].append(item)
 
     def clear(self):
-        self._list = [{}]
+        self._list = []
 
     def values(self):
         return self._list.copy()

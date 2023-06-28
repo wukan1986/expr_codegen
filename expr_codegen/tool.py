@@ -1,4 +1,5 @@
 from functools import reduce
+from graphlib import TopologicalSorter
 
 from sympy import simplify, cse
 
@@ -40,10 +41,11 @@ class ExprTool:
         expr = simplify(expr)
 
         exprs = []
+        syms = []
         self._inspect.get_children(expr,
-                                   output_exprs=exprs, output_symbols=[],
+                                   output_exprs=exprs, output_symbols=syms,
                                    date=self._date, asset=self._asset)
-        print('='*10, expr)
+        print('='*20, expr)
         print(exprs)
         return exprs
 
@@ -65,6 +67,7 @@ class ExprTool:
         args = [self.extract(v) for v in kwargs.values()] + [list(kwargs.values())]
         exprs = reduce(lambda x, y: x + y, args, [])
         exprs = sorted(set(exprs), key=exprs.index)
+
         return exprs
 
     def cse(self, exprs, symbols_repl=None, symbols_redu=None):
@@ -81,17 +84,28 @@ class ExprTool:
 
         Returns
         -------
-        根据条件分割后的表达式容器
+        graph_dag
+            依赖关系的有向无环图
+        graph_key
+            每个函数分组用key
+        graph_exp
+            表达式
 
         """
+        graph_dag = {}
+        graph_key = {}
+        graph_exp = {}
+
         symbols_redu = iter(symbols_redu)
-        exprs_ldl = ListDictList()
 
         repl, redu = cse(exprs, symbols_repl, optimizations="basic")
+
         for variable, expr in repl:
             expr = simplify(expr)
-            key = self._inspect.get_key(expr, date=self._date, asset=self._asset)
-            exprs_ldl.append(key, (variable, expr))
+
+            graph_dag[variable.name] = set(self._inspect.get_symbols(expr))
+            graph_key[variable.name] = self._inspect.get_key(expr, date=self._date, asset=self._asset)
+            graph_exp[variable.name] = expr
 
         for i, expr in enumerate(redu):
             # 单元素没有必要打印
@@ -99,8 +113,28 @@ class ExprTool:
                 continue
             variable = next(symbols_redu)
             expr = simplify(expr)
-            # 表达式集合得到的元组
-            key = self._inspect.get_key(expr, date=self._date, asset=self._asset)
-            exprs_ldl.append(key, (variable, expr))
+
+            graph_dag[variable] = set(self._inspect.get_symbols(expr))
+            graph_key[variable] = self._inspect.get_key(expr, date=self._date, asset=self._asset)
+            graph_exp[variable] = expr
+
+        return graph_dag, graph_key, graph_exp
+
+    def dag_ready(self, graph_dag, graph_key, graph_exp):
+        """有向无环图流转"""
+        exprs_ldl = ListDictList()
+
+        ts = TopologicalSorter(graph_dag)
+        ts.prepare()
+
+        nodes = ts.get_ready()  # 基础符号
+        ts.done(*nodes)  # 移动到第二行
+        nodes = ts.get_ready()  # 取第二行结果
+        while len(nodes) > 0:
+            exprs_ldl.next_row()
+            for node in nodes:
+                exprs_ldl.append(graph_key[node], (node, graph_exp[node]))
+            ts.done(*nodes)
+            nodes = ts.get_ready()
 
         return exprs_ldl

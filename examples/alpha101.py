@@ -55,7 +55,6 @@ exprs_src = {
     "alpha_016": (-1 * cs_rank(ts_covariance(cs_rank(HIGH), cs_rank(VOLUME), 5))),
     "alpha_017": (((-1 * cs_rank(ts_rank(CLOSE, 10))) * cs_rank(ts_delta(ts_delta(CLOSE, 1), 1))) * cs_rank(ts_rank((VOLUME / ADV20), 5))),
     "alpha_018": (-1 * cs_rank(((ts_std_dev(abs((CLOSE - OPEN)), 5) + (CLOSE - OPEN)) + ts_corr(CLOSE, OPEN, 10)))),
-    # TODO: 解决-1问题
     "alpha_019": ((-1 * sign(((CLOSE - ts_delay(CLOSE, 7)) + ts_delta(CLOSE, 7)))) * (1 + cs_rank((1 + ts_sum(RETURNS, 250))))),
     "alpha_020": (((-1 * cs_rank((OPEN - ts_delay(HIGH, 1)))) * cs_rank((OPEN - ts_delay(CLOSE, 1)))) * cs_rank((OPEN - ts_delay(LOW, 1)))),
 }
@@ -77,8 +76,9 @@ tool = ExprTool(date='date', asset='asset', inspect=inspect1)
 exprs_dst = tool.merge(**exprs_src)
 
 # 提取公共表达式
-exprs_ldl = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
-
+graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+# 有向无环图流转
+exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
 # 生成代码
 codes = codegen(exprs_ldl, exprs_src)
 

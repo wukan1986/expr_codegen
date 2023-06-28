@@ -22,6 +22,7 @@ setuptools.setup(
         'Jinja2',
         'black',
         'loguru',
+        'graphlib',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
