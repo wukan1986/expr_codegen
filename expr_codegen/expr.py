@@ -102,7 +102,6 @@ class ExprInspect(ABC):
                 # 不在子中即表示不同
                 if curr in child:
                     continue
-
                 output_exprs = append_negative_one(expr.args[i], output_exprs)
 
         # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
@@ -198,46 +197,3 @@ class ExprInspectByName(ExprInspect):
 
         # 不需分组
         return CL,
-
-
-class ListDictList:
-    """嵌套列表
-
-    1. 最外层是 列表[]
-    2. 第二层是 字典{}
-    3. 第三层是 列表[]
-
-    [
-    {'ts': [1, 2], 'cs': [2], 'gp_date': [2], 'gp_key': [2], }
-    {'ts': [1], 'cs': [1],}
-    ]
-
-    """
-
-    def __init__(self):
-        self._list = []
-
-    def next_row(self):
-        """移动到新的一行"""
-        self._list.append({})
-
-    def append(self, key, item):
-        """
-        1. key与上次相同时，放入同一位置的list中
-        2. key与上次不同时。
-            1. 当前行无同名key,放入同一行
-            2. 当前行有同名key,放入下一行
-        """
-        last_row = self._list[-1]
-        v = last_row.get(key, None)
-        if v is None:
-            # 同一行的新一列
-            last_row[key] = [item]
-        else:
-            last_row[key].append(item)
-
-    def clear(self):
-        self._list = []
-
-    def values(self):
-        return self._list.copy()

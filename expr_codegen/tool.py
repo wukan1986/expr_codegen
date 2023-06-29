@@ -1,9 +1,11 @@
+import pickle
 from functools import reduce
 from graphlib import TopologicalSorter
 
 from sympy import simplify, cse
 
-from expr_codegen.expr import ListDictList, ExprInspect
+from expr_codegen.expr import ExprInspect
+from expr_codegen.model import ListDictList
 
 
 class ExprTool:
@@ -45,8 +47,8 @@ class ExprTool:
         self._inspect.get_children(expr,
                                    output_exprs=exprs, output_symbols=syms,
                                    date=self._date, asset=self._asset)
-        print('='*20, expr)
-        print(exprs)
+        # print('='*20, expr)
+        # print(exprs)
         return exprs
 
     def merge(self, **kwargs):
@@ -137,4 +139,6 @@ class ExprTool:
             ts.done(*nodes)
             nodes = ts.get_ready()
 
+        with open("test.pickle", "wb") as file:
+            pickle.dump(exprs_ldl, file)
         return exprs_ldl

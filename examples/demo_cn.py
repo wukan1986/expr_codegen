@@ -59,6 +59,8 @@ exprs_dst = tool.merge(**exprs_src)
 graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 # 有向无环图流转
 exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
+# 是否优化
+exprs_ldl.optimize()
 # 生成代码
 codes = codegen(exprs_ldl, exprs_src)
 

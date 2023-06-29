@@ -3,7 +3,8 @@ import os
 import jinja2
 from jinja2 import FileSystemLoader
 
-from expr_codegen.expr import TS, CS, GP, ListDictList
+from expr_codegen.expr import TS, CS, GP
+from expr_codegen.model import ListDictList
 from expr_codegen.polars.printer import PolarsStrPrinter
 
 
@@ -37,16 +38,24 @@ def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
     # 分组应用代码
     groupbys = {}
     # 处理过后的表达式
-    exprs_dst = {}
+    exprs_dst = []
 
     for i, row in enumerate(exprs_ldl.values()):
         for k, vv in row.items():
+            if len(vv) == 0:
+                continue
             # 函数名
             func_name = f'func_{i}_{"__".join(k)}'
             func_code = []
-            for va, ex in vv:
-                exprs_dst[va] = ex
-                func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
+            for kv in vv:
+                if kv is None:
+                    func_code.append(f"# " + '=' * 40)
+                    exprs_dst.append(f"# " + '=' * 40 + func_name)
+                else:
+                    va, ex = kv
+                    func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
+                    exprs_dst.append(f"# {va} = {ex}")
+
             # polars风格代码列表
             funcs[func_name] = func_code
             # 分组应用代码

@@ -23,8 +23,8 @@ logger.info("start...")
 {{ value-}}
 {% endfor %}
 
-{% for key, value in exprs_dst.items() %}
-# {{ key }} = {{ value-}}
+{% for row in exprs_dst %}
+{{ row-}}
 {% endfor %}
 {% for key, value in exprs_src.items() %}
 # {{ key }} = {{ value-}}
