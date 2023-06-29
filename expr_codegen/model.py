@@ -97,7 +97,7 @@ class ListDictList:
 
         if chains_opt:
             # 将数据从第二的龙头复制到第一行的龙尾
-            chians_move(new_head, new_tail)
+            chains_move(new_head, new_tail)
             self.filter_empty()
 
 
@@ -160,7 +160,7 @@ def chains_sort(old_ldl, chains, head, tail):
     return new_ldl, new_head, new_tail
 
 
-def chians_move(head, tail):
+def chains_move(head, tail):
     """龙头复制到上一个龙尾"""
     for hh, tt in reversed(list(zip(head[1:], tail[:-1]))):
         tt.extend(hh)
