@@ -1,10 +1,11 @@
-from sympy import StrPrinter, Basic, Function
-from sympy.printing.precedence import precedence
+from sympy import Basic, Function
+from sympy.printing.precedence import precedence, PRECEDENCE
+from sympy.printing.pycode import PythonCodePrinter
 
 
 # TODO: 如有新添加函数，需要在此补充对应的打印代码
 
-class PandasStrPrinter(StrPrinter):
+class PandasStrPrinter(PythonCodePrinter):
     def _print(self, expr, **kwargs) -> str:
         """Internal dispatcher
 
@@ -38,8 +39,10 @@ class PandasStrPrinter(StrPrinter):
                 classes = tuple(c for c in classes[:i] if \
                                 c.__name__ == classes[0].__name__ or \
                                 c.__name__.endswith("Base")) + classes[i:]
+            # print('=' * 60)
             for cls in classes:
                 printmethodname = '_print_' + cls.__name__
+                # print(printmethodname, expr)
                 printmethod = getattr(self, printmethodname, None)
                 if printmethod is not None:
                     return printmethod(expr, **kwargs)
@@ -52,70 +55,90 @@ class PandasStrPrinter(StrPrinter):
         # return expr.name
         return f"df['{expr.name}']"
 
-    def _precedence(self, expr, idx=0):
-        """算子优先级处理，只处理第0位置"""
-        prec = precedence(expr)
-        if precedence(expr.args[idx]) < prec:
-            return "(%s)" % self._print(expr.args[idx])
-        else:
-            return self._print(expr.args[idx])
+    def _print_Or(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s | %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_Xor(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s ^ %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_And(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s & %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
 
     def _print_ts_mean(self, expr):
-        return "%s.rolling(%s).mean()" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).mean()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_std_dev(self, expr):
-        return "%s.rolling(%s).std(ddof=0)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).std(ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_if_else(self, expr):
-        return "%s.where(%s, %s)" % (self._precedence(expr, idx=1), self._print(expr.args[0]), self._print(expr.args[2]))
+        return "np.where(%s, %s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_arg_max(self, expr):
         # TODO: 是否换成bottleneck版
-        return "%s.rolling(%s).apply(np.argmax, engine='numba', raw=True)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).apply(np.argmax, engine='numba', raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_arg_min(self, expr):
         # TODO: 是否换成bottleneck版
-        return "%s.rolling(%s).apply(np.argmin, engine='numba', raw=True)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).apply(np.argmin, engine='numba', raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_max(self, expr):
-        return "%s.rolling(%s).max()" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).max()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_min(self, expr):
-        return "%s.rolling(%s).min()" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).min()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_delta(self, expr):
-        return "%s.diff(%s)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.diff(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_delay(self, expr):
-        return "%s.shift(%s)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.shift(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_corr(self, expr):
-        return "%s.rolling(%s).corr(%s, ddof=0)" % (self._precedence(expr), self._print(expr.args[2]), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).corr(%s, ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[2]), self._print(expr.args[1]))
 
     def _print_ts_covariance(self, expr):
-        return "%s.rolling(%s).cov(%s, ddof=0)" % (self._precedence(expr), self._print(expr.args[2]), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).cov(%s, ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[2]), self._print(expr.args[1]))
 
     def _print_ts_rank(self, expr):
-        return "%s.rolling(%s).rank(pct=True)" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).rank(pct=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_sum(self, expr):
-        return "%s.rolling(%s).sum()" % (self._precedence(expr), self._print(expr.args[1]))
+        PREC = precedence(expr)
+        return "%s.rolling(%s).sum()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_cs_rank(self, expr):
-        return "%s.rank(pct=True)" % self._precedence(expr)
+        PREC = precedence(expr)
+        return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)
 
     def _print_log(self, expr):
         return "np.log(%s)" % self._print(expr.args[0])
 
     def _print_abs(self, expr):
-        return "%s.abs()" % self._precedence(expr)
+        PREC = precedence(expr)
+        return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
 
     def _print_sign(self, expr):
-        return "%s.sign()" % self._precedence(expr)
+        PREC = precedence(expr)
+        return "%s.sign()" % self.parenthesize(expr.args[0], PREC)
 
     def _print_signed_power(self, expr):
         # 太长了，所以这里简化一下
         return "signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_gp_rank(self, expr):
-        return "%s.rank(pct=True)" % self._precedence(expr)
+        PREC = precedence(expr)
+        return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)

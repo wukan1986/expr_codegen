@@ -1,7 +1,7 @@
 # File > Settings... > Editor > Code Style > Hard wrap at > 300
 import os
 
-from sympy import symbols, Symbol, Function, numbered_symbols
+from sympy import symbols, Symbol, Function, numbered_symbols, Eq
 
 from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # TODO: 生成pandas代码的codegen，多个codegen只保留一个
@@ -35,7 +35,6 @@ cs_rank, = symbols('cs_rank, ', cls=Function)
 gp_rank, = symbols('gp_rank, ', cls=Function)
 
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
-# TODO: 1~11, 需要测试两处-x问题
 exprs_src = {
     "alpha_001": (cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5),
     "alpha_002": (-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6)),
@@ -57,6 +56,7 @@ exprs_src = {
     "alpha_018": (-1 * cs_rank(((ts_std_dev(abs((CLOSE - OPEN)), 5) + (CLOSE - OPEN)) + ts_corr(CLOSE, OPEN, 10)))),
     "alpha_019": ((-1 * sign(((CLOSE - ts_delay(CLOSE, 7)) + ts_delta(CLOSE, 7)))) * (1 + cs_rank((1 + ts_sum(RETURNS, 250))))),
     "alpha_020": (((-1 * cs_rank((OPEN - ts_delay(HIGH, 1)))) * cs_rank((OPEN - ts_delay(CLOSE, 1)))) * cs_rank((OPEN - ts_delay(LOW, 1)))),
+    "alpha_021": if_else((((ts_sum(CLOSE, 8) / 8) + ts_std_dev(CLOSE, 8)) < (ts_sum(CLOSE, 2) / 2)), (-1 * 1), if_else(((ts_sum(CLOSE, 2) / 2) < ((ts_sum(CLOSE, 8) / 8) - ts_std_dev(CLOSE, 8))), 1, if_else(((1 < (VOLUME / ADV20)) | Eq((VOLUME / ADV20), 1)), 1, (-1 * 1)))),
 }
 
 # 根据算子前缀进行算子分类

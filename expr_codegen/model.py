@@ -91,10 +91,11 @@ class ListDictList:
             self.back_merge()
             self.filter_empty()
 
+        # 接龙。groupby的数量没少，首尾接龙数据比较整齐
+        chains, head, tail = chains_create(self._list)
+        self._list, new_head, new_tail = chains_sort(self._list, chains, head, tail)
+
         if chains_opt:
-            # 接龙
-            chains, head, tail = chains_create(self._list)
-            self._list, new_head, new_tail = chains_sort(self._list, chains, head, tail)
             # 将数据从第二的龙头复制到第一行的龙尾
             chians_move(new_head, new_tail)
             self.filter_empty()

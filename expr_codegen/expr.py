@@ -155,16 +155,17 @@ class ExprInspectByPrefix(ExprInspect):
 
     def get_current(self, expr, date, asset):
         if expr.is_Function:
-            prefix1 = expr.name[2]
-            if prefix1 == '_':
-                prefix2 = expr.name[:2]
+            if hasattr(expr, 'name'):  # Or 没有名字
+                prefix1 = expr.name[2]
+                if prefix1 == '_':
+                    prefix2 = expr.name[:2]
 
-                if prefix2 == TS:
-                    return TS, asset, date
-                if prefix2 == CS:
-                    return CS, date
-                if prefix2 == GP:
-                    return GP, date, expr.args[0].name
+                    if prefix2 == TS:
+                        return TS, asset, date
+                    if prefix2 == CS:
+                        return CS, date
+                    if prefix2 == GP:
+                        return GP, date, expr.args[0].name
         # 不需分组
         return CL,
 
@@ -188,12 +189,13 @@ class ExprInspectByName(ExprInspect):
 
     def get_current(self, expr, date, asset):
         if expr.is_Function:
-            if expr.name in self._TS_NAMES:
-                return TS, asset, date
-            if expr.name in self._CS_NAMES:
-                return CS, date
-            if expr.name in self._GP_NAMES:
-                return GP, date, expr.args[0].name
+            if hasattr(expr, 'name'):  # Or 没有名字
+                if expr.name in self._TS_NAMES:
+                    return TS, asset, date
+                if expr.name in self._CS_NAMES:
+                    return CS, date
+                if expr.name in self._GP_NAMES:
+                    return GP, date, expr.args[0].name
 
         # 不需分组
         return CL,

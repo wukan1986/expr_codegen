@@ -87,12 +87,17 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 1. 备份后编辑`demo_cn.py`,先修改`exprs_src`的定义，添加多个公式，并设置好相应的输出列名
 2. 观察`exprs_src`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
 3. 然后`printer.py`添加对应函数的打印代码。
-    - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`_precedence`简化处理
+    - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
 
 ## 贡献代码
 
 1. 还有很多函数没有添加，需要大家提交代码一起完善
 2. 目前表达式样式优先向WorldQuant 的 Alpha101 靠齐
+
+## 小技巧
+`sympy`不支持`==`，而是当成两个对象比较。例如：
+1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
+2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
 
 ## 示例片段
 
