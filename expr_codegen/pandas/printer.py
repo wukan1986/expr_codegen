@@ -67,6 +67,10 @@ class PandasStrPrinter(PythonCodePrinter):
         PREC = PRECEDENCE["Mul"]
         return "%s & %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
 
+    def _print_Not(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "~%s" % self.parenthesize(expr.args[0], PREC)
+
     def _print_ts_mean(self, expr):
         PREC = precedence(expr)
         return "%s.rolling(%s).mean()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
