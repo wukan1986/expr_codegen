@@ -80,7 +80,7 @@ graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symb
 # 有向无环图流转
 exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
-exprs_ldl.optimize()
+exprs_ldl.optimize(back_opt=True, chains_opt=True)
 # 生成代码
 codes = codegen(exprs_ldl, exprs_src)
 

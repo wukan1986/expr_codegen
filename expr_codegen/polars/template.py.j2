@@ -19,9 +19,7 @@ def expr_rank_pct(expr: pl.Expr) -> pl.Expr:
 
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.with_columns(
-        {{ value|join('\n') }}
-    )
+{{ value }}
     return df
 {% endfor %}
 

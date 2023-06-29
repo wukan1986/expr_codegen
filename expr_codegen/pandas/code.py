@@ -50,14 +50,14 @@ def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
             for kv in vv:
                 if kv is None:
                     func_code.append(f"    # " + '=' * 40)
-                    exprs_dst.append(f"# " + '=' * 40 + func_name)
+                    exprs_dst.append(f"# #" + '=' * 40 + func_name)
                 else:
                     va, ex = kv
                     func_code.append(f"    # {va} = {ex}\n    df['{va}'] = {p.doprint(ex)}")
                     exprs_dst.append(f"# {va} = {ex}")
 
             # polars风格代码列表
-            funcs[func_name] = func_code
+            funcs[func_name] = '\n'.join(func_code)
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name)
 

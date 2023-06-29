@@ -2,4 +2,3 @@ sympy
 Jinja2
 black
 loguru
-graphlib

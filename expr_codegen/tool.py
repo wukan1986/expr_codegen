@@ -1,4 +1,3 @@
-import pickle
 from functools import reduce
 from graphlib import TopologicalSorter
 
@@ -139,6 +138,6 @@ class ExprTool:
             ts.done(*nodes)
             nodes = ts.get_ready()
 
-        with open("test.pickle", "wb") as file:
-            pickle.dump(exprs_ldl, file)
+        # with open("test.pickle", "wb") as file:
+        #     pickle.dump(exprs_ldl, file)
         return exprs_ldl

@@ -1,4 +1,7 @@
+from functools import reduce
 from itertools import product
+
+from expr_codegen.expr import CL
 
 
 class ListDictList:
@@ -18,6 +21,13 @@ class ListDictList:
     def __init__(self):
         self._list = []
 
+    def clear(self):
+        """清空"""
+        self._list = []
+
+    def values(self):
+        return self._list
+
     def next_row(self):
         """移动到新的一行"""
         self._list.append({})
@@ -32,17 +42,62 @@ class ListDictList:
         else:
             last_row[key].append(item)
 
-    def clear(self):
-        self._list = []
+    def filter_empty(self):
+        """过滤空值"""
+        new_list = []
+        for row in self._list:
+            try_del1 = []
+            for k, v in row.items():
+                if len(v) == 0:
+                    try_del1.append(k)
+            for k in try_del1:
+                row.pop(k)
+            if len(row) > 0:
+                new_list.append(row)
+        self._list = new_list
 
-    def values(self):
-        return self._list
+    def back_merge(self):
+        """向上合并，将CL类型向前合并"""
+        keys = reduce(lambda x, y: x + list(y.keys()), self._list, [])
+        values = reduce(lambda x, y: x + list(y.values()), self._list, [])
 
-    def optimize(self):
-        """相临两层的同类其实可以合并，可以减少groupby次数"""
-        chains, head, tail = chains_create(self._list)
-        self._list, new_head, new_tail = chains_sort(self._list, chains, head, tail)
-        chians_move(new_head, new_tail)
+        new_keys = []
+        new_values = []
+        last_v = None
+        for k, v in zip(keys, values):
+            if (k == (CL,)) and (last_v is not None):
+                last_v.extend(v)
+                v.clear()
+            else:
+                new_keys.append(k)
+                new_values.append(v)
+                last_v = v
+
+    def optimize(self, back_opt=True, chains_opt=True):
+        """将多组groupby根据规则进行合并，减少运行时间
+
+        back_opt和chains_opt时。例如：ts、cl、ts，会先变成ts、ts，然后变成ts。大大提高速度
+
+        Parameters
+        ----------
+        back_opt:
+            不需要groupby的组，其实是可以直接合并到前一组的。例如‘+’，即可以放时序组中也可以放横截面组中
+        chains_opt:
+            首尾接龙优化。同一层的组进行重排序，让多层形成首尾接龙的，第二组的头中的列表可以合并到前一组尾。
+            如： 第一层最后的时序分组和第二层开始的时序分组是可以一起计算的
+
+        """
+        if back_opt:
+            self.back_merge()
+            self.filter_empty()
+
+        if chains_opt:
+            # 接龙
+            chains, head, tail = chains_create(self._list)
+            self._list, new_head, new_tail = chains_sort(self._list, chains, head, tail)
+            # 将数据从第二的龙头复制到第一行的龙尾
+            chians_move(new_head, new_tail)
+            self.filter_empty()
 
 
 def chains_create(nested_list):
@@ -105,7 +160,7 @@ def chains_sort(old_ldl, chains, head, tail):
 
 
 def chians_move(head, tail):
-    """会修改原数据结构"""
+    """龙头复制到上一个龙尾"""
     for hh, tt in reversed(list(zip(head[1:], tail[:-1]))):
         tt.extend(hh)
         hh.clear()
