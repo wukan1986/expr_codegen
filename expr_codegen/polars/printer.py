@@ -1,11 +1,10 @@
-from sympy import Basic, Function
+from sympy import Basic, Function, StrPrinter
 from sympy.printing.precedence import precedence
-from sympy.printing.pycode import PythonCodePrinter
 
 
 # TODO: 如有新添加函数，需要在此补充对应的打印代码
 
-class PolarsStrPrinter(PythonCodePrinter):
+class PolarsStrPrinter(StrPrinter):
     def _print(self, expr, **kwargs) -> str:
         """Internal dispatcher
 
@@ -53,6 +52,9 @@ class PolarsStrPrinter(PythonCodePrinter):
         # return expr.name
         return f"pl.col('{expr.name}')"
 
+    def _print_if_else(self, expr):
+        return "pl.when(%s).then(%s).otherwise(%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
+
     def _print_ts_mean(self, expr):
         PREC = precedence(expr)
         return "%s.rolling_mean(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
@@ -60,9 +62,6 @@ class PolarsStrPrinter(PythonCodePrinter):
     def _print_ts_std_dev(self, expr):
         PREC = precedence(expr)
         return "%s.rolling_std(%s, ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
-
-    def _print_if_else(self, expr):
-        return "pl.when(%s).then(%s).otherwise(%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_arg_max(self, expr):
         # TODO: 是否换成bottleneck版
@@ -73,6 +72,14 @@ class PolarsStrPrinter(PythonCodePrinter):
         # TODO: 是否换成bottleneck版
         PREC = precedence(expr)
         return "%s.rolling_apply(np.argmin, window_size=%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+
+    def _print_ts_max(self, expr):
+        PREC = precedence(expr)
+        return "%s.rolling_max(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+
+    def _print_ts_min(self, expr):
+        PREC = precedence(expr)
+        return "%s.rolling_min(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_delta(self, expr):
         PREC = precedence(expr)
@@ -85,9 +92,22 @@ class PolarsStrPrinter(PythonCodePrinter):
     def _print_ts_corr(self, expr):
         return "pl.rolling_corr(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
+    def _print_ts_covariance(self, expr):
+        return "pl.rolling_cov(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
+
+    def _print_ts_rank(self, expr):
+        return "rolling_rank(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+
+    def _print_ts_sum(self, expr):
+        PREC = precedence(expr)
+        return "%s.rolling_sum(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+
     def _print_cs_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
-        return "expr_rank_pct(%s)" % self._print(expr.args[0])
+        return "rank_pct(%s)" % self._print(expr.args[0])
+
+    def _print_cs_scale(self, expr):
+        return "scale(%s)" % self._print(expr.args[0])
 
     def _print_log(self, expr):
         PREC = precedence(expr)
@@ -103,4 +123,4 @@ class PolarsStrPrinter(PythonCodePrinter):
 
     def _print_gp_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
-        return "expr_rank_pct(%s)" % self._print(expr.args[1])
+        return "rank_pct(%s)" % self._print(expr.args[1])

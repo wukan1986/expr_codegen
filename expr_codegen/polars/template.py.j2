@@ -3,19 +3,30 @@
 
 import re
 
+import bottleneck as bn
 import numpy as np
 import polars as pl
 import polars.selectors as cs
-
 from loguru import logger
+
 
 # TODO: load data
 df = pl.DataFrame()
 
 
-def expr_rank_pct(expr: pl.Expr) -> pl.Expr:
+def rank_pct(expr: pl.Expr) -> pl.Expr:
     """rank(pct=True)"""
     return expr.rank() / (expr.len() - expr.null_count())
+
+def rolling_rank(expr: pl.Expr, window) -> pl.Expr:
+    """-1~1 TO 0~1"""
+    return expr.map(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
+
+def signed_power(x, y):
+    return x.sign() * (x.abs() ** y)
+
+def scale(x, scale=1):
+    return x / x.sum() * scale
 
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:

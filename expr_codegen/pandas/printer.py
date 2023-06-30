@@ -1,6 +1,5 @@
 from sympy import Basic, Function, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
-from sympy.printing.pycode import PythonCodePrinter
 
 
 # TODO: 如有新添加函数，需要在此补充对应的打印代码
@@ -71,6 +70,9 @@ class PandasStrPrinter(StrPrinter):
         PREC = PRECEDENCE["Mul"]
         return "~%s" % self.parenthesize(expr.args[0], PREC)
 
+    def _print_if_else(self, expr):
+        return "np.where(%s, %s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
+
     def _print_ts_mean(self, expr):
         PREC = precedence(expr)
         return "%s.rolling(%s).mean()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
@@ -78,9 +80,6 @@ class PandasStrPrinter(StrPrinter):
     def _print_ts_std_dev(self, expr):
         PREC = precedence(expr)
         return "%s.rolling(%s).std(ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
-
-    def _print_if_else(self, expr):
-        return "np.where(%s, %s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_arg_max(self, expr):
         # TODO: 是否换成bottleneck版

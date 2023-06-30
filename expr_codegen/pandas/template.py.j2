@@ -11,8 +11,8 @@ df = pd.DataFrame()
 def signed_power(x, y):
     return x.sign() * (x.abs() ** y)
 
-def scale(x):
-    return x / x.sum()
+def scale(x, scale=1):
+    return x / x.sum() * scale
 
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:

@@ -5,9 +5,8 @@ from sympy import symbols, Symbol, Function, numbered_symbols, Eq
 
 from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # TODO: 生成pandas代码的codegen，多个codegen只保留一个
-from expr_codegen.pandas.code import codegen
 # TODO: 生成polars代码的codegen，多个codegen只保留一个
-# from expr_codegen.polars.code import codegen
+from expr_codegen.polars.code import codegen
 # codegen工具类
 from expr_codegen.tool import ExprTool
 
@@ -15,7 +14,8 @@ from expr_codegen.tool import ExprTool
 
 # TODO: 因子。请根据需要补充
 OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
-RETURNS, VWAP, ADV20, = symbols('RETURNS, VWAP, ADV20, ', cls=Symbol)
+RETURNS, VWAP, CAP, = symbols('RETURNS, VWAP, CAP, ', cls=Symbol)
+ADV20, ADV30, ADV40, ADV50, ADV60, ADV180, = symbols('ADV20, ADV30, ADV40, ADV50, ADV60, ADV180,', cls=Symbol)
 
 sw_l1, = symbols('sw_l1, ', cls=Symbol)
 
@@ -59,7 +59,7 @@ exprs_src = {
     "alpha_021": if_else((((ts_sum(CLOSE, 8) / 8) + ts_std_dev(CLOSE, 8)) < (ts_sum(CLOSE, 2) / 2)), (-1 * 1), if_else(((ts_sum(CLOSE, 2) / 2) < ((ts_sum(CLOSE, 8) / 8) - ts_std_dev(CLOSE, 8))), 1, if_else(((1 < (VOLUME / ADV20)) | Eq((VOLUME / ADV20), 1)), 1, (-1 * 1)))),
     "alpha_022": (-1 * (ts_delta(ts_corr(HIGH, VOLUME, 5), 5) * cs_rank(ts_std_dev(CLOSE, 20)))),
     "alpha_023": if_else(((ts_sum(HIGH, 20) / 20) < HIGH), (-1 * ts_delta(HIGH, 2)), 0),
-    "alpha_024": if_else((((ts_delta((ts_sum(CLOSE, 100) / 100), 100) / ts_delay(CLOSE, 100)) < 0.05) | ((ts_delta((ts_sum(CLOSE, 100) / 100), 100) / ts_delay(CLOSE, 100)) == 0.05)), (-1 * (CLOSE - ts_min(CLOSE, 100))), (-1 * ts_delta(CLOSE, 3))),
+    "alpha_024": if_else((((ts_delta((ts_sum(CLOSE, 100) / 100), 100) / ts_delay(CLOSE, 100)) < 0.05) | Eq((ts_delta((ts_sum(CLOSE, 100) / 100), 100) / ts_delay(CLOSE, 100)), 0.05)), (-1 * (CLOSE - ts_min(CLOSE, 100))), (-1 * ts_delta(CLOSE, 3))),
     "alpha_025": cs_rank(((((-1 * RETURNS) * ADV20) * VWAP) * (HIGH - CLOSE))),
     "alpha_026": (-1 * ts_max(ts_corr(ts_rank(VOLUME, 5), ts_rank(HIGH, 5), 5), 3)),
     "alpha_027": if_else((0.5 < cs_rank((ts_sum(ts_corr(cs_rank(VOLUME), cs_rank(VWAP), 6), 2) / 2.0))), (-1 * 1), 1),
@@ -84,7 +84,30 @@ exprs_src = {
     "alpha_046": if_else((0.25 < (((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10))), (-1 * 1),
                          if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < 0), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1))))),
     "alpha_047": ((((cs_rank((1 / CLOSE)) * VOLUME) / ADV20) * ((HIGH * cs_rank((HIGH - CLOSE))) / (ts_sum(HIGH, 5) / 5))) - cs_rank((VWAP - ts_delay(VWAP, 5)))),
-
+    # "alpha_048":(indneutralize(((correlation(delta(close, 1), delta(delay(close, 1), 1), 250) * delta(close, 1)) / close), IndClass.subindustry) / sum(((delta(close, 1) / delay(close, 1))^2), 250)),
+    "alpha_049": if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < (-1 * 0.1)), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1)))),
+    "alpha_050": (-1 * ts_max(cs_rank(ts_corr(cs_rank(VOLUME), cs_rank(VWAP), 5)), 5)),
+    "alpha_051": if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < (-1 * 0.05)), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1)))),
+    "alpha_052": ((((-1 * ts_min(LOW, 5)) + ts_delay(ts_min(LOW, 5), 5)) * cs_rank(((ts_sum(RETURNS, 240) - ts_sum(RETURNS, 20)) / 220))) * ts_rank(VOLUME, 5)),
+    "alpha_053": (-1 * ts_delta((((CLOSE - LOW) - (HIGH - CLOSE)) / (CLOSE - LOW)), 9)),
+    "alpha_054": ((-1 * ((LOW - CLOSE) * (OPEN ** 5))) / ((LOW - HIGH) * (CLOSE ** 5))),
+    "alpha_055": (-1 * ts_corr(cs_rank(((CLOSE - ts_min(LOW, 12)) / (ts_max(HIGH, 12) - ts_min(LOW, 12)))), cs_rank(VOLUME), 6)),
+    "alpha_056": (0 - (1 * (cs_rank((ts_sum(RETURNS, 10) / ts_sum(ts_sum(RETURNS, 2), 3))) * cs_rank((RETURNS * CAP))))),
+    # "alpha_057": (0 - (1 * ((close - vwap) / decay_linear(rank(ts_argmax(close, 30)), 2)))),
+    # "alpha_058": (((HIGH * LOW) ** 0.5) - VWAP),
+    # "alpha_059": (((HIGH * LOW) ** 0.5) - VWAP),
+    "alpha_060": (0 - (1 * ((2 * cs_scale(cs_rank(((((CLOSE - LOW) - (HIGH - CLOSE)) / (HIGH - LOW)) * VOLUME)), 1)) - cs_scale(cs_rank(ts_arg_max(CLOSE, 10)), 1)))),
+    "alpha_061": (cs_rank((VWAP - ts_min(VWAP, 16.1219))) < cs_rank(ts_corr(VWAP, ADV180, 17.9282))),
+    # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'。<*-1不合法
+    # "alpha_062": ((cs_rank(ts_corr(VWAP, ts_sum(ADV20, 22.4101), 9.91009)) < cs_rank(((cs_rank(OPEN) + cs_rank(LOW)) < (cs_rank(((HIGH + LOW) / 2)) + cs_rank(HIGH))))) * -1)
+    # "alpha_063": (((HIGH * LOW) ** 0.5) - VWAP),
+    "alpha_074": (cs_rank(ts_corr(VWAP, VOLUME, 4.24304)) < cs_rank(ts_corr(cs_rank(LOW), cs_rank(ADV50), 12.4413))),
+    "alpha_083": ((cs_rank(ts_delay(((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)), 2)) * cs_rank(cs_rank(VOLUME))) / (((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)) / (VWAP - CLOSE))),
+    "alpha_084": signed_power(ts_rank((VWAP - ts_max(VWAP, 15.3217)), 20.7127), ts_delta(CLOSE, 4.96796)),
+    "alpha_085": (cs_rank(ts_corr(((HIGH * 0.876703) + (CLOSE * (1 - 0.876703))), ADV30, 9.61331)) ** cs_rank(ts_corr(ts_rank(((HIGH + LOW) / 2), 3.70596), ts_rank(VOLUME, 10.1595), 7.11408))),
+    "alpha_094": ((cs_rank((VWAP - ts_min(VWAP, 11.5783))) ** ts_rank(ts_corr(ts_rank(VWAP, 19.6462), ts_rank(ADV60, 4.02992), 18.0926), 2.70756)) * -1),
+    "alpha_095": (cs_rank((OPEN - ts_min(OPEN, 12.4105))) < ts_rank((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.1351), ts_sum(ADV40, 19.1351), 12.8742)) ** 5), 11.7584)),
+    "alpha_101": ((CLOSE - OPEN) / ((HIGH - LOW) + 0.001)),
 }
 
 # 根据算子前缀进行算子分类
