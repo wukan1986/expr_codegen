@@ -8,7 +8,7 @@ from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # TODO: 生成polars代码的codegen，多个codegen只保留一个
 from expr_codegen.polars.code import codegen
 # codegen工具类
-from expr_codegen.tool import ExprTool
+from expr_codegen.tool import ExprTool, ts_sum__to__ts_mean
 
 # !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
 
@@ -109,6 +109,9 @@ exprs_src = {
     "alpha_095": (cs_rank((OPEN - ts_min(OPEN, 12.4105))) < ts_rank((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.1351), ts_sum(ADV40, 19.1351), 12.8742)) ** 5), 11.7584)),
     "alpha_101": ((CLOSE - OPEN) / ((HIGH - LOW) + 0.001)),
 }
+
+# Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
+exprs_src = {k: ts_sum__to__ts_mean(v, ts_mean) for k, v in exprs_src.items()}
 
 # 根据算子前缀进行算子分类
 inspect1 = ExprInspectByPrefix()

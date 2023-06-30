@@ -1,7 +1,7 @@
 from functools import reduce
 from graphlib import TopologicalSorter
 
-from sympy import simplify, cse
+from sympy import simplify, cse, preorder_traversal
 
 from expr_codegen.expr import ExprInspect
 from expr_codegen.model import ListDictList
@@ -146,3 +146,16 @@ class ExprTool:
         # with open("test.pickle", "wb") as file:
         #     pickle.dump(exprs_ldl, file)
         return exprs_ldl
+
+
+def ts_sum__to__ts_mean(e, ts_mean):
+    """将ts_sum(x, y)/y 转成 ts_mean(x, y)"""
+    replacements = []
+    for node in preorder_traversal(e):
+        if node.is_Mul and node.args[0].is_Rational and node.args[1].is_Function:
+            if node.args[1].name == 'ts_sum':
+                if node.args[1].args[1] == node.args[0].q and node.args[0].p == 1:
+                    replacements.append((node, ts_mean(node.args[1].args[0], node.args[1].args[1])))
+    for node, replacement in replacements:
+        e = e.xreplace({node: replacement})
+    return e
