@@ -90,10 +90,10 @@ class PolarsStrPrinter(StrPrinter):
         return "%s.shift(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_corr(self, expr):
-        return "pl.rolling_corr(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
+        return "pl.rolling_corr(%s, %s, window_size=%s, ddof=0)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_covariance(self, expr):
-        return "pl.rolling_cov(%s, %s, window_size=%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
+        return "pl.rolling_cov(%s, %s, window_size=%s, ddof=0)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_rank(self, expr):
         return "rolling_rank(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
