@@ -1,11 +1,11 @@
-from sympy import Basic, Function
+from sympy import Basic, Function, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
 from sympy.printing.pycode import PythonCodePrinter
 
 
 # TODO: 如有新添加函数，需要在此补充对应的打印代码
 
-class PandasStrPrinter(PythonCodePrinter):
+class PandasStrPrinter(StrPrinter):
     def _print(self, expr, **kwargs) -> str:
         """Internal dispatcher
 
@@ -127,6 +127,9 @@ class PandasStrPrinter(PythonCodePrinter):
     def _print_cs_rank(self, expr):
         PREC = precedence(expr)
         return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)
+
+    def _print_cs_scale(self, expr):
+        return "scale(%s)" % self._print(expr.args[0])
 
     def _print_log(self, expr):
         return "np.log(%s)" % self._print(expr.args[0])

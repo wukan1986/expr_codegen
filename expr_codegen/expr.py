@@ -33,8 +33,6 @@ def append_negative_one(node, output_exprs):
     if isinstance(node, Mul) and node.args[0] is S.NegativeOne:
         # Mul(-1, x) 即 -x
         output_exprs.append(node.args[1])
-    elif node is S.NegativeOne:
-        pass
     else:
         output_exprs.append(node)
     return output_exprs
@@ -95,12 +93,19 @@ class ExprInspect(ABC):
         if len(unique) >= 2:
             # 大于1，表示内部不统一，内部都要处理
             for i, child in enumerate(children):
+                # alpha_047无法正确输出
+                if expr.args[i].is_Atom:
+                    # print(expr.args[i], 'is_Atom 1')
+                    continue
                 output_exprs = append_negative_one(expr.args[i], output_exprs)
         elif curr[0] != CL:
             # 外部与内部不同，需处理
             for i, child in enumerate(children):
                 # 不在子中即表示不同
                 if curr in child:
+                    continue
+                if expr.args[i].is_Atom:
+                    # print(expr.args[i], 'is_Atom 2')
                     continue
                 output_exprs = append_negative_one(expr.args[i], output_exprs)
 

@@ -46,7 +46,7 @@ class ExprTool:
         self._inspect.get_children(expr,
                                    output_exprs=exprs, output_symbols=syms,
                                    date=self._date, asset=self._asset)
-        # print('='*20, expr)
+        # print('=' * 20, expr)
         # print(exprs)
         return exprs
 
@@ -66,6 +66,7 @@ class ExprTool:
         表达式列表
         """
         args = [self.extract(v) for v in kwargs.values()] + [list(kwargs.values())]
+        # args = [list(kwargs.values())] + [self.extract(v) for v in kwargs.values()]
         exprs = reduce(lambda x, y: x + y, args, [])
         exprs = sorted(set(exprs), key=exprs.index)
 
@@ -97,9 +98,9 @@ class ExprTool:
         graph_key = {}
         graph_exp = {}
 
-        symbols_redu = iter(symbols_redu)
-
         repl, redu = cse(exprs, symbols_repl, optimizations="basic")
+        # 最终表达式开始位置
+        exprs_start = len(redu) - len(symbols_redu)
 
         for variable, expr in repl:
             expr = simplify(expr)
@@ -108,10 +109,14 @@ class ExprTool:
             graph_key[variable.name] = self._inspect.get_key(expr, date=self._date, asset=self._asset)
             graph_exp[variable.name] = expr
 
+        symbols_redu = iter(symbols_redu)
         for i, expr in enumerate(redu):
-            # 单元素没有必要打印
-            if len(expr.args) == 0:
+            # 前面是需要输出的表达式
+            # if i >= src_len:
+            #     continue
+            if i < exprs_start:
                 continue
+            # print(expr)
             variable = next(symbols_redu)
             expr = simplify(expr)
 
