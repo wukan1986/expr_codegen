@@ -7,7 +7,7 @@ from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # TODO: 生成pandas代码的codegen，多个codegen只保留一个
 from expr_codegen.pandas.code import codegen
 # TODO: 生成polars代码的codegen，多个codegen只保留一个
-from expr_codegen.polars.code import codegen
+# from expr_codegen.polars.code import codegen
 # codegen工具类
 from expr_codegen.tool import ExprTool, ts_sum__to__ts_mean, cs_rank__drop_duplicates
 
@@ -22,6 +22,7 @@ sw_l1, = symbols('sw_l1, ', cls=Symbol)
 
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
 log, sign, abs, if_else, signed_power, = symbols('log, sign, abs, if_else, signed_power, ', cls=Function)
+max, min, = symbols('max, min, ', cls=Function)
 
 # TODO: 时序算子。需要提前按资产分组，组内按时间排序。请根据需要补充。必需以`ts_`开头
 ts_delay, ts_delta, ts_mean, ts_corr, ts_covariance, = symbols('ts_delay, ts_delta, ts_mean, ts_corr, ts_covariance,', cls=Function)
@@ -103,25 +104,25 @@ exprs_src = {
     # "alpha_062": ((cs_rank(ts_corr(VWAP, ts_sum(ADV20, 22.4101), 9.91009)) < cs_rank(((cs_rank(OPEN) + cs_rank(LOW)) < (cs_rank(((HIGH + LOW) / 2)) + cs_rank(HIGH))))) * -1)
     # "alpha_063": (((HIGH * LOW) ** 0.5) - VWAP),
     "alpha_066": ((cs_rank(ts_decay_linear(ts_delta(VWAP, 3.51013), 7.23052)) + ts_rank(ts_decay_linear(((((LOW * 0.96633) + (LOW * (1 - 0.96633))) - VWAP) / (OPEN - ((HIGH + LOW) / 2))), 11.4157), 6.72611)) * -1),
-    # "alpha_071": max(ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 3.43976), ts_rank(ADV180, 12.0647), 18.0175), 4.20501), 15.6948), ts_rank(ts_decay_linear((cs_rank(((LOW + OPEN) - (VWAP + VWAP))) ** 2), 16.4662), 4.4388)),
+    "alpha_071": max(ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 3.43976), ts_rank(ADV180, 12.0647), 18.0175), 4.20501), 15.6948), ts_rank(ts_decay_linear((cs_rank(((LOW + OPEN) - (VWAP + VWAP))) ** 2), 16.4662), 4.4388)),
     "alpha_072": (cs_rank(ts_decay_linear(ts_corr(((HIGH + LOW) / 2), ADV40, 8.93345), 10.1519)) / cs_rank(ts_decay_linear(ts_corr(ts_rank(VWAP, 3.72469), ts_rank(VOLUME, 18.5188), 6.86671), 2.95011))),
-    # "alpha_073": (max(cs_rank(ts_decay_linear(ts_delta(VWAP, 4.72775), 2.91864)), ts_rank(ts_decay_linear(((ts_delta(((OPEN * 0.147155) + (LOW * (1 - 0.147155))), 2.03608) / ((OPEN * 0.147155) + (LOW * (1 - 0.147155)))) * -1), 3.33829), 16.7411)) * -1),
+    "alpha_073": (max(cs_rank(ts_decay_linear(ts_delta(VWAP, 4.72775), 2.91864)), ts_rank(ts_decay_linear(((ts_delta(((OPEN * 0.147155) + (LOW * (1 - 0.147155))), 2.03608) / ((OPEN * 0.147155) + (LOW * (1 - 0.147155)))) * -1), 3.33829), 16.7411)) * -1),
     # "alpha_074": ((cs_rank(ts_corr(CLOSE, ts_sum(ADV30, 37.4843), 15.1365)) < cs_rank(ts_corr(cs_rank(((HIGH * 0.0261661) + (VWAP * (1 - 0.0261661)))), cs_rank(VOLUME), 11.4791))) * -1),
     "alpha_075": (cs_rank(ts_corr(VWAP, VOLUME, 4.24304)) < cs_rank(ts_corr(cs_rank(LOW), cs_rank(ADV50), 12.4413))),
     # "alpha_076":,
-    # "alpha_077": min(cs_rank(ts_decay_linear(((((HIGH + LOW) / 2) + HIGH) - (VWAP + HIGH)), 20.0451)), cs_rank(ts_decay_linear(ts_corr(((HIGH + LOW) / 2), ADV40, 3.1614), 5.64125))),
+    "alpha_077": min(cs_rank(ts_decay_linear(((((HIGH + LOW) / 2) + HIGH) - (VWAP + HIGH)), 20.0451)), cs_rank(ts_decay_linear(ts_corr(((HIGH + LOW) / 2), ADV40, 3.1614), 5.64125))),
     "alpha_078": (cs_rank(ts_corr(ts_sum(((LOW * 0.352233) + (VWAP * (1 - 0.352233))), 19.7428), ts_sum(ADV40, 19.7428), 6.83313)) ** cs_rank(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 5.77492))),
     "alpha_083": ((cs_rank(ts_delay(((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)), 2)) * cs_rank(cs_rank(VOLUME))) / (((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)) / (VWAP - CLOSE))),
     "alpha_084": signed_power(ts_rank((VWAP - ts_max(VWAP, 15.3217)), 20.7127), ts_delta(CLOSE, 4.96796)),
     "alpha_085": (cs_rank(ts_corr(((HIGH * 0.876703) + (CLOSE * (1 - 0.876703))), ADV30, 9.61331)) ** cs_rank(ts_corr(ts_rank(((HIGH + LOW) / 2), 3.70596), ts_rank(VOLUME, 10.1595), 7.11408))),
     # "alpha_086": ((ts_rank(ts_corr(CLOSE, ts_sum(ADV20, 14.7444), 6.00049), 20.4195) < cs_rank(((OPEN + CLOSE) - (VWAP + OPEN)))) * -1),
-    # "alpha_088": min(cs_rank(ts_decay_linear(((cs_rank(OPEN) + cs_rank(LOW)) - (cs_rank(HIGH) + cs_rank(CLOSE))), 8.06882)), ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 8.44728), ts_rank(ADV60, 20.6966), 8.01266), 6.65053), 2.61957)),
-    #"alpha_092": min(ts_rank(ts_decay_linear(((((HIGH + LOW) / 2) + CLOSE) < (LOW + OPEN)), 14.7221), 18.8683), ts_rank(ts_decay_linear(ts_corr(cs_rank(LOW), cs_rank(ADV30), 7.58555), 6.94024), 6.80584)),
+    "alpha_088": min(cs_rank(ts_decay_linear(((cs_rank(OPEN) + cs_rank(LOW)) - (cs_rank(HIGH) + cs_rank(CLOSE))), 8.06882)), ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 8.44728), ts_rank(ADV60, 20.6966), 8.01266), 6.65053), 2.61957)),
+    "alpha_092": min(ts_rank(ts_decay_linear(((((HIGH + LOW) / 2) + CLOSE) < (LOW + OPEN)), 14.7221), 18.8683), ts_rank(ts_decay_linear(ts_corr(cs_rank(LOW), cs_rank(ADV30), 7.58555), 6.94024), 6.80584)),
     "alpha_094": ((cs_rank((VWAP - ts_min(VWAP, 11.5783))) ** ts_rank(ts_corr(ts_rank(VWAP, 19.6462), ts_rank(ADV60, 4.02992), 18.0926), 2.70756)) * -1),
     "alpha_095": (cs_rank((OPEN - ts_min(OPEN, 12.4105))) < ts_rank((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.1351), ts_sum(ADV40, 19.1351), 12.8742)) ** 5), 11.7584)),
-    #"alpha_096": (max(ts_rank(ts_decay_linear(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 3.83878), 4.16783), 8.38151), ts_rank(ts_decay_linear(ts_arg_max(ts_corr(ts_rank(CLOSE, 7.45404), ts_rank(ADV60, 4.13242), 3.65459), 12.6556), 14.0365), 13.4143)) * -1),
+    "alpha_096": (max(ts_rank(ts_decay_linear(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 3.83878), 4.16783), 8.38151), ts_rank(ts_decay_linear(ts_arg_max(ts_corr(ts_rank(CLOSE, 7.45404), ts_rank(ADV60, 4.13242), 3.65459), 12.6556), 14.0365), 13.4143)) * -1),
     "alpha_098": (cs_rank(ts_decay_linear(ts_corr(VWAP, ts_sum(ADV5, 26.4719), 4.58418), 7.18088)) - cs_rank(ts_decay_linear(ts_rank(ts_arg_min(ts_corr(cs_rank(OPEN), cs_rank(ADV15), 20.8187), 8.62571), 6.95668), 8.07206))),
-    #"alpha_099": ((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.8975), ts_sum(ADV60, 19.8975), 8.8136)) < cs_rank(ts_corr(LOW, VOLUME, 6.28259))) * -1),
+    # "alpha_099": ((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.8975), ts_sum(ADV60, 19.8975), 8.8136)) < cs_rank(ts_corr(LOW, VOLUME, 6.28259))) * -1),
     "alpha_101": ((CLOSE - OPEN) / ((HIGH - LOW) + 0.001)),
 }
 

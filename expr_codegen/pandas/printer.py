@@ -140,6 +140,12 @@ class PandasStrPrinter(StrPrinter):
         PREC = precedence(expr)
         return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
 
+    def _print_max(self, expr):
+        return "np.maximum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+
+    def _print_min(self, expr):
+        return "np.minimum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+
     def _print_sign(self, expr):
         PREC = precedence(expr)
         return "%s.sign()" % self.parenthesize(expr.args[0], PREC)
