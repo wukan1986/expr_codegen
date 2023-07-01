@@ -32,7 +32,9 @@ def append_negative_one(node, output_exprs):
     """
     if isinstance(node, Mul) and node.args[0] is S.NegativeOne:
         # Mul(-1, x) 即 -x
-        output_exprs.append(node.args[1])
+        # alpha_036中发现在bug, (-1, CLOSE-OPEN, OPEN-ts_mean(CLOSE, 200))
+        for arg in node.args[1:]:
+            output_exprs.append(arg)
     else:
         output_exprs.append(node)
     return output_exprs
@@ -40,6 +42,9 @@ def append_negative_one(node, output_exprs):
 
 class ExprInspect(ABC):
     """表达式识别抽象类"""
+
+    def __init__(self):
+        self._level = 0
 
     def get_current(self, expr, date, asset):
         """得到当前算子的类别
@@ -83,42 +88,48 @@ class ExprInspect(ABC):
         当前是其它算子，返回当前算子元组
 
         """
-        curr = self.get_current(expr, date, asset)
-        children = [self.get_children(a, output_exprs, output_symbols, date, asset) for a in expr.args]
-        # 删除长度为0的，CLOSE、-1 等符号为0
-        children = [c for c in children if len(c) > 0]
-        # 多个集合合成一个去重
-        unique = reduce(lambda x, y: x | y, children, set())
+        self._level += 1
 
-        if len(unique) >= 2:
-            # 大于1，表示内部不统一，内部都要处理
-            for i, child in enumerate(children):
-                # alpha_047无法正确输出
-                if expr.args[i].is_Atom:
-                    # print(expr.args[i], 'is_Atom 1')
-                    continue
-                output_exprs = append_negative_one(expr.args[i], output_exprs)
-        elif curr[0] != CL:
-            # 外部与内部不同，需处理
-            for i, child in enumerate(children):
-                # 不在子中即表示不同
-                if curr in child:
-                    continue
-                if expr.args[i].is_Atom:
-                    # print(expr.args[i], 'is_Atom 2')
-                    continue
-                output_exprs = append_negative_one(expr.args[i], output_exprs)
+        try:
+            curr = self.get_current(expr, date, asset)
+            children = [self.get_children(a, output_exprs, output_symbols, date, asset) for a in expr.args]
 
-        # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
-        if curr[0] == CL:
-            if expr.is_Symbol:
-                # 汇总符号列表
-                output_symbols.append(expr)
-            # 返回子中出现过的集合{ts cs gp}
-            return unique
-        else:
-            # 当前算子，非列算子，直接返回，如{ts} {cs} {gp}
-            return set([curr])
+            # 删除长度为0的，CLOSE、-1 等符号为0
+            children = [c for c in children if len(c) > 0]
+            # 多个集合合成一个去重
+            unique = reduce(lambda x, y: x | y, children, set())
+
+            if len(unique) >= 2:
+                # 大于1，表示内部不统一，内部都要处理
+                for i, child in enumerate(children):
+                    # alpha_047无法正确输出
+                    if expr.args[i].is_Atom:
+                        # print(expr.args[i], 'is_Atom 1')
+                        continue
+                    output_exprs = append_negative_one(expr.args[i], output_exprs)
+            elif curr[0] != CL:
+                # 外部与内部不同，需处理
+                for i, child in enumerate(children):
+                    # 不在子中即表示不同
+                    if curr in child:
+                        continue
+                    if expr.args[i].is_Atom:
+                        # print(expr.args[i], 'is_Atom 2')
+                        continue
+                    output_exprs = append_negative_one(expr.args[i], output_exprs)
+
+            # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
+            if curr[0] == CL:
+                if expr.is_Symbol:
+                    # 汇总符号列表
+                    output_symbols.append(expr)
+                # 返回子中出现过的集合{ts cs gp}
+                return unique
+            else:
+                # 当前算子，非列算子，直接返回，如{ts} {cs} {gp}
+                return set([curr])
+        finally:
+            self._level -= 1
 
     def get_key(self, expr, date, asset):
         """当前表达式，存字典时的 键
