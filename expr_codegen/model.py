@@ -1,7 +1,7 @@
 from functools import reduce
 from itertools import product
 
-from expr_codegen.expr import CL
+from expr_codegen.expr import CL, GP
 
 
 class ListDictList:
@@ -63,15 +63,20 @@ class ListDictList:
 
         new_keys = []
         new_values = []
+        last_k = None
         last_v = None
         for k, v in zip(keys, values):
-            if (k == (CL,)) and (last_v is not None):
+            # 当前是整列时可以向上合并，但前一个是gp_xxx一类时不合并，因为循环太多次了
+            if (last_v is not None) and (k[0] == CL) and (last_k[0] != GP):
+                # print(1, k, last_k)
                 last_v.extend(v)
                 v.clear()
             else:
+                # print(2, k, last_k)
                 new_keys.append(k)
                 new_values.append(v)
                 last_v = v
+                last_k = k
 
     def optimize(self, back_opt=True, chains_opt=True):
         """将多组groupby根据规则进行合并，减少运行时间
@@ -98,6 +103,11 @@ class ListDictList:
         if chains_opt:
             # 将数据从第二的龙头复制到第一行的龙尾
             chains_move(new_head, new_tail)
+            self.filter_empty()
+
+        # 执行第二次，解决接龙后，还有部分没有合并的情况
+        if back_opt:
+            self.back_merge()
             self.filter_empty()
 
 
