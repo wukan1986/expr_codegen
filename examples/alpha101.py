@@ -18,7 +18,7 @@ OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUM
 RETURNS, VWAP, CAP, = symbols('RETURNS, VWAP, CAP, ', cls=Symbol)
 ADV5, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV180, = symbols('ADV5, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV180,', cls=Symbol)
 
-sw_l1, = symbols('sw_l1, ', cls=Symbol)
+SECTOR, INDUSTRY, SUBINDUSTRY, = symbols('sector, industry, subindustry, ', cls=Symbol)
 
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
 log, sign, abs, if_else, signed_power, = symbols('log, sign, abs, if_else, signed_power, ', cls=Function)
@@ -34,7 +34,7 @@ ts_sum, ts_decay_linear, = symbols('ts_sum, ts_decay_linear, ', cls=Function)
 cs_rank, cs_scale, = symbols('cs_rank, cs_scale, ', cls=Function)
 
 # TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
-gp_rank, = symbols('gp_rank, ', cls=Function)
+gp_rank, gp_neutralize, = symbols('gp_rank, gp_neutralize', cls=Function)
 
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
@@ -86,7 +86,7 @@ exprs_src = {
     "alpha_046": if_else((0.25 < (((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10))), (-1 * 1),
                          if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < 0), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1))))),
     "alpha_047": ((((cs_rank((1 / CLOSE)) * VOLUME) / ADV20) * ((HIGH * cs_rank((HIGH - CLOSE))) / (ts_sum(HIGH, 5) / 5))) - cs_rank((VWAP - ts_delay(VWAP, 5)))),
-    # "alpha_048":(indneutralize(((correlation(delta(close, 1), delta(delay(close, 1), 1), 250) * delta(close, 1)) / close), IndClass.subindustry) / sum(((delta(close, 1) / delay(close, 1))^2), 250)),
+    "alpha_048": (gp_neutralize(SUBINDUSTRY, ((ts_corr(ts_delta(CLOSE, 1), ts_delta(ts_delay(CLOSE, 1), 1), 250) * ts_delta(CLOSE, 1)) / CLOSE)) / ts_sum(((ts_delta(CLOSE, 1) / ts_delay(CLOSE, 1)) ** 2), 250)),
     "alpha_049": if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < (-1 * 0.1)), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1)))),
     "alpha_050": (-1 * ts_max(cs_rank(ts_corr(cs_rank(VOLUME), cs_rank(VWAP), 5)), 5)),
     "alpha_051": if_else(((((ts_delay(CLOSE, 20) - ts_delay(CLOSE, 10)) / 10) - ((ts_delay(CLOSE, 10) - CLOSE) / 10)) < (-1 * 0.05)), 1, ((-1 * 1) * (CLOSE - ts_delay(CLOSE, 1)))),
@@ -96,8 +96,8 @@ exprs_src = {
     "alpha_055": (-1 * ts_corr(cs_rank(((CLOSE - ts_min(LOW, 12)) / (ts_max(HIGH, 12) - ts_min(LOW, 12)))), cs_rank(VOLUME), 6)),
     "alpha_056": (0 - (1 * (cs_rank((ts_sum(RETURNS, 10) / ts_sum(ts_sum(RETURNS, 2), 3))) * cs_rank((RETURNS * CAP))))),
     "alpha_057": (0 - (1 * ((CLOSE - VWAP) / ts_decay_linear(cs_rank(ts_arg_max(CLOSE, 30)), 2)))),
-    # "alpha_058": (((HIGH * LOW) ** 0.5) - VWAP),
-    # "alpha_059": (((HIGH * LOW) ** 0.5) - VWAP),
+    "alpha_058": (-1 * ts_rank(ts_decay_linear(ts_corr(gp_neutralize(SECTOR, VWAP), VOLUME, 3.92795), 7.89291), 5.50322)),
+    "alpha_059": (-1 * ts_rank(ts_decay_linear(ts_corr(gp_neutralize(INDUSTRY, ((VWAP * 0.728317) + (VWAP * (1 - 0.728317)))), VOLUME, 4.25197), 16.2289), 8.19648)),
     "alpha_060": (0 - (1 * ((2 * cs_scale(cs_rank(((((CLOSE - LOW) - (HIGH - CLOSE)) / (HIGH - LOW)) * VOLUME)), 1)) - cs_scale(cs_rank(ts_arg_max(CLOSE, 10)), 1)))),
     "alpha_061": (cs_rank((VWAP - ts_min(VWAP, 16.1219))) < cs_rank(ts_corr(VWAP, ADV180, 17.9282))),
     # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'。<*-1不合法

@@ -157,3 +157,6 @@ class PandasStrPrinter(StrPrinter):
     def _print_gp_rank(self, expr):
         PREC = precedence(expr)
         return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)
+
+    def _print_gp_neutralize(self, expr):
+        return "neutralize(%s)" % self._print(expr.args[1])

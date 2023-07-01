@@ -137,3 +137,6 @@ class PolarsStrPrinter(StrPrinter):
     def _print_gp_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
         return "rank_pct(%s)" % self._print(expr.args[1])
+
+    def _print_gp_neutralize(self, expr):
+        return "neutralize(%s)" % self._print(expr.args[1])
