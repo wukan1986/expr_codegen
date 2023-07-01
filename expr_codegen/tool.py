@@ -157,5 +157,20 @@ def ts_sum__to__ts_mean(e, ts_mean):
                 if node.args[1].args[1] == node.args[0].q and node.args[0].p == 1:
                     replacements.append((node, ts_mean(node.args[1].args[0], node.args[1].args[1])))
     for node, replacement in replacements:
+        print(node, '  ->  ', replacement)
+        e = e.xreplace({node: replacement})
+    return e
+
+
+def cs_rank__drop_duplicates(e):
+    """cs_rank(cs_rank(x)) 转成 cs_rank(x)"""
+    replacements = []
+    for node in preorder_traversal(e):
+        # print(node)
+        if hasattr(node, 'name') and node.name == 'cs_rank':
+            if hasattr(node.args[0], 'name') and node.args[0].name == 'cs_rank':
+                replacements.append((node, node.args[0]))
+    for node, replacement in replacements:
+        print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
     return e
