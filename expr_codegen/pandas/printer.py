@@ -123,6 +123,9 @@ class PandasStrPrinter(StrPrinter):
         PREC = precedence(expr)
         return "%s.rolling(%s).sum()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
+    def _print_ts_decay_linear(self, expr):
+        return "ta.WMA(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+
     def _print_cs_rank(self, expr):
         PREC = precedence(expr)
         return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)

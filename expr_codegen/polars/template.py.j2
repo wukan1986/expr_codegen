@@ -7,6 +7,7 @@ import bottleneck as bn
 import numpy as np
 import polars as pl
 import polars.selectors as cs
+import talib as ta
 from loguru import logger
 
 
@@ -18,9 +19,14 @@ def rank_pct(expr: pl.Expr) -> pl.Expr:
     """rank(pct=True)"""
     return expr.rank() / (expr.len() - expr.null_count())
 
+
 def rolling_rank(expr: pl.Expr, window) -> pl.Expr:
     """-1~1 TO 0~1"""
     return expr.map(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
+
+
+def ts_decay_linear(expr: pl.Expr, window) -> pl.Expr:
+    return expr.map(lambda x: ta.WMA(x, window))
 
 def signed_power(x, y):
     return x.sign() * (x.abs() ** y)
