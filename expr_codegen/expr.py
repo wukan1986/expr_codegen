@@ -94,8 +94,9 @@ class ExprInspect(ABC):
             curr = self.get_current(expr, date, asset)
             children = [self.get_children(a, output_exprs, output_symbols, date, asset) for a in expr.args]
 
-            # 删除长度为0的，CLOSE、-1 等符号为0
-            children = [c for c in children if len(c) > 0]
+            # if self._level == 1:
+            #     print(expr, curr, children)
+
             # 多个集合合成一个去重
             unique = reduce(lambda x, y: x | y, children, set())
 
