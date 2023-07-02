@@ -1,12 +1,7 @@
-import os
-
+from black import format_str, Mode
 from sympy import symbols, Symbol, Function, numbered_symbols
 
 from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
-# TODO: 生成pandas代码的codegen，多个codegen只保留一个
-from expr_codegen.pandas.code import codegen
-# TODO: 生成polars代码的codegen，多个codegen只保留一个
-from expr_codegen.polars.code import codegen
 # codegen工具类
 from expr_codegen.tool import ExprTool
 
@@ -36,7 +31,7 @@ exprs_src = {
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),
     "expr_6": ts_delta(OPEN, 10),
-    "expr_7": ts_delta(OPEN+1, 10),
+    "expr_7": ts_delta(OPEN + 1, 10),
 }
 
 # 根据算子前缀进行算子分类
@@ -61,14 +56,21 @@ graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symb
 exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
 exprs_ldl.optimize(back_opt=True, chains_opt=True)
+
 # 生成代码
+is_polars = False
+if is_polars:
+    from expr_codegen.polars.code import codegen
+
+    output_file = 'output_polars.py'
+else:
+    from expr_codegen.pandas.code import codegen
+
+    output_file = 'output_pandas.py'
+
 codes = codegen(exprs_ldl, exprs_src)
 
-# TODO: 保存文件
-output_file = 'output_pandas.py'
-output_file = 'output_polars.py'
-with open(output_file, 'w') as f:
-    f.write(codes)
-
-# reformat
-os.system(f'python -m black -l 240 {output_file}')
+# TODO: reformat & output
+res = format_str(codes, mode=Mode(line_length=500))
+with open(output_file, 'w', encoding='utf-8') as f:
+    f.write(res)

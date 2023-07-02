@@ -1,13 +1,8 @@
 # File > Settings... > Editor > Code Style > Hard wrap at > 300
-import os
-
+from black import Mode, format_str
 from sympy import symbols, Symbol, Function, numbered_symbols, Eq
 
 from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
-# TODO: 生成pandas代码的codegen，多个codegen只保留一个
-from expr_codegen.pandas.code import codegen
-# TODO: 生成polars代码的codegen，多个codegen只保留一个
-# from expr_codegen.polars.code import codegen
 # codegen工具类
 from expr_codegen.tool import ExprTool, ts_sum__to__ts_mean, cs_rank__drop_duplicates
 
@@ -21,20 +16,22 @@ ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, AD
 SECTOR, INDUSTRY, SUBINDUSTRY, = symbols('sector, industry, subindustry, ', cls=Symbol)
 
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
-log, sign, abs, if_else, signed_power, = symbols('log, sign, abs, if_else, signed_power, ', cls=Function)
+log, sign, abs, = symbols('log, sign, abs, ', cls=Function)
 max, min, = symbols('max, min, ', cls=Function)
+if_else, signed_power, = symbols('if_else, signed_power, ', cls=Function)
 
 # TODO: 时序算子。需要提前按资产分组，组内按时间排序。请根据需要补充。必需以`ts_`开头
-ts_delay, ts_delta, ts_mean, ts_corr, ts_covariance, = symbols('ts_delay, ts_delta, ts_mean, ts_corr, ts_covariance,', cls=Function)
+ts_delay, ts_delta, = symbols('ts_delay, ts_delta, ', cls=Function)
 ts_arg_max, ts_arg_min, ts_max, ts_min, = symbols('ts_arg_max, ts_arg_min, ts_max, ts_min, ', cls=Function)
-ts_std_dev, ts_rank, = symbols('ts_std_dev, ts_rank, ', cls=Function)
-ts_sum, ts_decay_linear, = symbols('ts_sum, ts_decay_linear, ', cls=Function)
+ts_sum, ts_mean, ts_decay_linear, = symbols('ts_sum, ts_mean, ts_decay_linear, ', cls=Function)
+ts_std_dev, ts_corr, ts_covariance, = symbols('ts_std_dev, ts_corr, ts_covariance,', cls=Function)
+ts_rank, = symbols('ts_rank, ', cls=Function)
 
 # TODO: 横截面算子。需要提前按时间分组。请根据需要补充。必需以`cs_`开头
 cs_rank, cs_scale, = symbols('cs_rank, cs_scale, ', cls=Function)
 
 # TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
-gp_rank, gp_neutralize, = symbols('gp_rank, gp_neutralize', cls=Function)
+gp_neutralize, = symbols('gp_neutralize, ', cls=Function)
 
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
@@ -155,7 +152,7 @@ inspect1 = ExprInspectByPrefix()
 inspect2 = ExprInspectByName(
     ts_names={ts_delay, ts_delta, ts_mean, ts_corr, },
     cs_names={cs_rank, },
-    gp_names={gp_rank, },
+    gp_names={gp_neutralize, },
 )
 
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
@@ -170,13 +167,18 @@ graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symb
 exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
 exprs_ldl.optimize(back_opt=True, chains_opt=True)
+
 # 生成代码
+is_polars = False
+if is_polars:
+    from expr_codegen.polars.code import codegen
+else:
+    from expr_codegen.pandas.code import codegen
+
+output_file = 'output_alpha101.py'
 codes = codegen(exprs_ldl, exprs_src)
 
-# TODO: 保存文件
-output_file = 'output_alpha101.py'
-with open(output_file, 'w') as f:
-    f.write(codes)
-
-# reformat
-os.system(f'python -m black -l 500 {output_file}')
+# TODO: reformat & output
+res = format_str(codes, mode=Mode(line_length=500))
+with open(output_file, 'w', encoding='utf-8') as f:
+    f.write(res)

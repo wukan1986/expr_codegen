@@ -18,10 +18,12 @@ setuptools.setup(
     url="https://github.com/wukan1986/sympy_polars",
     packages=setuptools.find_packages(),
     install_requires=[
-        'sympy',
-        'Jinja2',
         'black',
+        'Jinja2',
         'loguru',
+        'streamlit',
+        'streamlit-ace',
+        'sympy',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

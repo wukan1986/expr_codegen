@@ -1,4 +1,6 @@
-sympy
-Jinja2
 black
+Jinja2
 loguru
+streamlit
+streamlit-ace
+sympy
