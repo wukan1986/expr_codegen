@@ -16,7 +16,7 @@ from expr_codegen.tool import ExprTool, ts_sum__to__ts_mean, cs_rank__drop_dupli
 # TODO: 因子。请根据需要补充
 OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
 RETURNS, VWAP, CAP, = symbols('RETURNS, VWAP, CAP, ', cls=Symbol)
-ADV5, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV180, = symbols('ADV5, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV180,', cls=Symbol)
+ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180, = symbols('ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,', cls=Symbol)
 
 SECTOR, INDUSTRY, SUBINDUSTRY, = symbols('sector, industry, subindustry, ', cls=Symbol)
 
@@ -100,29 +100,46 @@ exprs_src = {
     "alpha_059": (-1 * ts_rank(ts_decay_linear(ts_corr(gp_neutralize(INDUSTRY, ((VWAP * 0.728317) + (VWAP * (1 - 0.728317)))), VOLUME, 4.25197), 16.2289), 8.19648)),
     "alpha_060": (0 - (1 * ((2 * cs_scale(cs_rank(((((CLOSE - LOW) - (HIGH - CLOSE)) / (HIGH - LOW)) * VOLUME)), 1)) - cs_scale(cs_rank(ts_arg_max(CLOSE, 10)), 1)))),
     "alpha_061": (cs_rank((VWAP - ts_min(VWAP, 16.1219))) < cs_rank(ts_corr(VWAP, ADV180, 17.9282))),
-    # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'。<*-1不合法
-    # "alpha_062": ((cs_rank(ts_corr(VWAP, ts_sum(ADV20, 22.4101), 9.91009)) < cs_rank(((cs_rank(OPEN) + cs_rank(LOW)) < (cs_rank(((HIGH + LOW) / 2)) + cs_rank(HIGH))))) * -1)
-    # "alpha_063": (((HIGH * LOW) ** 0.5) - VWAP),
+    # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'
+    # AttributeError: 'StrictLessThan' object has no attribute 'diff'
+    # "alpha_062": if_else((cs_rank(ts_corr(VWAP, ts_sum(ADV20, 22.4101), 9.91009)) < cs_rank(((cs_rank(OPEN) + cs_rank(OPEN)) < (cs_rank(((HIGH + LOW) / 2)) + cs_rank(HIGH))))), -1, 0),
+    "alpha_063": ((cs_rank(ts_decay_linear(ts_delta(gp_neutralize(INDUSTRY, CLOSE), 2.25164), 8.22237)) - cs_rank(ts_decay_linear(ts_corr(((VWAP * 0.318108) + (OPEN * (1 - 0.318108))), ts_sum(ADV180, 37.2467), 13.557), 12.2883))) * -1),
+    "alpha_064": if_else((cs_rank(ts_corr(ts_sum(((OPEN * 0.178404) + (LOW * (1 - 0.178404))), 12.7054), ts_sum(ADV120, 12.7054), 16.6208)) < cs_rank(ts_delta(((((HIGH + LOW) / 2) * 0.178404) + (VWAP * (1 - 0.178404))), 3.69741))), -1, 0),
+    "alpha_065": if_else((cs_rank(ts_corr(((OPEN * 0.00817205) + (VWAP * (1 - 0.00817205))), ts_sum(ADV60, 8.6911), 6.40374)) < cs_rank((OPEN - ts_min(OPEN, 13.635)))), -1, 0),
     "alpha_066": ((cs_rank(ts_decay_linear(ts_delta(VWAP, 3.51013), 7.23052)) + ts_rank(ts_decay_linear(((((LOW * 0.96633) + (LOW * (1 - 0.96633))) - VWAP) / (OPEN - ((HIGH + LOW) / 2))), 11.4157), 6.72611)) * -1),
+    "alpha_067": ((cs_rank((HIGH - ts_min(HIGH, 2.14593))) ** cs_rank(ts_corr(gp_neutralize(SECTOR, VWAP), gp_neutralize(SUBINDUSTRY, ADV20), 6.02936))) * -1),
+    "alpha_068": if_else((ts_rank(ts_corr(cs_rank(HIGH), cs_rank(ADV15), 8.91644), 13.9333) < cs_rank(ts_delta(((CLOSE * 0.518371) + (LOW * (1 - 0.518371))), 1.06157))), -1, 0),
+    "alpha_069": ((cs_rank(ts_max(ts_delta(gp_neutralize(INDUSTRY, VWAP), 2.72412), 4.79344)) ** ts_rank(ts_corr(((CLOSE * 0.490655) + (VWAP * (1 - 0.490655))), ADV20, 4.92416), 9.0615)) * -1),
+    "alpha_070": ((cs_rank(ts_delta(VWAP, 1.29456)) ** ts_rank(ts_corr(gp_neutralize(INDUSTRY, CLOSE), ADV50, 17.8256), 17.9171)) * -1),
     "alpha_071": max(ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 3.43976), ts_rank(ADV180, 12.0647), 18.0175), 4.20501), 15.6948), ts_rank(ts_decay_linear((cs_rank(((LOW + OPEN) - (VWAP + VWAP))) ** 2), 16.4662), 4.4388)),
     "alpha_072": (cs_rank(ts_decay_linear(ts_corr(((HIGH + LOW) / 2), ADV40, 8.93345), 10.1519)) / cs_rank(ts_decay_linear(ts_corr(ts_rank(VWAP, 3.72469), ts_rank(VOLUME, 18.5188), 6.86671), 2.95011))),
     "alpha_073": (max(cs_rank(ts_decay_linear(ts_delta(VWAP, 4.72775), 2.91864)), ts_rank(ts_decay_linear(((ts_delta(((OPEN * 0.147155) + (LOW * (1 - 0.147155))), 2.03608) / ((OPEN * 0.147155) + (LOW * (1 - 0.147155)))) * -1), 3.33829), 16.7411)) * -1),
-    # "alpha_074": ((cs_rank(ts_corr(CLOSE, ts_sum(ADV30, 37.4843), 15.1365)) < cs_rank(ts_corr(cs_rank(((HIGH * 0.0261661) + (VWAP * (1 - 0.0261661)))), cs_rank(VOLUME), 11.4791))) * -1),
+    "alpha_074": if_else((cs_rank(ts_corr(CLOSE, ts_sum(ADV30, 37.4843), 15.1365)) < cs_rank(ts_corr(cs_rank(((HIGH * 0.0261661) + (VWAP * (1 - 0.0261661)))), cs_rank(VOLUME), 11.4791))), -1, 0),
     "alpha_075": (cs_rank(ts_corr(VWAP, VOLUME, 4.24304)) < cs_rank(ts_corr(cs_rank(LOW), cs_rank(ADV50), 12.4413))),
-    # "alpha_076":,
+    "alpha_076": (max(cs_rank(ts_decay_linear(ts_delta(VWAP, 1.24383), 11.8259)), ts_rank(ts_decay_linear(ts_rank(ts_corr(gp_neutralize(SECTOR, LOW), ADV81, 8.14941), 19.569), 17.1543), 19.383)) * -1),
     "alpha_077": min(cs_rank(ts_decay_linear(((((HIGH + LOW) / 2) + HIGH) - (VWAP + HIGH)), 20.0451)), cs_rank(ts_decay_linear(ts_corr(((HIGH + LOW) / 2), ADV40, 3.1614), 5.64125))),
     "alpha_078": (cs_rank(ts_corr(ts_sum(((LOW * 0.352233) + (VWAP * (1 - 0.352233))), 19.7428), ts_sum(ADV40, 19.7428), 6.83313)) ** cs_rank(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 5.77492))),
+    "alpha_079": (cs_rank(ts_delta(gp_neutralize(SECTOR, ((CLOSE * 0.60733) + (OPEN * (1 - 0.60733)))), 1.23438)) < cs_rank(ts_corr(ts_rank(VWAP, 3.60973), ts_rank(ADV150, 9.18637), 14.6644))),
+    "alpha_080": ((cs_rank(sign(ts_delta(gp_neutralize(INDUSTRY, ((OPEN * 0.868128) + (HIGH * (1 - 0.868128)))), 4.04545))) ** ts_rank(ts_corr(HIGH, ADV10, 5.11456), 5.53756)) * -1),
+    # "alpha_081":((rank(Log(product(rank((rank(correlation(vwap, sum(adv10, 49.6054), 8.47743))^4)), 14.9655))) < rank(correlation(rank(vwap), rank(volume), 5.07914))) * -1),
+    "alpha_082": (min(cs_rank(ts_decay_linear(ts_delta(OPEN, 1.46063), 14.8717)), ts_rank(ts_decay_linear(ts_corr(gp_neutralize(SECTOR, VOLUME), ((OPEN * 0.634196) + (OPEN * (1 - 0.634196))), 17.4842), 6.92131), 13.4283)) * -1),
     "alpha_083": ((cs_rank(ts_delay(((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)), 2)) * cs_rank(cs_rank(VOLUME))) / (((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)) / (VWAP - CLOSE))),
     "alpha_084": signed_power(ts_rank((VWAP - ts_max(VWAP, 15.3217)), 20.7127), ts_delta(CLOSE, 4.96796)),
     "alpha_085": (cs_rank(ts_corr(((HIGH * 0.876703) + (CLOSE * (1 - 0.876703))), ADV30, 9.61331)) ** cs_rank(ts_corr(ts_rank(((HIGH + LOW) / 2), 3.70596), ts_rank(VOLUME, 10.1595), 7.11408))),
-    # "alpha_086": ((ts_rank(ts_corr(CLOSE, ts_sum(ADV20, 14.7444), 6.00049), 20.4195) < cs_rank(((OPEN + CLOSE) - (VWAP + OPEN)))) * -1),
+    "alpha_086": if_else((ts_rank(ts_corr(CLOSE, ts_sum(ADV20, 14.7444), 6.00049), 20.4195) < cs_rank(((OPEN + CLOSE) - (VWAP + OPEN)))), -1, 0),
+    "alpha_087": (max(cs_rank(ts_decay_linear(ts_delta(((CLOSE * 0.369701) + (VWAP * (1 - 0.369701))), 1.91233), 2.65461)), ts_rank(ts_decay_linear(abs(ts_corr(gp_neutralize(INDUSTRY, ADV81), CLOSE, 13.4132)), 4.89768), 14.4535)) * -1),
     "alpha_088": min(cs_rank(ts_decay_linear(((cs_rank(OPEN) + cs_rank(LOW)) - (cs_rank(HIGH) + cs_rank(CLOSE))), 8.06882)), ts_rank(ts_decay_linear(ts_corr(ts_rank(CLOSE, 8.44728), ts_rank(ADV60, 20.6966), 8.01266), 6.65053), 2.61957)),
+    "alpha_089": (ts_rank(ts_decay_linear(ts_corr(((LOW * 0.967285) + (LOW * (1 - 0.967285))), ADV10, 6.94279), 5.51607), 3.79744) - ts_rank(ts_decay_linear(ts_delta(gp_neutralize(INDUSTRY, VWAP), 3.48158), 10.1466), 15.3012)),
+    "alpha_090": ((cs_rank((CLOSE - ts_max(CLOSE, 4.66719))) ** ts_rank(ts_corr(gp_neutralize(SUBINDUSTRY, ADV40), LOW, 5.38375), 3.21856)) * -1),
+    "alpha_091": ((ts_rank(ts_decay_linear(ts_decay_linear(ts_corr(gp_neutralize(INDUSTRY, CLOSE), VOLUME, 9.74928), 16.398), 3.83219), 4.8667) - cs_rank(ts_decay_linear(ts_corr(VWAP, ADV30, 4.01303), 2.6809))) * -1),
     "alpha_092": min(ts_rank(ts_decay_linear(((((HIGH + LOW) / 2) + CLOSE) < (LOW + OPEN)), 14.7221), 18.8683), ts_rank(ts_decay_linear(ts_corr(cs_rank(LOW), cs_rank(ADV30), 7.58555), 6.94024), 6.80584)),
     "alpha_094": ((cs_rank((VWAP - ts_min(VWAP, 11.5783))) ** ts_rank(ts_corr(ts_rank(VWAP, 19.6462), ts_rank(ADV60, 4.02992), 18.0926), 2.70756)) * -1),
     "alpha_095": (cs_rank((OPEN - ts_min(OPEN, 12.4105))) < ts_rank((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.1351), ts_sum(ADV40, 19.1351), 12.8742)) ** 5), 11.7584)),
     "alpha_096": (max(ts_rank(ts_decay_linear(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 3.83878), 4.16783), 8.38151), ts_rank(ts_decay_linear(ts_arg_max(ts_corr(ts_rank(CLOSE, 7.45404), ts_rank(ADV60, 4.13242), 3.65459), 12.6556), 14.0365), 13.4143)) * -1),
+    "alpha_097": ((cs_rank(ts_decay_linear(ts_delta(gp_neutralize(INDUSTRY, ((LOW * 0.721001) + (VWAP * (1 - 0.721001)))), 3.3705), 20.4523)) - ts_rank(ts_decay_linear(ts_rank(ts_corr(ts_rank(LOW, 7.87871), ts_rank(ADV60, 17.255), 4.97547), 18.5925), 15.7152), 6.71659)) * -1),
     "alpha_098": (cs_rank(ts_decay_linear(ts_corr(VWAP, ts_sum(ADV5, 26.4719), 4.58418), 7.18088)) - cs_rank(ts_decay_linear(ts_rank(ts_arg_min(ts_corr(cs_rank(OPEN), cs_rank(ADV15), 20.8187), 8.62571), 6.95668), 8.07206))),
-    # "alpha_099": ((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.8975), ts_sum(ADV60, 19.8975), 8.8136)) < cs_rank(ts_corr(LOW, VOLUME, 6.28259))) * -1),
+    "alpha_099": if_else((cs_rank(ts_corr(ts_sum(((HIGH + LOW) / 2), 19.8975), ts_sum(ADV60, 19.8975), 8.8136)) < cs_rank(ts_corr(LOW, VOLUME, 6.28259))), -1, 0),
+    "alpha_100": (0 - (1 * (((1.5 * cs_scale(gp_neutralize(SUBINDUSTRY, gp_neutralize(SUBINDUSTRY, cs_rank(((((CLOSE - LOW) - (HIGH - CLOSE)) / (HIGH - LOW)) * VOLUME)))))) - cs_scale(gp_neutralize(SUBINDUSTRY, (ts_corr(CLOSE, cs_rank(ADV20), 5) - cs_rank(ts_arg_min(CLOSE, 30)))))) * (VOLUME / ADV20)))),
     "alpha_101": ((CLOSE - OPEN) / ((HIGH - LOW) + 0.001)),
 }
 

@@ -99,6 +99,10 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
 2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
 
+`sympy`不支持`bool`转`int`。例如：
+1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
+2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
+
 ## 示例片段
 
 需要转译的部分公式，详细代码请参考 [Demo](examples/demo_cn.py)
