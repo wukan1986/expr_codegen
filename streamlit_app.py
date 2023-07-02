@@ -1,8 +1,9 @@
 import re
 
 import streamlit as st
-from streamlit_ace import st_ace
+import sympy
 from black import format_str, Mode
+from streamlit_ace import st_ace
 from sympy import symbols, Symbol, Function, numbered_symbols
 
 from expr_codegen.expr import ExprInspectByPrefix
@@ -64,8 +65,6 @@ with st.expander(label="预定义的**因子**和**算子**"):
     with st.echo():
         # 常见因子
         OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
-        # 预留因子(可以在生成代码后，在编辑器中查找替换成自己的因子)
-        FACTOR1, FACTOR2, FACTOR3, FACTOR4, FACTOR5, = symbols('FACTOR1, FACTOR2, FACTOR3, FACTOR4, FACTOR5, ', cls=Symbol)
 
         # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
         log, sign, abs, = symbols('log, sign, abs, ', cls=Function)
@@ -85,16 +84,22 @@ with st.expander(label="预定义的**因子**和**算子**"):
         # TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
         gp_neutralize, = symbols('gp_neutralize, ', cls=Function)
 
+    st.subheader('自定义因子')
+    factors = st.text_input(label='可覆写已定义因子', value='OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ')
+    sympy.var(factors)
+
 st.subheader('自定义表达式')
-exprs_src = st_ace(value="""alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
+exprs_src = st_ace(value="""# 请在此添加表达式，`=`右边为表达式，`=`左边为输出因子名。
+alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
 alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
-alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)""",
+alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
+""",
                    language="python",
                    )
 
 # eval处理，转成字典
 exprs_src = [expr.split('=') for expr in exprs_src.splitlines() if '=' in expr]
-exprs_src = {expr[0].strip(): safe_eval(expr[1].strip(), globals()) for expr in exprs_src}
+exprs_src = {expr[0].strip(): safe_eval(expr[1].strip(), globals()) for expr in exprs_src if '#' not in expr[0]}
 
 # 子表达式在前，原表式在最后
 exprs_dst = tool.merge(**exprs_src)
