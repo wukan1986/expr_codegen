@@ -25,6 +25,8 @@ def safe_eval(string, dict):
     return eval(code, dict)
 
 
+st.set_page_config(page_title='Expr Codegen', layout="wide")
+
 st.title('表达式转译代码')
 
 with st.sidebar:
@@ -51,6 +53,10 @@ with st.sidebar:
 [问题反馈](http://github.com/wukan1986/expr_codegen/issues)
 
 作者: wukan
+
+声明：
+1. 本站点不存储用户输入的表达式，安全保密可放心
+2. 生成的代码可能有错，发现后请及时反馈
     """)
 
 with st.expander(label="预定义的**因子**和**算子**"):
