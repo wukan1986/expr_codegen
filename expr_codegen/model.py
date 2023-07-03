@@ -4,6 +4,29 @@ from itertools import product
 from expr_codegen.expr import CL, GP
 
 
+class DictList:
+    def __init__(self):
+        self._dict = {}
+
+    def append(self, k, v):
+        l = self._dict.get(k, None)
+        if l is None:
+            l = [v]
+            self._dict[k] = l
+        else:
+            l.append(v)
+
+    def clear(self):
+        """清空"""
+        self._dict = {}
+
+    def values(self):
+        return self._dict
+
+    def get(self, key):
+        return self._dict.get(key, None)
+
+
 class ListDictList:
     """嵌套列表
 
@@ -78,7 +101,7 @@ class ListDictList:
                 last_v = v
                 last_k = k
 
-    def optimize(self, back_opt=True, chains_opt=True):
+    def optimize(self, back_opt=True, chain_opt=True):
         """将多组groupby根据规则进行合并，减少运行时间
 
         back_opt和chains_opt时。例如：ts、cl、ts，会先变成ts、ts，然后变成ts。大大提高速度
@@ -87,7 +110,7 @@ class ListDictList:
         ----------
         back_opt:
             不需要groupby的组，其实是可以直接合并到前一组的。例如‘+’，即可以放时序组中也可以放横截面组中
-        chains_opt:
+        chain_opt:
             首尾接龙优化。同一层的组进行重排序，让多层形成首尾接龙的，第二组的头中的列表可以合并到前一组尾。
             如： 第一层最后的时序分组和第二层开始的时序分组是可以一起计算的
 
@@ -97,12 +120,12 @@ class ListDictList:
             self.filter_empty()
 
         # 接龙。groupby的数量没少，首尾接龙数据比较整齐
-        chains, head, tail = chains_create(self._list)
-        self._list, new_head, new_tail = chains_sort(self._list, chains, head, tail)
+        chains, head, tail = chain_create(self._list)
+        self._list, new_head, new_tail = chain_sort(self._list, chains, head, tail)
 
-        if chains_opt:
+        if chain_opt:
             # 将数据从第二的龙头复制到第一行的龙尾
-            chains_move(new_head, new_tail)
+            chain_move(new_head, new_tail)
             self.filter_empty()
 
         # 执行第二次，解决接龙后，还有部分没有合并的情况
@@ -111,7 +134,7 @@ class ListDictList:
             self.filter_empty()
 
 
-def chains_create(nested_list):
+def chain_create(nested_list):
     """接龙。多个列表，头尾相连"""
     # 两两取交集，交集为{}时，添加一个{None}，防止product时出错
     neighbor_inter = [set(x) & set(y) or {None} for x, y in zip(nested_list[:-1], nested_list[1:])]
@@ -150,7 +173,7 @@ def chains_create(nested_list):
     return arr, head, tail
 
 
-def chains_sort(old_ldl, chains, head, tail):
+def chain_sort(old_ldl, chains, head, tail):
     """三层嵌套结构根据接龙表进行复制"""
     new_ldl = []
     new_head = []
@@ -170,7 +193,7 @@ def chains_sort(old_ldl, chains, head, tail):
     return new_ldl, new_head, new_tail
 
 
-def chains_move(head, tail):
+def chain_move(head, tail):
     """龙头复制到上一个龙尾"""
     for hh, tt in reversed(list(zip(head[1:], tail[:-1]))):
         tt.extend(hh)

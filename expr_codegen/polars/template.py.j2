@@ -53,9 +53,16 @@ logger.info("start...")
 {% for row in exprs_dst %}
 {{ row-}}
 {% endfor %}
-{% for key, value in exprs_src.items() %}
-# {{ key }} = {{ value-}}
+
+"""
+{{ syms_dst }}
+"""
+
+"""
+{%-for key, value in exprs_src.items() %}
+{{ key }} = {{ value-}}
 {% endfor %}
+"""
 
 # drop intermediate columns
 df = df.drop(columns=filter(lambda x: re.search(r'^x_\d+', x), df.columns))

@@ -1,7 +1,6 @@
 from black import format_str, Mode
 from sympy import symbols, Symbol, Function, numbered_symbols
 
-from expr_codegen.expr import ExprInspectByPrefix, ExprInspectByName
 # codegen工具类
 from expr_codegen.tool import ExprTool
 
@@ -34,28 +33,18 @@ exprs_src = {
     "expr_7": ts_delta(OPEN + 1, 10),
 }
 
-# 根据算子前缀进行算子分类
-inspect1 = ExprInspectByPrefix()
-
-# TODO: 根据算子名称进行算子分类，名称不确定，所以需指定。如没有用到可不管理
-inspect2 = ExprInspectByName(
-    ts_names={ts_delay, ts_delta, ts_mean, ts_corr, },
-    cs_names={cs_rank, },
-    gp_names={gp_rank, },
-)
-
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
-tool = ExprTool(date='date', asset='asset', inspect=inspect1)
+tool = ExprTool(date='date', asset='asset')
 
 # 子表达式在前，原表式在最后
-exprs_dst = tool.merge(**exprs_src)
+exprs_dst, syms_dst = tool.merge(**exprs_src)
 
 # 提取公共表达式
 graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 # 有向无环图流转
 exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
-exprs_ldl.optimize(back_opt=True, chains_opt=True)
+exprs_ldl.optimize(back_opt=True, chain_opt=True)
 
 # 生成代码
 is_polars = False
@@ -68,7 +57,7 @@ else:
 
     output_file = 'output_pandas.py'
 
-codes = codegen(exprs_ldl, exprs_src)
+codes = codegen(exprs_ldl, exprs_src, syms_dst)
 
 # TODO: reformat & output
 res = format_str(codes, mode=Mode(line_length=500))

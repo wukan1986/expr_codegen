@@ -28,7 +28,7 @@ def get_groupby_from_tuple(tup, func_name):
     return f'df = {func_name}(df)'
 
 
-def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
+def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.j2'):
     """基于模板的代码生成"""
     # 打印Polars风格代码
     p = PolarsStrPrinter()
@@ -67,4 +67,4 @@ def codegen(exprs_ldl: ListDictList, exprs_src, filename='template.py.j2'):
     env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
     template = env.get_template(filename)
     return template.render(funcs=funcs, groupbys=groupbys,
-                           exprs_src=exprs_src, exprs_dst=exprs_dst)
+                           exprs_src=exprs_src, syms_dst=syms_dst, exprs_dst=exprs_dst)
