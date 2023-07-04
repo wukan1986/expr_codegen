@@ -1,23 +1,12 @@
 from black import format_str, Mode
-from sympy import symbols, Symbol, Function, numbered_symbols
+from sympy import numbered_symbols
 
+from examples.sympy_define import *
 # codegen工具类
-from expr_codegen.tool import ExprTool
-
-# !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
+from expr_codegen.tool import ExprTool, dag_ready
 
 # TODO: 因子。请根据需要补充
-OPEN, HIGH, LOW, CLOSE, VOLUME, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, ', cls=Symbol)
 sw_l1, = symbols('sw_l1, ', cls=Symbol)
-
-# TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
-log, sign, abs, = symbols('log, sign, abs, ', cls=Function)
-
-# TODO: 时序算子。需要提前按资产分组，组内按时间排序。请根据需要补充。必需以`ts_`开头
-ts_delay, ts_delta, ts_mean, ts_corr, = symbols('ts_delay, ts_delta, ts_mean, ts_corr, ', cls=Function)
-
-# TODO: 横截面算子。需要提前按时间分组。请根据需要补充。必需以`cs_`开头
-cs_rank, = symbols('cs_rank, ', cls=Function)
 
 # TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
 gp_rank, = symbols('gp_rank, ', cls=Function)
@@ -42,7 +31,7 @@ exprs_dst, syms_dst = tool.merge(**exprs_src)
 # 提取公共表达式
 graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 # 有向无环图流转
-exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
+exprs_ldl = dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
 exprs_ldl.optimize(back_opt=True, chain_opt=True)
 

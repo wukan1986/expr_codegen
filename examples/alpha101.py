@@ -1,37 +1,11 @@
 # File > Settings... > Editor > Code Style > Hard wrap at > 300
 from black import Mode, format_str
-from sympy import symbols, Symbol, Function, numbered_symbols, Eq
+from sympy import numbered_symbols
 
+from examples.sympy_define import *
 from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one
 # codegen工具类
-from expr_codegen.tool import ExprTool
-
-# !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
-
-# TODO: 因子。请根据需要补充
-OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
-RETURNS, VWAP, CAP, = symbols('RETURNS, VWAP, CAP, ', cls=Symbol)
-ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180, = symbols('ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,', cls=Symbol)
-
-SECTOR, INDUSTRY, SUBINDUSTRY, = symbols('SECTOR, INDUSTRY, SUBINDUSTRY, ', cls=Symbol)
-
-# TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
-log, sign, abs, = symbols('log, sign, abs, ', cls=Function)
-max, min, = symbols('max, min, ', cls=Function)
-if_else, signed_power, = symbols('if_else, signed_power, ', cls=Function)
-
-# TODO: 时序算子。需要提前按资产分组，组内按时间排序。请根据需要补充。必需以`ts_`开头
-ts_delay, ts_delta, = symbols('ts_delay, ts_delta, ', cls=Function)
-ts_arg_max, ts_arg_min, ts_max, ts_min, = symbols('ts_arg_max, ts_arg_min, ts_max, ts_min, ', cls=Function)
-ts_sum, ts_mean, ts_decay_linear, = symbols('ts_sum, ts_mean, ts_decay_linear, ', cls=Function)
-ts_std_dev, ts_corr, ts_covariance, = symbols('ts_std_dev, ts_corr, ts_covariance,', cls=Function)
-ts_rank, = symbols('ts_rank, ', cls=Function)
-
-# TODO: 横截面算子。需要提前按时间分组。请根据需要补充。必需以`cs_`开头
-cs_rank, cs_scale, = symbols('cs_rank, cs_scale, ', cls=Function)
-
-# TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
-gp_neutralize, = symbols('gp_neutralize, ', cls=Function)
+from expr_codegen.tool import ExprTool, dag_ready
 
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
@@ -141,7 +115,7 @@ exprs_src = {
 }
 
 # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-exprs_src = {k: ts_sum__to__ts_mean(v, ts_mean) for k, v in exprs_src.items()}
+exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
 # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
 exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
 # 1.0*VWAP转VWAP
@@ -156,9 +130,9 @@ exprs_dst, syms_dst = tool.merge(**exprs_src)
 # 提取公共表达式
 graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 # 有向无环图流转
-exprs_ldl = tool.dag_ready(graph_dag, graph_key, graph_exp)
+exprs_ldl = dag_ready(graph_dag, graph_key, graph_exp)
 # 是否优化
-exprs_ldl.optimize(back_opt=True, chain_opt=True)
+exprs_ldl.optimize(back_opt=False, chain_opt=True)
 
 # 生成代码
 is_polars = False

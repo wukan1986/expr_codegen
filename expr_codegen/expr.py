@@ -1,14 +1,17 @@
 import re
 from functools import reduce
 
-from sympy import Mul, preorder_traversal
+from sympy import Mul, preorder_traversal, symbols, Function
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
-CL = 'cl'  # 列算子
-TS = 'ts'  # 时序算子
-CS = 'cs'  # 横截面算子
-GP = 'gp'  # 分组算子。分组越小，速度越慢
+CL = 'cl'  # 列算子, column
+TS = 'ts'  # 时序算子, time-series
+CS = 'cs'  # 横截面算子 cross section
+GP = 'gp'  # 分组算子。group 分组越小，速度越慢
+
+CL_TUP = (CL,)  # 整列元组
+CL_SET = set([CL_TUP])  # 整列集合
 
 
 def append_node(node, output_exprs):
@@ -70,7 +73,13 @@ def is_NegativeX(expr):
     return False
 
 
-def get_current_by_prefix(expr, date, asset, *args, **kwargs):
+def get_current_by_prefix(expr, date, asset, **kwargs):
+    """表达式根节点信息。按名称前缀。例如
+
+    OPEN取的是OPEN，得cl
+    ts_mean取的ts_mean,得ts
+    -ts_mean取的是-,得cl
+    """
     if expr.is_Function:
         if hasattr(expr, 'name'):  # Or 没有名字
             prefix1 = expr.name[2]
@@ -84,10 +93,23 @@ def get_current_by_prefix(expr, date, asset, *args, **kwargs):
                 if prefix2 == GP:
                     return GP, date, expr.args[0].name
     # 不需分组
-    return CL,
+    return CL_TUP
 
 
-def get_current_by_name(expr, date, asset, ts_names, cs_names, gp_names, *args, **kwargs):
+def get_current_by_name(expr, date, asset, ts_names, cs_names, gp_names, **kwargs):
+    """表达式根节点信息。按名称。
+
+    Parameters
+    ----------
+    ts_names
+        时序算子名称字符串集合
+    cs_names
+        横截面算子名称字符串集合
+    gp_names
+        分组算子名称字符串集合
+    kwargs
+
+    """
     if expr.is_Function:
         if hasattr(expr, 'name'):  # Or 没有名字
             if expr.name in ts_names:
@@ -98,25 +120,54 @@ def get_current_by_name(expr, date, asset, ts_names, cs_names, gp_names, *args, 
                 return GP, date, expr.args[0].name
 
     # 不需分组
-    return CL,
+    return CL_TUP
 
 
+# 调试用，勿删
 # __level__ = 0
 
 
-def get_children(func, config, expr, output_exprs, output_symbols, date, asset):
+def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, asset):
+    """表达式整体信息。例如
+
+    -ts_corr返回{ts}而不是 {cl}
+    -ts_corr+cs_rank返回{ts,cs}
+    -OPEN-CLOSE返回{cl}
+
+    Parameters
+    ----------
+    func
+        表达式根分类函数
+    func_kwargs
+        func对应的参数字典
+    expr
+        表达式
+    output_exprs
+        输出分割后的了表达式
+    output_symbols
+        输出每个子表达式中的符号
+    date
+        分组用的日期字段名
+    asset
+        分组用的资产字段名
+
+    Returns
+    -------
+
+    """
     # global __level__
     # __level__ += 1
 
     try:
-        curr = func(expr, date, asset, **config)
-        children = [get_children(func, config, a, output_exprs, output_symbols, date, asset) for a in expr.args]
+        curr = func(expr, date, asset, **func_kwargs)
+        children = [get_children(func, func_kwargs, a, output_exprs, output_symbols, date, asset) for a in expr.args]
 
+        # print(expr, curr, children)
         # if __level__ == 1:
         #     print(expr, curr, children)
 
         # 多个集合合成一个去重
-        unique = reduce(lambda x, y: x | y, children, set())
+        unique = reduce(lambda x, y: x | y, children, set()) - CL_SET
 
         if len(unique) >= 2:
             # 大于1，表示内部不统一，内部都要处理
@@ -152,34 +203,35 @@ def get_children(func, config, expr, output_exprs, output_symbols, date, asset):
         pass
 
 
-def get_key(func, config, expr, date, asset):
-    """当前表达式，存字典时的 键
+def get_key(children):
+    """!!!此函数只能在先抽取出子表达式后再cse，然后才能调用。否则报错。
+
+    为了保证expr能正确分组，只有一种分法
 
     Parameters
     ----------
-    expr
-        表达式
-    date
-        日期字段名
-    asset
-        资产字段名
+
 
     Returns
     -------
     用于字典的键
 
     """
-    tup = get_children(func, config, expr, [], [], date=date, asset=asset)
-
-    if len(tup) == 0:
-        return CL,
+    if len(children) == 0:
+        # OPEN等因子会走这一步
+        return CL_TUP
+    elif len(children) == 1:
+        # 只有一种分法，最合适的方法
+        return list(children)[0]
     else:
-        # TODO: 取首个是否会有问题？
-        return list(tup)[0]
+        assert False, f'{children} 无法正确分类，之前没有分清'
 
 
-def ts_sum__to__ts_mean(e, ts_mean):
+def ts_sum__to__ts_mean(e):
     """将ts_sum(x, y)/y 转成 ts_mean(x, y)"""
+    # TODO: 这里重新定义的ts_mean与外部已经定义好的是否同一个？
+    ts_mean = symbols('ts_mean', cls=Function)
+
     replacements = []
     for node in preorder_traversal(e):
         if node.is_Mul and node.args[0].is_Rational and node.args[1].is_Function:

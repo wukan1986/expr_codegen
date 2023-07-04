@@ -24,7 +24,7 @@ class DictList:
         return self._dict
 
     def get(self, key):
-        return self._dict.get(key, None)
+        return self._dict.get(key, [])
 
 
 class ListDictList:

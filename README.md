@@ -16,7 +16,9 @@ polars语法不同于pandas,也不同于常见的表达式，导致学习难度�
 2. Pandas
 
 还有很多算子还没实现完全，欢迎贡献代码
+
 ## 在线演示
+
 https://exprcodegen.streamlit.app
 
 初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。
@@ -84,8 +86,8 @@ https://exprcodegen.streamlit.app
 
 两种分类方法
 
-1. 根据算子前缀分类(`ExprInspectByPrefix`)，限制算子必需以`ts_`、`cs_`、`gp_`开头
-2. 根据算子全名分类(`ExprInspectByName`), 不再限制算子名。比如`cs_rank`可以叫`rank`
+1. 根据算子前缀分类(`get_current_by_prefix`)，限制算子必需以`ts_`、`cs_`、`gp_`开头
+2. 根据算子全名分类(`get_current_by_name`), 不再限制算子名。比如`cs_rank`可以叫`rank`
 
 ## 二次开发
 
@@ -100,11 +102,14 @@ https://exprcodegen.streamlit.app
 2. 目前表达式样式优先向WorldQuant 的 Alpha101 靠齐
 
 ## 小技巧
+
 `sympy`不支持`==`，而是当成两个对象比较。例如：
+
 1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
 2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
 
 `sympy`不支持`bool`转`int`。例如：
+
 1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
 2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
 
