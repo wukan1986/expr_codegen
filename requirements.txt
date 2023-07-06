@@ -4,3 +4,4 @@ loguru
 streamlit
 streamlit-ace
 sympy
+networkx

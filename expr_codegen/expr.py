@@ -11,7 +11,7 @@ CS = 'cs'  # 横截面算子 cross section
 GP = 'gp'  # 分组算子。group 分组越小，速度越慢
 
 CL_TUP = (CL,)  # 整列元组
-CL_SET = set([CL_TUP])  # 整列集合
+CL_SET = {CL_TUP}  # 整列集合
 
 
 def append_node(node, output_exprs):
@@ -162,8 +162,8 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, as
         curr = func(expr, date, asset, **func_kwargs)
         children = [get_children(func, func_kwargs, a, output_exprs, output_symbols, date, asset) for a in expr.args]
 
-        # print(expr, curr, children)
-        # if __level__ == 1:
+        # print(expr, curr, children, __level__)
+        # if __level__ == 6:
         #     print(expr, curr, children)
 
         # 多个集合合成一个去重
@@ -187,6 +187,11 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, as
                     # print(expr.args[i], 'is_Atom 2')
                     continue
                 output_exprs = append_node(expr.args[i], output_exprs)
+        else:
+            # ts_sum(OPEN, 5)*ts_sum(RETURNS, 5) ('cl',) [{('ts', 'asset', 'date')}, {('ts', 'asset', 'date')}] 6 alpha_008
+            pass
+            # if isinstance(expr, Mul):
+            #     output_exprs = append_node(expr, output_exprs)
 
         # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
         if curr[0] == CL:
@@ -197,7 +202,7 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, as
             return unique
         else:
             # 当前算子，非列算子，直接返回，如{ts} {cs} {gp}
-            return set([curr])
+            return {curr}
     finally:
         # __level__ -= 1
         pass

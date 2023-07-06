@@ -1,30 +1,11 @@
 from functools import reduce
 from itertools import product
 
-from expr_codegen.expr import CL, GP
+import networkx as nx
+from sympy import symbols
 
-
-class DictList:
-    def __init__(self):
-        self._dict = {}
-
-    def append(self, k, v):
-        l = self._dict.get(k, None)
-        if l is None:
-            l = [v]
-            self._dict[k] = l
-        else:
-            l.append(v)
-
-    def clear(self):
-        """清空"""
-        self._dict = {}
-
-    def values(self):
-        return self._dict
-
-    def get(self, key):
-        return self._dict.get(key, [])
+from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
+from expr_codegen.expr import CL, GP, get_symbols, get_children, get_key, is_NegativeX
 
 
 class ListDictList:
@@ -115,10 +96,6 @@ class ListDictList:
             如： 第一层最后的时序分组和第二层开始的时序分组是可以一起计算的
 
         """
-        if back_opt:
-            self.back_merge()
-            self.filter_empty()
-
         # 接龙。groupby的数量没少，首尾接龙数据比较整齐
         chains, head, tail = chain_create(self._list)
         self._list, new_head, new_tail = chain_sort(self._list, chains, head, tail)
@@ -128,7 +105,7 @@ class ListDictList:
             chain_move(new_head, new_tail)
             self.filter_empty()
 
-        # 执行第二次，解决接龙后，还有部分没有合并的情况
+        # 解决接龙后，还有部分没有合并的情况
         if back_opt:
             self.back_merge()
             self.filter_empty()
@@ -198,3 +175,200 @@ def chain_move(head, tail):
     for hh, tt in reversed(list(zip(head[1:], tail[:-1]))):
         tt.extend(hh)
         hh.clear()
+
+
+# ==========================
+
+def create_dag_exprs(exprs):
+    """根据表达式字典生成DAG"""
+    # 创建有向无环图
+    G = nx.DiGraph()
+
+    for symbol, expr in exprs.items():
+        # 添加中间节点
+        G.add_node(symbol.name, symbol=symbol, expr=expr)
+        syms = get_symbols(expr, return_str=True)
+        for sym in syms:
+            # 由于边的原因，这里会主动生成一些源节点
+            G.add_edge(sym, symbol.name)
+
+    # 源始因子，添加属性
+    for node in zero_indegree(G):
+        s = symbols(node)
+        G.nodes[node]['symbol'] = s
+        G.nodes[node]['expr'] = s
+    return G
+
+
+def init_dag_exprs(G, func, func_kwargs, date, asset):
+    """使用表达式信息初始化DAG"""
+    for i, generation in enumerate(nx.topological_generations(G)):
+        # print(i, generation)
+        for node in generation:
+            expr = G.nodes[node]['expr']
+            syms = []
+            children = get_children(func, func_kwargs, expr, [], syms, date, asset)
+            G.nodes[node]['children'] = children
+            G.nodes[node]['key'] = get_key(children)
+            G.nodes[node]['symbols'] = [str(s) for s in syms]
+            G.nodes[node]['gen'] = i
+            # print(G.nodes[node])
+    return G
+
+
+def merge_nodes_1(G: nx.DiGraph, *args):
+    """合并节点，从当前节点开始，查看是否可能替换前后两端的节点"""
+    # 准备一个当前节点列表
+    this_pred = args
+    # 下一步不为空就继续
+    while this_pred:
+        next_pred = []
+        for node in this_pred:
+            if not G.has_node(node):
+                continue
+            pred = G.pred[node]
+            if len(pred) == 0:
+                # 到了最上层的因子，需停止
+                continue
+            dic = G.nodes[node]
+            key = dic['key']
+            expr = dic['expr']
+            symbols = dic['symbols']
+            if key[0] == CL:
+                if is_NegativeX(expr):
+                    # 检查表达式是否很简单, 是就替换，可能会替换多个
+                    skip_expr_node(G, node)
+                else:
+                    succ = G.succ[node]
+                    # 下游只有一个，直接替换。
+                    if len(succ) == 1:
+                        skip_expr_node(G, node)
+            else:
+                # 复制一次，防止修改后报错
+                for p in pred.copy():
+                    # 在下游同一表达式中使用了多次，不替换
+                    if symbols.count(p) > 1:
+                        continue
+                    d = G.nodes[p]
+                    k = d['key']
+                    e = d['expr']
+                    if key == k:
+                        # 同类型
+                        succ = G.succ[p]
+                        # 下游只有一个，直接替换。
+                        if len(succ) == 1:
+                            skip_expr_node(G, p)
+            next_pred.extend(pred)
+        # 更新下一次循环
+        this_pred = list(set(next_pred))
+    return G
+
+
+def merge_nodes_2(G: nx.DiGraph, *args):
+    """合并节点，从当前节点开始，查看是否需要被替换，只做用于根节点"""
+    # 准备一个当前节点列表
+    this_pred = args
+    # 下一步不为空就继续
+    while this_pred:
+        next_pred = []
+        for node in this_pred:
+            dic = G.nodes[node]
+            expr = dic['expr']
+            if not is_NegativeX(expr):
+                continue
+            pred = G.pred[node]
+            for p in pred.copy():
+                succ = G.succ[p]
+                if len(succ) > 1:
+                    # 上游节点只有一个下游，当前就是自己了
+                    continue
+                skip_expr_node(G, p)
+            # 只做根节点，所以没有下一次了
+            # next_pred.extend(pred)
+        # 更新下一次循环
+        this_pred = list(set(next_pred))
+    return G
+
+
+def get_expr_labels(G, nodes=None):
+    """得到表达式标签"""
+    labels = {}
+    if nodes is None:
+        for n, d in G.nodes(data=True):
+            labels[n] = '{symbol}={expr}'.format(**d)
+    else:
+        for n, d in G.nodes(data=True):
+            if n not in nodes:
+                continue
+            labels[n] = '{symbol}={expr}'.format(**d)
+    return labels
+
+
+def draw_expr_tree(G: nx.DiGraph, root: str, ax=None):
+    """画表达式树"""
+    # 查找上游节点
+    nodes = nx.ancestors(G, root) | {root}
+    labels = get_expr_labels(G, nodes)
+    # 子图
+    view = nx.subgraph(G, nodes)
+    # 位置
+    pos = hierarchy_pos(G, root)
+    nx.draw(view, ax=ax, pos=pos, labels=labels)
+
+
+def skip_expr_node(G: nx.DiGraph, node):
+    """跳过中间节点，将两端的节点直接连接起来，同时更新表达式
+
+    1. (A,B,C) 模式，直接成 (A,C)
+    2. (A,B,C), (D, B) 模式，变成 (A,C),(D,C)
+    """
+    pred = G.pred[node]
+    succ = G.succ[node]
+    if len(pred) == 0 or len(succ) == 0:
+        return G
+
+    # 取当前节点表达式
+    d = G.nodes[node]
+    expr = d['expr']
+    symbol = d['symbol']
+
+    for s in succ:
+        e = G.nodes[s]['expr']
+        e = e.xreplace({symbol: expr})
+        G.nodes[s]['expr'] = e
+
+    # 这里用了product生成多个关联边
+    G.add_edges_from(product(pred, succ))
+    G.remove_node(node)
+    return G
+
+
+def dag_start(exprs_dict, exprs_names, func, func_kwargs, date, asset):
+    G = create_dag_exprs(exprs_dict)
+    G = init_dag_exprs(G, func, func_kwargs, date, asset)
+
+    G = remove_paths_by_zero_outdegree(G, exprs_names)
+    G = merge_nodes_1(G, *exprs_names)
+    G = merge_nodes_2(G, *exprs_names)
+
+    # 由于表达式修改，需再次更新表达式
+    G = init_dag_exprs(G, func, func_kwargs, date, asset)
+
+    # 分层输出
+    return G
+
+
+def dag_end(G):
+    """有向无环图流转"""
+    exprs_ldl = ListDictList()
+
+    for i, generation in enumerate(nx.topological_generations(G)):
+        exprs_ldl.next_row()
+        for node in generation:
+            key = G.nodes[node]['key']
+            expr = G.nodes[node]['expr']
+            exprs_ldl.append(key, (node, expr))
+
+    exprs_ldl._list = exprs_ldl.values()[1:]
+
+    return exprs_ldl

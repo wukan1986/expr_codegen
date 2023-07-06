@@ -3,7 +3,7 @@ from sympy import numbered_symbols
 
 from examples.sympy_define import *
 # codegen工具类
-from expr_codegen.tool import ExprTool, dag_ready
+from expr_codegen.tool import ExprTool
 
 # TODO: 因子。请根据需要补充
 sw_l1, = symbols('sw_l1, ', cls=Symbol)
@@ -29,9 +29,9 @@ tool = ExprTool(date='date', asset='asset')
 exprs_dst, syms_dst = tool.merge(**exprs_src)
 
 # 提取公共表达式
-graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 # 有向无环图流转
-exprs_ldl = dag_ready(graph_dag, graph_key, graph_exp)
+exprs_ldl = tool.dag()
 # 是否优化
 exprs_ldl.optimize(back_opt=True, chain_opt=True)
 

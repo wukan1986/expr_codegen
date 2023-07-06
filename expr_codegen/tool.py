@@ -1,31 +1,7 @@
-from graphlib import TopologicalSorter
-
 from sympy import simplify, cse, symbols
 
-from expr_codegen.expr import is_NegativeX, get_current_by_prefix, get_children, get_key, CL
-from expr_codegen.model import ListDictList, DictList
-
-
-def dag_ready(graph_dag, graph_key, graph_exp):
-    """有向无环图流转"""
-    exprs_ldl = ListDictList()
-
-    ts = TopologicalSorter(graph_dag)
-    ts.prepare()
-
-    nodes = ts.get_ready()  # 基础符号
-    ts.done(*nodes)  # 移动到第二行
-    nodes = ts.get_ready()  # 取第二行结果
-    while len(nodes) > 0:
-        exprs_ldl.next_row()
-        for node in nodes:
-            exprs_ldl.append(graph_key[node], (node, graph_exp[node]))
-        ts.done(*nodes)
-        nodes = ts.get_ready()
-
-    # with open("test.pickle", "wb") as file:
-    #     pickle.dump(exprs_ldl, file)
-    return exprs_ldl
+from expr_codegen.expr import get_current_by_prefix, get_children
+from expr_codegen.model import dag_start, dag_end
 
 
 class ExprTool:
@@ -40,10 +16,12 @@ class ExprTool:
         asset: str
             资产字段名
         """
-        self._date = date
-        self._asset = asset
+        self.date = date
+        self.asset = asset
         self.get_current_func = get_current_by_prefix
         self.get_current_func_kwargs = {}
+        self.exprs_dict = {}
+        self.exprs_names = []
 
     def set_current(self, func, **kwargs):
         self.get_current_func = func
@@ -70,7 +48,7 @@ class ExprTool:
         get_children(self.get_current_func, self.get_current_func_kwargs,
                      expr,
                      output_exprs=exprs, output_symbols=syms,
-                     date=self._date, asset=self._asset)
+                     date=self.date, asset=self.asset)
         # print('=' * 20, expr)
         # print(exprs)
         return exprs, syms
@@ -112,12 +90,11 @@ class ExprTool:
 
         # 不做改动，直接生成
         for variable, expr in repl:
-            exprs_dict[variable] = expr
+            exprs_dict[variable] = simplify(expr)
         for variable, expr in redu:
-            exprs_dict[variable] = expr
+            exprs_dict[variable] = simplify(expr)
 
         return exprs_dict
-
 
     def cse(self, exprs, symbols_repl=None, symbols_redu=None):
         """多个子公式+长公式，提取公共公式
@@ -141,12 +118,7 @@ class ExprTool:
             表达式
 
         """
-        # 有向无环图，用于分层计算
-        graph_dag = {}
-        # 同一层中 分组所用
-        graph_key = {}
-        # 每个变量对应的表达式
-        graph_exp = {}
+        self.exprs_names = list(symbols_redu)
 
         repl, redu = cse(exprs, symbols_repl, optimizations="basic")
         outputs_len = len(symbols_redu)
@@ -159,16 +131,13 @@ class ExprTool:
             variable = symbols(variable)
             new_redu.append((variable, expr))
 
-        exprs_dict = self.reduce(repl, new_redu)
+        self.exprs_dict = self.reduce(repl, new_redu)
 
-        # 生成DAG
-        for variable, expr in exprs_dict.items():
-            syms = []
-            children = get_children(self.get_current_func, self.get_current_func_kwargs, expr, [], syms, date=self._date, asset=self._asset)
-            key = get_key(children)
+        # with open("exprs.pickle", "wb") as file:
+        #     pickle.dump(exprs_dict, file)
 
-            graph_dag[variable.name] = [str(s) for s in syms]
-            graph_key[variable.name] = key
-            graph_exp[variable.name] = expr
+        return self.exprs_dict
 
-        return graph_dag, graph_key, graph_exp
+    def dag(self):
+        G = dag_start(self.exprs_dict, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
+        return dag_end(G)

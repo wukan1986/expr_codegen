@@ -8,7 +8,7 @@ from streamlit_ace import st_ace
 from sympy import numbered_symbols, Eq
 
 from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, safe_eval
-from expr_codegen.tool import ExprTool, dag_ready
+from expr_codegen.tool import ExprTool
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
 _ = Eq
@@ -31,7 +31,7 @@ with st.sidebar:
     st.subheader("优化")
     is_pre_opt = st.checkbox('事前`表达式`化简', True)
     # TODO: 好像这个还有问题等有空再改
-    is_back_opt = st.checkbox('事后`整列分组`向前合并', False)
+    is_back_opt = st.checkbox('事后`整列分组`向前合并', True)
     is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
 
     st.subheader("关于")
@@ -105,10 +105,10 @@ if st.button('代码生成'):
     exprs_dst, syms_dst = tool.merge(**exprs_src)
 
     logger.info('提取公共表达式')
-    graph_dag, graph_key, graph_exp = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+    exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
-    exprs_ldl = dag_ready(graph_dag, graph_key, graph_exp)
+    exprs_ldl = tool.dag()
 
     logger.info('分组优化')
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
