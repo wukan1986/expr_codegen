@@ -3,7 +3,7 @@ from black import Mode, format_str
 from sympy import numbered_symbols
 
 from examples.sympy_define import *
-from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one
+from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
 # codegen工具类
 from expr_codegen.tool import ExprTool
 
@@ -37,7 +37,7 @@ exprs_src = {
     "alpha_026": (-1 * ts_max(ts_corr(ts_rank(VOLUME, 5), ts_rank(HIGH, 5), 5), 3)),
     "alpha_027": if_else((0.5 < cs_rank((ts_sum(ts_corr(cs_rank(VOLUME), cs_rank(VWAP), 6), 2) / 2.0))), (-1 * 1), 1),
     "alpha_028": cs_scale(((ts_corr(ADV20, LOW, 5) + ((HIGH + LOW) / 2)) - CLOSE)),
-    # "alpha_029": (min(product(cs_rank(cs_rank(cs_scale(log(ts_sum(ts_min(cs_rank(cs_rank((-1 * cs_rank(ts_delta((CLOSE - 1), 5))))), 2), 1))))), 1), 5) + ts_rank(ts_delay((-1 * RETURNS), 6), 5)),
+    "alpha_029": (min(ts_product(cs_rank(cs_rank(cs_scale(log(ts_sum(ts_min(cs_rank(cs_rank((-1 * cs_rank(ts_delta((CLOSE - 1), 5))))), 2), 1))))), 1), 5) + ts_rank(ts_delay((-1 * RETURNS), 6), 5)),
     "alpha_030": (((1.0 - cs_rank(((sign((CLOSE - ts_delay(CLOSE, 1))) + sign((ts_delay(CLOSE, 1) - ts_delay(CLOSE, 2)))) + sign((ts_delay(CLOSE, 2) - ts_delay(CLOSE, 3)))))) * ts_sum(VOLUME, 5)) / ts_sum(VOLUME, 20)),
     "alpha_031": ((cs_rank(cs_rank(cs_rank(ts_decay_linear((-1 * cs_rank(cs_rank(ts_delta(CLOSE, 10)))), 10)))) + cs_rank((-1 * ts_delta(CLOSE, 3)))) + sign(cs_scale(ts_corr(ADV20, LOW, 12)))),
     "alpha_032": (cs_scale(((ts_sum(CLOSE, 7) / 7) - CLOSE)) + (20 * cs_scale(ts_corr(VWAP, ts_delay(CLOSE, 5), 230)))),
@@ -71,9 +71,10 @@ exprs_src = {
     "alpha_059": (-1 * ts_rank(ts_decay_linear(ts_corr(gp_neutralize(INDUSTRY, ((VWAP * 0.728317) + (VWAP * (1 - 0.728317)))), VOLUME, 4.25197), 16.2289), 8.19648)),
     "alpha_060": (0 - (1 * ((2 * cs_scale(cs_rank(((((CLOSE - LOW) - (HIGH - CLOSE)) / (HIGH - LOW)) * VOLUME)), 1)) - cs_scale(cs_rank(ts_arg_max(CLOSE, 10)), 1)))),
     "alpha_061": (cs_rank((VWAP - ts_min(VWAP, 16.1219))) < cs_rank(ts_corr(VWAP, ADV180, 17.9282))),
-    # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'
-    # AttributeError: 'StrictLessThan' object has no attribute 'diff'
+
+    # TODO: 有问题，等待修正
     # "alpha_062": if_else((cs_rank(ts_corr(VWAP, ts_sum(ADV20, 22.4101), 9.91009)) < cs_rank(((cs_rank(OPEN) + cs_rank(OPEN)) < (cs_rank(((HIGH + LOW) / 2)) + cs_rank(HIGH))))), -1, 0),
+
     "alpha_063": ((cs_rank(ts_decay_linear(ts_delta(gp_neutralize(INDUSTRY, CLOSE), 2.25164), 8.22237)) - cs_rank(ts_decay_linear(ts_corr(((VWAP * 0.318108) + (OPEN * (1 - 0.318108))), ts_sum(ADV180, 37.2467), 13.557), 12.2883))) * -1),
     "alpha_064": if_else((cs_rank(ts_corr(ts_sum(((OPEN * 0.178404) + (LOW * (1 - 0.178404))), 12.7054), ts_sum(ADV120, 12.7054), 16.6208)) < cs_rank(ts_delta(((((HIGH + LOW) / 2) * 0.178404) + (VWAP * (1 - 0.178404))), 3.69741))), -1, 0),
     "alpha_065": if_else((cs_rank(ts_corr(((OPEN * 0.00817205) + (VWAP * (1 - 0.00817205))), ts_sum(ADV60, 8.6911), 6.40374)) < cs_rank((OPEN - ts_min(OPEN, 13.635)))), -1, 0),
@@ -92,7 +93,7 @@ exprs_src = {
     "alpha_078": (cs_rank(ts_corr(ts_sum(((LOW * 0.352233) + (VWAP * (1 - 0.352233))), 19.7428), ts_sum(ADV40, 19.7428), 6.83313)) ** cs_rank(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 5.77492))),
     "alpha_079": (cs_rank(ts_delta(gp_neutralize(SECTOR, ((CLOSE * 0.60733) + (OPEN * (1 - 0.60733)))), 1.23438)) < cs_rank(ts_corr(ts_rank(VWAP, 3.60973), ts_rank(ADV150, 9.18637), 14.6644))),
     "alpha_080": ((cs_rank(sign(ts_delta(gp_neutralize(INDUSTRY, ((OPEN * 0.868128) + (HIGH * (1 - 0.868128)))), 4.04545))) ** ts_rank(ts_corr(HIGH, ADV10, 5.11456), 5.53756)) * -1),
-    # "alpha_081":((rank(Log(product(rank((rank(correlation(vwap, sum(adv10, 49.6054), 8.47743))^4)), 14.9655))) < rank(correlation(rank(vwap), rank(volume), 5.07914))) * -1),
+    "alpha_081": if_else((cs_rank(log(ts_product(cs_rank((cs_rank(ts_corr(VWAP, ts_sum(ADV10, 49.6054), 8.47743)) ** 4)), 14.9655))) < cs_rank(ts_corr(cs_rank(VWAP), cs_rank(VOLUME), 5.07914))), -1, 0),
     "alpha_082": (min(cs_rank(ts_decay_linear(ts_delta(OPEN, 1.46063), 14.8717)), ts_rank(ts_decay_linear(ts_corr(gp_neutralize(SECTOR, VOLUME), ((OPEN * 0.634196) + (OPEN * (1 - 0.634196))), 17.4842), 6.92131), 13.4283)) * -1),
     "alpha_083": ((cs_rank(ts_delay(((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)), 2)) * cs_rank(cs_rank(VOLUME))) / (((HIGH - LOW) / (ts_sum(CLOSE, 5) / 5)) / (VWAP - CLOSE))),
     "alpha_084": signed_power(ts_rank((VWAP - ts_max(VWAP, 15.3217)), 20.7127), ts_delta(CLOSE, 4.96796)),
@@ -120,6 +121,10 @@ exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
 exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
 # 1.0*VWAP转VWAP
 exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+# 将部分参数为1的ts函数进行简化
+exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+# ts_delay转成ts_delta
+exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
 
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
 tool = ExprTool(date='date', asset='asset')
@@ -135,7 +140,7 @@ exprs_ldl = tool.dag()
 exprs_ldl.optimize(back_opt=True, chain_opt=True)
 
 # 生成代码
-is_polars = False
+is_polars = True
 if is_polars:
     from expr_codegen.polars.code import codegen
 else:

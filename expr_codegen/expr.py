@@ -1,7 +1,7 @@
 import re
 from functools import reduce
 
-from sympy import Mul, preorder_traversal, symbols, Function
+from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
@@ -12,6 +12,22 @@ GP = 'gp'  # 分组算子。group 分组越小，速度越慢
 
 CL_TUP = (CL,)  # 整列元组
 CL_SET = {CL_TUP}  # 整列集合
+
+
+def safe_eval(string, dict):
+    code = compile(string, '<user input>', 'eval')
+    reason = None
+    banned = ('eval', 'compile', 'exec', 'getattr', 'hasattr', 'setattr', 'delattr',
+              'classmethod', 'globals', 'help', 'input', 'isinstance', 'issubclass', 'locals',
+              'open', 'print', 'property', 'staticmethod', 'vars')
+    for name in code.co_names:
+        if re.search(r'^__\S*__$', name):
+            reason = 'attributes not allowed'
+        elif name in banned:
+            reason = 'code execution not allowed'
+        if reason:
+            raise NameError(f'{name} not allowed : {reason}')
+    return eval(code, dict)
 
 
 def append_node(node, output_exprs):
@@ -279,17 +295,51 @@ def mul_one(e):
     return e
 
 
-def safe_eval(string, dict):
-    code = compile(string, '<user input>', 'eval')
-    reason = None
-    banned = ('eval', 'compile', 'exec', 'getattr', 'hasattr', 'setattr', 'delattr',
-              'classmethod', 'globals', 'help', 'input', 'isinstance', 'issubclass', 'locals',
-              'open', 'print', 'property', 'staticmethod', 'vars')
-    for name in code.co_names:
-        if re.search(r'^__\S*__$', name):
-            reason = 'attributes not allowed'
-        elif name in banned:
-            reason = 'code execution not allowed'
-        if reason:
-            raise NameError(f'{name} not allowed : {reason}')
-    return eval(code, dict)
+def ts_xxx_1_drop(e):
+    """ts_xxx部分函数如果参数为1，可直接丢弃"""
+    replacements = []
+    for node in preorder_traversal(e):
+        if hasattr(node, 'name') and node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear', 'ts_max', 'ts_min', 'ts_product'):
+            if node.args[1] == 1:
+                replacements.append((node, node.args[0]))
+    for node, replacement in replacements:
+        print(node, '  ->  ', replacement)
+        e = e.xreplace({node: replacement})
+    return e
+
+
+def ts_delay__to__ts_delta(e):
+    """ 将-ts_delay(x, y)转成ts_delta(x, y)-x
+
+    本质上为x-ts_delay(x, y) 转成 ts_delta(x, y)
+
+    例如 OPEN - ts_delay(OPEN, 5) + (CLOSE - ts_delay(CLOSE, 5))
+    结果 ts_delta(CLOSE, 5) + ts_delta(OPEN, 5)
+    """
+    ts_delta = symbols('ts_delta', cls=Function)
+
+    replacements = []
+    for node in preorder_traversal(e):
+        if node.is_Add:
+            new_args = []
+            for arg in node.args:
+                if arg.is_Mul:
+                    if arg.args[0] == -1 and arg.args[1].is_Function and arg.args[1].name == 'ts_delay':
+                        # 添加ts_delta(x, y)
+                        new_args.append(ts_delta(arg.args[1].args[0], arg.args[1].args[1]))
+                        # 添加-x
+                        new_args.append(-arg.args[1].args[0])
+                    else:
+                        new_args.append(arg)
+                else:
+                    new_args.append(arg)
+            if len(new_args) > len(node.args):
+                # 长度变长，表示成功实现了调整
+                tmp_args = simplify(Add._from_args(new_args))
+                # 优化后长度变短，表示有变量对冲掉了，成功
+                if len(tmp_args.args) < len(new_args):
+                    replacements.append((node, tmp_args))
+    for node, replacement in replacements:
+        print(node, '  ->  ', replacement)
+        e = e.xreplace({node: replacement})
+    return e

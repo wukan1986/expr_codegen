@@ -73,6 +73,10 @@ class PolarsStrPrinter(StrPrinter):
         PREC = precedence(expr)
         return "%s.rolling_apply(np.argmin, window_size=%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
+    def _print_ts_product(self, expr):
+        PREC = precedence(expr)
+        return "%s.rolling_apply(lambda x: np.product(x.to_numpy()), window_size=%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+
     def _print_ts_max(self, expr):
         PREC = precedence(expr)
         return "%s.rolling_max(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))

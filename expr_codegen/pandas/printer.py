@@ -91,6 +91,10 @@ class PandasStrPrinter(StrPrinter):
         PREC = precedence(expr)
         return "%s.rolling(%s).apply(np.argmin, engine='numba', raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
+    def _print_ts_product(self, expr):
+        PREC = precedence(expr)
+        return "%s.rolling(%s).apply(np.product, raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+
     def _print_ts_max(self, expr):
         PREC = precedence(expr)
         return "%s.rolling(%s).max()" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))

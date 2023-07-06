@@ -7,7 +7,7 @@ from loguru import logger
 from streamlit_ace import st_ace
 from sympy import numbered_symbols, Eq
 
-from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, safe_eval
+from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, safe_eval, ts_xxx_1_drop, ts_delay__to__ts_delta
 from expr_codegen.tool import ExprTool
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
@@ -97,6 +97,10 @@ if st.button('代码生成'):
         exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
         # 1.0*VWAP转VWAP
         exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+        # 将部分参数为1的ts函数进行简化
+        exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+        # ts_delay转成ts_delta
+        exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
 
     # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
     tool = ExprTool(date=date_name, asset=asset_name)

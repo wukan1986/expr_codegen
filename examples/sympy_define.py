@@ -20,7 +20,7 @@ if_else, signed_power, = symbols('if_else, signed_power, ', cls=Function)
 # TODO: 时序算子。需要提前按资产分组，组内按时间排序。请根据需要补充。必需以`ts_`开头
 ts_delay, ts_delta, = symbols('ts_delay, ts_delta, ', cls=Function)
 ts_arg_max, ts_arg_min, ts_max, ts_min, = symbols('ts_arg_max, ts_arg_min, ts_max, ts_min, ', cls=Function)
-ts_sum, ts_mean, ts_decay_linear, = symbols('ts_sum, ts_mean, ts_decay_linear, ', cls=Function)
+ts_sum, ts_mean, ts_decay_linear, ts_product, = symbols('ts_sum, ts_mean, ts_decay_linear, ts_product, ', cls=Function)
 ts_std_dev, ts_corr, ts_covariance, = symbols('ts_std_dev, ts_corr, ts_covariance,', cls=Function)
 ts_rank, = symbols('ts_rank, ', cls=Function)
 
