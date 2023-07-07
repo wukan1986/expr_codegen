@@ -15,15 +15,13 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset, date = tup
-        return f'df = df.sort(by={[asset, date]}).groupby(by={[asset]}, maintain_order=True).apply({func_name})'
+        return f'df = df.sort(by={[date]}).groupby(by={[asset]}, maintain_order=True).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        # TODO: 这里是否需要sort, 哪种速度更快
-        return f'df = df.sort(by={[date]}).groupby(by={[date]}, maintain_order=False).apply({func_name})'
+        return f'df = df.groupby(by={[date]}, maintain_order=False).apply({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        # TODO: 这里是否需要sort, 哪种速度更快
-        return f'df = df.sort(by={[date, group]}).groupby(by={[date, group]}, maintain_order=False).apply({func_name})'
+        return f'df = df.groupby(by={[date, group]}, maintain_order=False).apply({func_name})'
 
     return f'df = {func_name}(df)'
 
@@ -58,9 +56,15 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
                     func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
                     exprs_dst.append(f"# {va} = {ex}")
             func_code.append(f"    )")
+            func_code = func_code[1:]
+
+            # TODO: sort是先做还是后做，还未最后定夺
+            # if k[0] == TS:
+            #     # 时序需要排序
+            #     func_code = [f'    df = df.sort(by=["{k[2]}"])'] + func_code
 
             # polars风格代码列表
-            funcs[func_name] = '\n'.join(func_code[1:])
+            funcs[func_name] = '\n'.join(func_code)
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name)
 

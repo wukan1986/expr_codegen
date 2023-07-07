@@ -15,7 +15,7 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset, date = tup
-        return f'df = df.sort_values(by={[asset, date]}).groupby(by={[asset]}, group_keys=False).apply({func_name})'
+        return f'df = df.groupby(by={[asset]}, group_keys=False).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
         # TODO: 这里是否需要sort, 哪种速度更快
@@ -28,7 +28,7 @@ def get_groupby_from_tuple(tup, func_name):
     return f'df = {func_name}(df)'
 
 
-def codegen(exprs_ldl: ListDictList, exprs_src,  syms_dst, filename='template.py.j2'):
+def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.j2'):
     """基于模板的代码生成"""
     # 打印Pandas风格代码
     p = PandasStrPrinter()
@@ -47,6 +47,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src,  syms_dst, filename='template.py
             # 函数名
             func_name = f'func_{i}_{"__".join(k)}'
             func_code = []
+            if k[0] == TS:
+                # 时序需要排序
+                func_code.append(f'    df = df.sort_values(by=["{k[2]}"])')
             for kv in vv:
                 if kv is None:
                     func_code.append(f"    # " + '=' * 40)

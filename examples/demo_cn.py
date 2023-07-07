@@ -36,7 +36,7 @@ exprs_ldl = tool.dag()
 exprs_ldl.optimize(back_opt=True, chain_opt=True)
 
 # 生成代码
-is_polars = False
+is_polars = True
 if is_polars:
     from expr_codegen.polars.code import codegen
 
@@ -46,7 +46,8 @@ else:
 
     output_file = 'output_pandas.py'
 
-codes = codegen(exprs_ldl, exprs_src, syms_dst)
+# 用户可根据自己需求指向其它模板
+codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
 # TODO: reformat & output
 res = format_str(codes, mode=Mode(line_length=500))

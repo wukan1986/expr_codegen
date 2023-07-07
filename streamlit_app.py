@@ -118,7 +118,7 @@ if st.button('代码生成'):
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
     logger.info('代码生成')
-    codes = codegen(exprs_ldl, exprs_src, syms_dst)
+    codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
     # TODO: reformat & output
     res = format_str(codes, mode=Mode(line_length=500))
