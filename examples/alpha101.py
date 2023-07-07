@@ -225,40 +225,12 @@ exprs_src = {
     "alpha_101": ((CLOSE - OPEN) / ((HIGH - LOW) + 0.001)),
 }
 
-# Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
-# alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
-# 1.0*VWAP转VWAP
-exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
-# 将部分参数为1的ts函数进行简化
-exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
-# ts_delay转成ts_delta
-exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
-
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
 tool = ExprTool(date='date', asset='asset')
-
-# 子表达式在前，原表式在最后
-exprs_dst, syms_dst = tool.merge(**exprs_src)
-
-# 提取公共表达式
-exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
-# 有向无环图流转
-exprs_ldl = tool.dag()
-# 是否优化
-exprs_ldl.optimize(back_opt=True, chain_opt=True)
-
 # 生成代码
-is_polars = False
-if is_polars:
-    from expr_codegen.polars.code import codegen
-else:
-    from expr_codegen.pandas.code import codegen
+codes = tool.all(exprs_src, style='pandas', template_file='template.py.j2')
 
 output_file = 'output_alpha101.py'
-codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
-
 # TODO: reformat & output
 res = format_str(codes, mode=Mode(line_length=500))
 with open(output_file, 'w', encoding='utf-8') as f:

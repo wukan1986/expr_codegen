@@ -14,6 +14,19 @@ CL_TUP = (CL,)  # 整列元组
 CL_SET = {CL_TUP}  # 整列集合
 
 
+def string_to_exprs(exprs_src, dict):
+    """将字符串传字典，需要传入globals()
+
+    # 请在此添加表达式，`=`右边为表达式，`=`左边为输出因子名。
+    alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
+    alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
+    alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
+    """
+    exprs_src = [expr.split('=') for expr in exprs_src.splitlines() if '=' in expr]
+    exprs_src = {expr[0].strip(): safe_eval(expr[1].strip(), dict) for expr in exprs_src if '#' not in expr[0]}
+    return exprs_src
+
+
 def safe_eval(string, dict):
     code = compile(string, '<user input>', 'eval')
     reason = None

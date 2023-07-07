@@ -4,7 +4,7 @@
 
 ## 项目背景
 
-polars语法不同于pandas,也不同于常见的表达式，导致学习难度大，转译还容易出错。所以创建此项目为解决以下问题：
+`polars`语法不同于`pandas`,也不同于常见的表达式，导致学习难度大，转译还容易出错。所以创建此项目为解决以下问题：
 
 1. 提取公共表达式，减少代码量和重复计算
 2. 对表达式进行化简，便于人理解
@@ -38,8 +38,12 @@ https://exprcodegen.streamlit.app
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 ├─examples
+│      alpha101.py # WorldQuant Alpha101示例
 │      demo_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
+│      demo_exec.py # 演示表达式不生成文件直接生成结果画图
 │      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
+│      show_tree.py # 画表达式树形图。可用于分析对比优化结果
+│      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
 └─expr_codegen
     │  expr.py # 表达式处理基本函数
     │  tool.py # 核心工具代码。一般不需修改
@@ -172,3 +176,6 @@ df = df.sort_values(by=["asset", "date"]).groupby(by=["asset"], group_keys=False
 df = df.groupby(by=["date"], group_keys=False).apply(func_0_cs__date)
 df = func_0_cl(df)
 ```
+
+## 生成代码不写文件直接执行
+参考示例中的`demo_exec.py`, 它提前准备了数据，然后将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果

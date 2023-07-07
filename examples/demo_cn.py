@@ -1,5 +1,4 @@
 from black import format_str, Mode
-from sympy import numbered_symbols
 
 from examples.sympy_define import *
 # codegen工具类
@@ -24,31 +23,11 @@ exprs_src = {
 
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
 tool = ExprTool(date='date', asset='asset')
-
-# 子表达式在前，原表式在最后
-exprs_dst, syms_dst = tool.merge(**exprs_src)
-
-# 提取公共表达式
-exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
-# 有向无环图流转
-exprs_ldl = tool.dag()
-# 是否优化
-exprs_ldl.optimize(back_opt=True, chain_opt=True)
-
 # 生成代码
-is_polars = True
-if is_polars:
-    from expr_codegen.polars.code import codegen
+tool = ExprTool(date='date', asset='asset')
+codes = tool.all(exprs_src, style='polars', template_file='template.py.j2')
 
-    output_file = 'output_polars.py'
-else:
-    from expr_codegen.pandas.code import codegen
-
-    output_file = 'output_pandas.py'
-
-# 用户可根据自己需求指向其它模板
-codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
-
+output_file = 'output_polars.py'
 # TODO: reformat & output
 res = format_str(codes, mode=Mode(line_length=500))
 with open(output_file, 'w', encoding='utf-8') as f:

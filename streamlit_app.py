@@ -7,7 +7,7 @@ from loguru import logger
 from streamlit_ace import st_ace
 from sympy import numbered_symbols, Eq
 
-from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, safe_eval, ts_xxx_1_drop, ts_delay__to__ts_delta
+from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta, string_to_exprs
 from expr_codegen.tool import ExprTool
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
@@ -22,8 +22,8 @@ with st.sidebar:
     asset_name = st.text_input('资产字段名', 'asset')
 
     # 生成代码
-    is_polars = st.radio('代码风格', ('polars', 'pandas'))
-    if is_polars == 'polars':
+    style = st.radio('代码风格', ('polars', 'pandas'))
+    if style == 'polars':
         from expr_codegen.polars.code import codegen
     else:
         from expr_codegen.pandas.code import codegen
@@ -85,13 +85,11 @@ if st.button('代码生成'):
     sympy.var(factors)
 
     # eval处理，转成字典
-    exprs_src = [expr.split('=') for expr in exprs_src.splitlines() if '=' in expr]
-    exprs_src = {expr[0].strip(): safe_eval(expr[1].strip(), globals()) for expr in exprs_src if '#' not in expr[0]}
+    exprs_src = string_to_exprs(exprs_src, globals())
 
     if is_pre_opt:
         logger.info('事前 表达式 化简')
         # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-        # from examples.sympy_define import * 中已经带了ts_mean
         exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
         # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
         exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
@@ -109,7 +107,7 @@ if st.button('代码生成'):
     exprs_dst, syms_dst = tool.merge(**exprs_src)
 
     logger.info('提取公共表达式')
-    exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+    tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
     exprs_ldl = tool.dag()
@@ -120,6 +118,5 @@ if st.button('代码生成'):
     logger.info('代码生成')
     codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
-    # TODO: reformat & output
     res = format_str(codes, mode=Mode(line_length=500))
     st.code(res, language='python')

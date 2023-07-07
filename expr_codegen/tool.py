@@ -1,6 +1,6 @@
-from sympy import simplify, cse, symbols
+from sympy import simplify, cse, symbols, numbered_symbols
 
-from expr_codegen.expr import get_current_by_prefix, get_children
+from expr_codegen.expr import get_current_by_prefix, get_children, ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
 from expr_codegen.model import dag_start, dag_end
 
 
@@ -139,5 +139,39 @@ class ExprTool:
         return self.exprs_dict
 
     def dag(self):
+        """生成DAG"""
         G = dag_start(self.exprs_dict, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
         return dag_end(G)
+
+    def all(self, exprs_src, style='polars', template_file='template.py.j2'):
+        """功能集成版，将几个功能写到一起方便使用"""
+        assert style in ('polars', 'pandas')
+
+        # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
+        exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
+        # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
+        exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
+        # 1.0*VWAP转VWAP
+        exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+        # 将部分参数为1的ts函数进行简化
+        exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+        # ts_delay转成ts_delta
+        exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+
+        # 子表达式在前，原表式在最后
+        exprs_dst, syms_dst = self.merge(**exprs_src)
+
+        # 提取公共表达式
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+        # 有向无环图流转
+        exprs_ldl = self.dag()
+        # 是否优化
+        exprs_ldl.optimize(back_opt=True, chain_opt=True)
+
+        if style == 'polars':
+            from expr_codegen.polars.code import codegen
+        else:
+            from expr_codegen.pandas.code import codegen
+
+        codes = codegen(exprs_ldl, exprs_src, syms_dst, filename=template_file)
+        return codes
