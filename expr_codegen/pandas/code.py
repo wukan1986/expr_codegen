@@ -18,11 +18,9 @@ def get_groupby_from_tuple(tup, func_name):
         return f'df = df.groupby(by={[asset]}, group_keys=False).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        # TODO: 这里是否需要sort, 哪种速度更快
         return f'df = df.groupby(by={[date]}, group_keys=False).apply({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        # TODO: 这里是否需要sort, 哪种速度更快
         return f'df = df.groupby(by={[date, group]}, group_keys=False).apply({func_name})'
 
     return f'df = {func_name}(df)'
@@ -35,8 +33,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
 
     # polars风格代码
     funcs = {}
-    # 分组应用代码
-    groupbys = {}
+    # 分组应用代码。这里利用了字典按插入顺序排序的特点，将排序放在最前
+    groupbys = {'sort': 'df = df'}
     # 处理过后的表达式
     exprs_dst = []
 
@@ -48,8 +46,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
             func_name = f'func_{i}_{"__".join(k)}'
             func_code = []
             if k[0] == TS:
-                # 时序需要排序
-                func_code.append(f'    df = df.sort_values(by=["{k[2]}"])')
+                groupbys['sort'] = f'df = df.sort_values(by=["{k[2]}", "{k[1]}"]).reset_index(drop=True)'
             for kv in vv:
                 if kv is None:
                     func_code.append(f"    # " + '=' * 40)
