@@ -19,10 +19,9 @@ exprs_src = {
     "expr_7": ts_delta(OPEN + 1, 10),
 }
 
-# TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
+# TODO: 一定要正确设定时间列名和资产列名
 tool = ExprTool(date='date', asset='asset')
 # 生成代码
-tool = ExprTool(date='date', asset='asset')
 codes = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=False)
 
 output_file = 'output_polars.py'
