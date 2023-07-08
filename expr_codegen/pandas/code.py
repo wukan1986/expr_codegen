@@ -45,8 +45,6 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
             # 函数名
             func_name = f'func_{i}_{"__".join(k)}'
             func_code = []
-            if k[0] == TS:
-                groupbys['sort'] = f'df = df.sort_values(by=["{k[2]}", "{k[1]}"]).reset_index(drop=True)'
             for kv in vv:
                 if kv is None:
                     func_code.append(f"    # " + '=' * 40)
@@ -55,6 +53,11 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
                     va, ex = kv
                     func_code.append(f"    # {va} = {ex}\n    df['{va}'] = {p.doprint(ex)}")
                     exprs_dst.append(f"# {va} = {ex}")
+
+            if k[0] == TS:
+                groupbys['sort'] = f'df = df.sort_values(by=["{k[2]}", "{k[1]}"]).reset_index(drop=True)'
+                # 时序需要排序
+                func_code = [f'    df = df.sort_values(by=["{k[2]}"])'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)

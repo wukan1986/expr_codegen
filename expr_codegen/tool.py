@@ -1,3 +1,4 @@
+from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
 from expr_codegen.expr import get_current_by_prefix, get_children, ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
@@ -143,20 +144,37 @@ class ExprTool:
         G = dag_start(self.exprs_dict, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style='polars', template_file='template.py.j2'):
-        """功能集成版，将几个功能写到一起方便使用"""
+    def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2', fast: bool = False):
+        """功能集成版，将几个功能写到一起方便使用
+
+        Parameters
+        ----------
+        exprs_src: dict
+            表达式字典
+        style: str
+            代码风格。可选值 ('polars', 'pandas')
+        template_file: str
+            根据需求可定制模板
+        fast:bool
+            快速模式。将跳过表达式化简。生成代码的分组重排，以及代码格式化这类为人类体验而服务的功能
+        Returns
+        -------
+        代码字符串
+
+        """
         assert style in ('polars', 'pandas')
 
-        # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-        exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
-        # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-        exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
-        # 1.0*VWAP转VWAP
-        exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
-        # 将部分参数为1的ts函数进行简化
-        exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
-        # ts_delay转成ts_delta
-        exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+        if not fast:
+            # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
+            exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
+            # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
+            exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
+            # 1.0*VWAP转VWAP
+            exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+            # 将部分参数为1的ts函数进行简化
+            exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+            # ts_delay转成ts_delta
+            exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
 
         # 子表达式在前，原表式在最后
         exprs_dst, syms_dst = self.merge(**exprs_src)
@@ -165,8 +183,10 @@ class ExprTool:
         self.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
         exprs_ldl = self.dag()
-        # 是否优化
-        exprs_ldl.optimize(back_opt=True, chain_opt=True)
+
+        if not fast:
+            # 因为遗传算法中的表达式是单个输入，所以没有必要优化
+            exprs_ldl.optimize(back_opt=True, chain_opt=True)
 
         if style == 'polars':
             from expr_codegen.polars.code import codegen
@@ -174,4 +194,9 @@ class ExprTool:
             from expr_codegen.pandas.code import codegen
 
         codes = codegen(exprs_ldl, exprs_src, syms_dst, filename=template_file)
+
+        if not fast:
+            # 格式化。在遗传算法中没有必要
+            codes = format_str(codes, mode=Mode(line_length=1000))
+
         return codes

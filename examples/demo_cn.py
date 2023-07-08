@@ -1,5 +1,3 @@
-from black import format_str, Mode
-
 from examples.sympy_define import *
 # codegen工具类
 from expr_codegen.tool import ExprTool
@@ -25,10 +23,8 @@ exprs_src = {
 tool = ExprTool(date='date', asset='asset')
 # 生成代码
 tool = ExprTool(date='date', asset='asset')
-codes = tool.all(exprs_src, style='polars', template_file='template.py.j2')
+codes = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=False)
 
 output_file = 'output_polars.py'
-# TODO: reformat & output
-res = format_str(codes, mode=Mode(line_length=500))
 with open(output_file, 'w', encoding='utf-8') as f:
-    f.write(res)
+    f.write(codes)

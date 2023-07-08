@@ -15,7 +15,7 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset, date = tup
-        return f'df = df.sort(by={[date]}).groupby(by={[asset]}, maintain_order=True).apply({func_name})'
+        return f'df = df.groupby(by={[asset]}, maintain_order=True).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
         return f'df = df.groupby(by={[date]}, maintain_order=False).apply({func_name})'
@@ -33,8 +33,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
 
     # polars风格代码
     funcs = {}
-    # 分组应用代码
-    groupbys = {}
+    # 分组应用代码。这里利用了字典按插入顺序排序的特点，将排序放在最前
+    groupbys = {'sort': 'df = df'}
     # 处理过后的表达式
     exprs_dst = []
 
@@ -58,10 +58,10 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
             func_code.append(f"    )")
             func_code = func_code[1:]
 
-            # TODO: sort是先做还是后做，还未最后定夺
-            # if k[0] == TS:
-            #     # 时序需要排序
-            #     func_code = [f'    df = df.sort(by=["{k[2]}"])'] + func_code
+            if k[0] == TS:
+                groupbys['sort'] = f'df = df.sort(by=["{k[2]}", "{k[1]}"])'
+                # 时序需要排序
+                func_code = [f'    df = df.sort(by=["{k[2]}"])'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)

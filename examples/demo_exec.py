@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import polars as pl
-from black import Mode, format_str
 from matplotlib import pyplot as plt
 
 from examples.sympy_define import *
@@ -37,8 +36,8 @@ exprs_src = string_to_exprs(exprs_src, globals())
 
 # 生成代码
 tool = ExprTool(date='date', asset='asset')
-codes = tool.all(exprs_src, style='polars', template_file='template.py.j2')
-codes = format_str(codes, mode=Mode(line_length=500))
+codes = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
+
 # 打印代码
 print(codes)
 

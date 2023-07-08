@@ -1,9 +1,6 @@
 # File > Settings... > Editor > Code Style > Hard wrap at > 300
-from black import Mode, format_str
-from sympy import numbered_symbols
 
 from examples.sympy_define import *
-from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
 # codegen工具类
 from expr_codegen.tool import ExprTool
 
@@ -228,10 +225,8 @@ exprs_src = {
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
 tool = ExprTool(date='date', asset='asset')
 # 生成代码
-codes = tool.all(exprs_src, style='pandas', template_file='template.py.j2')
+codes = tool.all(exprs_src, style='pandas', template_file='template.py.j2', fast=False)
 
 output_file = 'output_alpha101.py'
-# TODO: reformat & output
-res = format_str(codes, mode=Mode(line_length=500))
 with open(output_file, 'w', encoding='utf-8') as f:
-    f.write(res)
+    f.write(codes)
