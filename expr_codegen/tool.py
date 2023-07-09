@@ -2,7 +2,7 @@ from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
 from expr_codegen.expr import get_current_by_prefix, get_children, ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
-from expr_codegen.model import dag_start, dag_end
+from expr_codegen.model import dag_start, dag_end, dag_middle
 
 
 class ExprTool:
@@ -139,9 +139,11 @@ class ExprTool:
 
         return self.exprs_dict
 
-    def dag(self):
+    def dag(self, fast):
         """生成DAG"""
-        G = dag_start(self.exprs_dict, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
+        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
+        if not fast:
+            G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
         return dag_end(G)
 
     def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2', fast: bool = False):
@@ -182,7 +184,7 @@ class ExprTool:
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
-        exprs_ldl = self.dag()
+        exprs_ldl = self.dag(fast)
 
         if not fast:
             # 因为遗传算法中的表达式是单个输入，所以没有必要优化

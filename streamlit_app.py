@@ -110,7 +110,7 @@ if st.button('代码生成'):
     tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
-    exprs_ldl = tool.dag()
+    exprs_ldl = tool.dag(False)
 
     logger.info('分组优化')
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)

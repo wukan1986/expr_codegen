@@ -343,9 +343,15 @@ def skip_expr_node(G: nx.DiGraph, node):
     return G
 
 
-def dag_start(exprs_dict, exprs_names, func, func_kwargs, date, asset):
+def dag_start(exprs_dict, func, func_kwargs, date, asset):
     G = create_dag_exprs(exprs_dict)
     G = init_dag_exprs(G, func, func_kwargs, date, asset)
+
+    # 分层输出
+    return G
+
+
+def dag_middle(G, exprs_names, func, func_kwargs, date, asset):
 
     G = remove_paths_by_zero_outdegree(G, exprs_names)
     G = merge_nodes_1(G, *exprs_names)
