@@ -261,7 +261,7 @@ def get_key(children):
         assert False, f'{children} 无法正确分类，之前没有分清'
 
 
-def ts_sum__to__ts_mean(e):
+def replace__ts_sum__to__ts_mean(e):
     """将ts_sum(x, y)/y 转成 ts_mean(x, y)"""
     # TODO: 这里重新定义的ts_mean与外部已经定义好的是否同一个？
     ts_mean = symbols('ts_mean', cls=Function)
@@ -278,7 +278,7 @@ def ts_sum__to__ts_mean(e):
     return e
 
 
-def cs_rank__drop_duplicates(e):
+def replace__cs_rank(e):
     """cs_rank(cs_rank(x)) 转成 cs_rank(x)"""
     replacements = []
     for node in preorder_traversal(e):
@@ -292,7 +292,7 @@ def cs_rank__drop_duplicates(e):
     return e
 
 
-def mul_one(e):
+def replace__one_mul(e):
     """1.0*VWAP转成VWAP"""
     replacements = []
     for node in preorder_traversal(e):
@@ -308,20 +308,23 @@ def mul_one(e):
     return e
 
 
-def ts_xxx_1_drop(e):
+def replace__ts_xxx_1(e):
     """ts_xxx部分函数如果参数为1，可直接丢弃"""
     replacements = []
     for node in preorder_traversal(e):
-        if hasattr(node, 'name') and node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear', 'ts_max', 'ts_min', 'ts_product'):
-            if node.args[1] == 1:
-                replacements.append((node, node.args[0]))
+        if hasattr(node, 'name'):
+            if node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
+                             'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
+                             'ts_product', 'ts_std_dev', 'ts_rank'):
+                if node.args[1] <= 1:
+                    replacements.append((node, node.args[0]))
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
     return e
 
 
-def ts_delay__to__ts_delta(e):
+def replace__ts_delay__to__ts_delta(e):
     """ 将-ts_delay(x, y)转成ts_delta(x, y)-x
 
     本质上为x-ts_delay(x, y) 转成 ts_delta(x, y)
@@ -356,3 +359,28 @@ def ts_delay__to__ts_delta(e):
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
     return e
+
+
+def meaningless__ts_xxx_1(e):
+    """ts_xxx部分函数如果参数为1，可直接丢弃"""
+    for node in preorder_traversal(e):
+        if hasattr(node, 'name'):
+            if node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
+                             'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
+                             'ts_product', 'ts_std_dev', 'ts_rank'):
+                if node.args[1] <= 1:
+                    return True
+            if node.name in ('ts_corr', 'ts_covariance',):
+                if node.args[2] <= 1:
+                    return True
+    return False
+
+
+def meaningless__xx_xx(e):
+    """部分函数如果两参数完全一样，可直接丢弃"""
+    for node in preorder_traversal(e):
+        if hasattr(node, 'name'):
+            if node.name in ('max', 'min', 'ts_corr', 'ts_covariance'):
+                if node.args[0] == node.args[1]:
+                    return True
+    return False

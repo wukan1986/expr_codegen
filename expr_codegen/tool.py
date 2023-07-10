@@ -1,7 +1,7 @@
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
-from expr_codegen.expr import get_current_by_prefix, get_children, ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta
+from expr_codegen.expr import get_current_by_prefix, get_children, replace__ts_sum__to__ts_mean, replace__cs_rank, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
 
@@ -76,9 +76,10 @@ class ExprTool:
             exprs.extend(e)
             syms.extend(s)
 
-        exprs = exprs + list(kwargs.values())
-        exprs = sorted(set(exprs), key=exprs.index)
         syms = sorted(set(syms), key=syms.index)
+        # 如果目标有重复表达式，这里会混乱
+        exprs = sorted(set(exprs), key=exprs.index)
+        exprs = exprs + list(kwargs.values())
 
         # print(exprs)
 
@@ -168,21 +169,21 @@ class ExprTool:
 
         if not fast:
             # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-            exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
             # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-            exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__cs_rank(v) for k, v in exprs_src.items()}
             # 1.0*VWAP转VWAP
-            exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
             # 将部分参数为1的ts函数进行简化
-            exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__ts_xxx_1(v) for k, v in exprs_src.items()}
             # ts_delay转成ts_delta
-            exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
 
         # 子表达式在前，原表式在最后
         exprs_dst, syms_dst = self.merge(**exprs_src)
 
         # 提取公共表达式
-        self.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
         exprs_ldl = self.dag(fast)
 

@@ -7,7 +7,8 @@ from loguru import logger
 from streamlit_ace import st_ace
 from sympy import numbered_symbols, Eq
 
-from expr_codegen.expr import ts_sum__to__ts_mean, cs_rank__drop_duplicates, mul_one, ts_xxx_1_drop, ts_delay__to__ts_delta, string_to_exprs
+import expr_codegen
+from expr_codegen.expr import replace__ts_sum__to__ts_mean, replace__cs_rank, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta, string_to_exprs
 from expr_codegen.tool import ExprTool
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
@@ -35,7 +36,7 @@ with st.sidebar:
     is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
 
     st.subheader("关于")
-    st.markdown("""[Github仓库](https://github.com/wukan1986/expr_codegen)
+    st.markdown(f"""[Github仓库](https://github.com/wukan1986/expr_codegen)
 
 [问题反馈](http://github.com/wukan1986/expr_codegen/issues)
 
@@ -44,7 +45,10 @@ with st.sidebar:
 声明：
 1. 本站点不存储用户输入的表达式，安全保密可放心
 2. 生成的代码可能有错，发现后请及时反馈
+
+version: {expr_codegen.__version__}
     """)
+
 
 st.title('表达式转译代码')
 
@@ -73,6 +77,10 @@ exprs_src = st_ace(value="""# 请在此添加表达式，`=`右边为表达式�
 alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
 alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
 alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
+
+LABEL_OO_1=ts_delay(OPEN, -2)/ts_delay(OPEN, -1)-1 # 第二天开盘交易
+LABEL_OO_2=ts_delay(OPEN, -3)/ts_delay(OPEN, -1)-1 # 第二天开盘交易，持有二天
+LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
 """,
                    language="python",
                    auto_update=True,
@@ -90,15 +98,15 @@ if st.button('代码生成'):
     if is_pre_opt:
         logger.info('事前 表达式 化简')
         # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-        exprs_src = {k: ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
+        exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
         # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-        exprs_src = {k: cs_rank__drop_duplicates(v) for k, v in exprs_src.items()}
+        exprs_src = {k: replace__cs_rank(v) for k, v in exprs_src.items()}
         # 1.0*VWAP转VWAP
-        exprs_src = {k: mul_one(v) for k, v in exprs_src.items()}
+        exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
         # 将部分参数为1的ts函数进行简化
-        exprs_src = {k: ts_xxx_1_drop(v) for k, v in exprs_src.items()}
+        exprs_src = {k: replace__ts_xxx_1(v) for k, v in exprs_src.items()}
         # ts_delay转成ts_delta
-        exprs_src = {k: ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+        exprs_src = {k: replace__ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
 
     # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
     tool = ExprTool(date=date_name, asset=asset_name)
@@ -107,7 +115,7 @@ if st.button('代码生成'):
     exprs_dst, syms_dst = tool.merge(**exprs_src)
 
     logger.info('提取公共表达式')
-    tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
+    tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
     exprs_ldl = tool.dag(False)
