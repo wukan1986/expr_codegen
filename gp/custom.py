@@ -48,8 +48,8 @@ def add_operators(pset):
     # pset.addPrimitive(dummy, [float, int], float, name='ts_product')
     pset.addPrimitive(dummy, [float, int], float, name='ts_std_dev')
     pset.addPrimitive(dummy, [float, int], float, name='ts_rank')
-    pset.addPrimitive(dummy, [float, float, int], float, name='ts_corr')
-    pset.addPrimitive(dummy, [float, float, int], float, name='ts_covariance')
+    # pset.addPrimitive(dummy, [float, float, int], float, name='ts_corr')
+    # pset.addPrimitive(dummy, [float, float, int], float, name='ts_covariance')
 
     pset.addPrimitive(dummy, [float], float, name='cs_rank')
     pset.addPrimitive(dummy, [float], float, name='cs_scale')

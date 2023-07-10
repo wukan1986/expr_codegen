@@ -17,7 +17,9 @@ from gp.helper import stringify_for_sympy, invalid_atom_infinite, invalid_number
 
 _ = Eq, Add, Mul, Pow
 # ======================================
+# 每代计数
 GEN_COUNT = count()
+# 日志路径
 LOG_DIR = pathlib.Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -41,7 +43,7 @@ creator.create("FitnessMulti", base.Fitness, weights=(1,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMulti)
 
 toolbox = base.Toolbox()
-toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=2)
+toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=5)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # toolbox.register("compile", gp.compile, pset=pset)
@@ -76,8 +78,12 @@ def map_exprs(evaluate, invalid_ind):
 
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式
-    expr_dict = {f'GP_{i}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
+    expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
     expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
+
+    # 通过字典特性删除重复表达式
+    expr_dict = {v: k for k, v in expr_dict.items()}
+    expr_dict = {v: k for k, v in expr_dict.items()}
 
     # 清理非法表达式
     expr_dict = {k: v for k, v in expr_dict.items() if not (invalid_atom_infinite(v) or invalid_number_type(v, pset))}
@@ -101,7 +107,7 @@ def map_exprs(evaluate, invalid_ind):
     # df_output.groupby(by='date').apply(lambda x: x)
 
     # 封装，加传数据存储的字段名
-    invalid_ind2 = [(expr, f'GP_{i}') for i, expr in enumerate(invalid_ind)]
+    invalid_ind2 = [(expr, f'GP_{i:04d}') for i, expr in enumerate(invalid_ind)]
     # 调用评估函数
     return map(evaluate, invalid_ind2)
 

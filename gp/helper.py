@@ -2,7 +2,7 @@ import copy
 
 import networkx as nx
 from deap import gp
-from sympy import preorder_traversal, simplify
+from sympy import preorder_traversal
 
 
 def convert_inverse_prim(prim, args):
