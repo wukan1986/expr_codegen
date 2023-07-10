@@ -19,7 +19,7 @@
 
 ## 在线演示
 
-https://exprcodegen.streamlit.app
+https://exprcodegen0710.streamlit.app (可能地址有变更，新地址请参考置顶issue)
 
 初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。
 此工具免费部署在国外，打开可能有些慢
@@ -44,13 +44,16 @@ https://exprcodegen.streamlit.app
 │      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
-└─expr_codegen
-    │  expr.py # 表达式处理基本函数
-    │  tool.py # 核心工具代码。一般不需修改
-    ├─polars
-    │  │  code.py # 针对polars语法的代码生成功能
-    │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
-    │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
+├─expr_codegen
+│   │  expr.py # 表达式处理基本函数
+│   │  tool.py # 核心工具代码。一般不需修改
+│   ├─polars
+│   │  │  code.py # 针对polars语法的代码生成功能
+│   │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
+│   │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
+├─gp
+│   遗传算法相关代码
+
 ```
 
 ## 工作原理
@@ -58,7 +61,7 @@ https://exprcodegen.streamlit.app
 本项目主于依赖于`sympy`项目。所用到的主要函数如下：
 
 1. `simplify`: 对复杂表达式进行化简
-2. `cse`: 多个表达式提取公共子表达式
+2. `cse`: Common Subexpression Elimination公共子表达式消除
 3. `StrPrinter`: 根据不同的函数输出不同字符串。定制此代码可以支持其它语种或库
 
 因为`groupby`,`sort`都比较占用时间。如果提前将公式分类，不同的类别使用不同的`groupby`，可以减少计算时间。
@@ -179,3 +182,6 @@ df = func_0_cl(df)
 
 ## 生成代码不写文件直接执行
 参考示例中的`demo_exec.py`, 它提前准备了数据，然后将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
+
+## 遗传算法
+请参考`gp`目录
