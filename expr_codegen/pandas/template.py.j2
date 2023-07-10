@@ -50,7 +50,7 @@ logger.info("start...")
 """
 
 # drop intermediate columns
-df = df.drop(columns=filter(lambda x: re.search(r'^x_\d+', x), df.columns))
+df = df.drop(columns=filter(lambda x: re.search(r'^_x_\d+', x), df.columns))
 
 
 logger.info('done')

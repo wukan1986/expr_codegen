@@ -185,12 +185,18 @@ def create_dag_exprs(exprs):
     G = nx.DiGraph()
 
     for symbol, expr in exprs.items():
-        # 添加中间节点
-        G.add_node(symbol.name, symbol=symbol, expr=expr)
-        syms = get_symbols(expr, return_str=True)
-        for sym in syms:
-            # 由于边的原因，这里会主动生成一些源节点
-            G.add_edge(sym, symbol.name)
+        # if symbol.name == 'GP_0':
+        #     test = 1
+        if expr.is_Symbol:
+            G.add_node(symbol.name, symbol=symbol, expr=expr)
+            G.add_edge(expr.name, symbol.name)
+        else:
+            # 添加中间节点
+            G.add_node(symbol.name, symbol=symbol, expr=expr)
+            syms = get_symbols(expr, return_str=True)
+            for sym in syms:
+                # 由于边的原因，这里会主动生成一些源节点
+                G.add_edge(sym, symbol.name)
 
     # 源始因子，添加属性
     for node in zero_indegree(G):
@@ -352,7 +358,6 @@ def dag_start(exprs_dict, func, func_kwargs, date, asset):
 
 
 def dag_middle(G, exprs_names, func, func_kwargs, date, asset):
-
     G = remove_paths_by_zero_outdegree(G, exprs_names)
     G = merge_nodes_1(G, *exprs_names)
     G = merge_nodes_2(G, *exprs_names)

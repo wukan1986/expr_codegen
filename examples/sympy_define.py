@@ -1,9 +1,9 @@
 # !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
 
-from sympy import symbols, Symbol, Function, Eq
+from sympy import symbols, Symbol, Function, Eq, Add, Mul, Pow
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
-_ = Eq
+_ = Eq, Add, Mul, Pow
 
 # TODO: 因子。请根据需要补充
 OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
