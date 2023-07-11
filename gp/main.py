@@ -2,10 +2,13 @@ import operator
 import pathlib
 import pickle
 import random
+# abs在examples.sympy_define中已经被替换成了sympy的symbol，如果用后要用到正必需别名一下
+from builtins import abs as _abs
 from itertools import count
 
 import numpy as np
 import polars as pl
+import polars.selectors as cs
 from deap import base, creator, gp, tools
 from loguru import logger
 
@@ -30,6 +33,10 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 df_input = pl.read_parquet('data.parquet')
 # 从脚本获取数据
 df_output: pl.DataFrame = None
+
+IC = None
+IR = None
+
 # 添加下期收益率标签
 tool = ExprTool(date='date', asset='asset')
 # ======================================
@@ -39,7 +46,8 @@ pset = add_constants(pset)
 pset = add_operators(pset)
 pset = add_factors(pset)
 
-creator.create("FitnessMulti", base.Fitness, weights=(1,))
+# 多目标优化、单目标优化
+creator.create("FitnessMulti", base.Fitness, weights=(1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMulti)
 
 toolbox = base.Toolbox()
@@ -55,15 +63,37 @@ toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_v
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 
 
+def rank_ic(a, b):
+    """计算RankIC"""
+    return pl.corr(pl.col(a), pl.col(b), method='spearman', ddof=0, propagate_nans=False)
+
+
+def calc_ic_ir(df: pl.DataFrame, factors, label):
+    """计算IC和IR"""
+    df = df.groupby(by=['date'], maintain_order=False).agg(
+        [rank_ic(x, label) for x in factors]
+    )
+    ic = df.select(cs.numeric().mean())
+    ir = df.select(cs.numeric().mean() / cs.numeric().std())
+
+    ic = ic.to_dicts()[0]
+    ir = ir.to_dicts()[0]
+
+    return ic, ir
+
+
 def evaluate_expr(individual, points):
-    """评估函数"""
+    """评估函数
+
+    需要返回元组，
+    """
     ind, col = individual
     if col not in df_output.columns:
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
-        return float('nan'),
+        return float('nan'),  # float('nan'),
 
-    # 其实也可以将评估函数写在模板中，这里只取结果即可
-    return random.random(),
+    # IC绝对值越大越好
+    return _abs(IC.get(col, float('nan'))),  # IR.get(col, float('nan')),
 
 
 def map_exprs(evaluate, invalid_ind):
@@ -103,8 +133,10 @@ def map_exprs(evaluate, invalid_ind):
     # print(df_output, '222')
     logger.info("执行完成")
 
-    # 评估
-    # df_output.groupby(by='date').apply(lambda x: x)
+    global IC
+    global IR
+    # 计算ic, ir，需指定对应的标签字段
+    IC, IR = calc_ic_ir(df_output, expr_dict.keys(), 'LABEL_OO_1')
 
     # 封装，加传数据存储的字段名
     invalid_ind2 = [(expr, f'GP_{i:04d}') for i, expr in enumerate(invalid_ind)]
@@ -120,8 +152,8 @@ def main():
     # 伪随机种子，同种子可复现
     random.seed(318)
 
-    pop = toolbox.population(n=50)
-    hof = tools.HallOfFame(10)
+    pop = toolbox.population(n=100)
+    hof = tools.HallOfFame(20)
 
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
@@ -131,11 +163,16 @@ def main():
     mstats.register("min", np.nanmin)
     mstats.register("max", np.nanmax)
 
-    pop, log = gp.harm(pop, toolbox, 0.5, 0.1, 40, alpha=0.05, beta=10, gamma=0.25, rho=0.9, stats=mstats,
-                       halloffame=hof, verbose=True)
+    pop, log = gp.harm(pop, toolbox,
+                       cxpb=0.5, mutpb=0.1, ngen=50,
+                       alpha=0.05, beta=10, gamma=0.25, rho=0.9,
+                       stats=mstats, halloffame=hof, verbose=True)
     # print log
     return pop, log, hof
 
 
 if __name__ == "__main__":
-    main()
+    pop, log, hof = main()
+    print('=' * 60)
+    for i, h in enumerate(hof):
+        print(i, h)
