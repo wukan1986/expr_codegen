@@ -142,7 +142,10 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_abs(self, expr):
         PREC = precedence(expr)
-        return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
+        if expr.args[0].is_number:
+            return "np.abs(%s)" % expr.args[0]
+        else:
+            return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
 
     def _print_max(self, expr):
         return "np.maximum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
@@ -151,8 +154,7 @@ class PandasStrPrinter(StrPrinter):
         return "np.minimum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_sign(self, expr):
-        PREC = precedence(expr)
-        return "%s.sign()" % self.parenthesize(expr.args[0], PREC)
+        return "np.sign(%s)" % self._print(expr.args[0])
 
     def _print_signed_power(self, expr):
         # 太长了，所以这里简化一下

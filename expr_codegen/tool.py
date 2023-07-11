@@ -1,7 +1,7 @@
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
-from expr_codegen.expr import get_current_by_prefix, get_children, replace__ts_sum__to__ts_mean, replace__cs_rank, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta
+from expr_codegen.expr import get_current_by_prefix, get_children, replace__ts_sum__to__ts_mean, replace__repeat, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
 
@@ -171,7 +171,7 @@ class ExprTool:
             # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
             exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
             # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-            exprs_src = {k: replace__cs_rank(v) for k, v in exprs_src.items()}
+            exprs_src = {k: replace__repeat(v) for k, v in exprs_src.items()}
             # 1.0*VWAP转VWAP
             exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
             # 将部分参数为1的ts函数进行简化

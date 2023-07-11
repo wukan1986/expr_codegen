@@ -278,14 +278,18 @@ def replace__ts_sum__to__ts_mean(e):
     return e
 
 
-def replace__cs_rank(e):
-    """cs_rank(cs_rank(x)) 转成 cs_rank(x)"""
+def replace__repeat(e):
+    """cs_rank(cs_rank(x)) 转成 cs_rank(x)
+    sign(sign(x)) 转成 sign(x)
+    abs(abs(x)) 转成 abs(x)
+    """
     replacements = []
     for node in preorder_traversal(e):
         # print(node)
-        if hasattr(node, 'name') and node.name == 'cs_rank':
-            if hasattr(node.args[0], 'name') and node.args[0].name == 'cs_rank':
-                replacements.append((node, node.args[0]))
+        if hasattr(node, 'name') and hasattr(node.args[0], 'name'):
+            if node.name == node.args[0].name:
+                if node.name in ('cs_rank', 'sign', 'abs'):
+                    replacements.append((node, node.args[0]))
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
