@@ -142,7 +142,7 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_abs(self, expr):
         PREC = precedence(expr)
-        if expr.args[0].is_number:
+        if expr.args[0].is_Number:
             return "np.abs(%s)" % expr.args[0]
         else:
             return "%s.abs()" % self.parenthesize(expr.args[0], PREC)

@@ -1,6 +1,7 @@
 import copy
 
 import networkx as nx
+import numpy as np
 from deap import gp
 from sympy import preorder_traversal
 
@@ -19,11 +20,15 @@ def convert_inverse_prim(prim, args):
         'fdiv': lambda *args_: "Mul({}, Pow({}, -1))".format(*args_),
         'fmul': lambda *args_: "Mul({},{})".format(*args_),
         'fadd': lambda *args_: "Add({},{})".format(*args_),
+        'fmax': lambda *args_: "max({},{})".format(*args_),
+        'fmin': lambda *args_: "min({},{})".format(*args_),
 
         'isub': lambda *args_: "Add({}, Mul(-1,{}))".format(*args_),
         'idiv': lambda *args_: "Mul({}, Pow({}, -1))".format(*args_),
         'imul': lambda *args_: "Mul({},{})".format(*args_),
         'iadd': lambda *args_: "Add({},{})".format(*args_),
+        'imax': lambda *args_: "max({},{})".format(*args_),
+        'imin': lambda *args_: "min({},{})".format(*args_),
 
         'pass_int': lambda *args_: "{}".format(*args_),
     }
@@ -70,9 +75,12 @@ def invalid_number_type(e, pset):
         if prim is None:
             continue
         for i, arg in enumerate(prim.args):
-            if issubclass(arg, float):
+            if issubclass(arg, np.ndarray):
+                if node.args[i].is_Number:
+                    return True
+            elif issubclass(arg, int):
                 # 应当是浮点，结果却是整数
-                if node.args[i].is_Integer:
+                if node.args[i].is_Float:
                     return True
             elif issubclass(arg, int):
                 pass

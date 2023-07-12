@@ -41,7 +41,7 @@ IR = None
 tool = ExprTool(date='date', asset='asset')
 # ======================================
 
-pset = gp.PrimitiveSetTyped("MAIN", [], float)
+pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
 pset = add_constants(pset)
 pset = add_operators(pset)
 pset = add_factors(pset)
@@ -74,7 +74,11 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
         [rank_ic(x, label) for x in factors]
     )
     ic = df.select(cs.numeric().mean())
-    ir = df.select(cs.numeric().mean() / cs.numeric().std())
+    ir = df.select(cs.numeric().mean() / cs.numeric().std(ddof=0))
+
+    # 居然有部分算出来是None
+    ic = ic.fill_null(float('nan'))
+    ir = ir.fill_null(float('nan'))
 
     ic = ic.to_dicts()[0]
     ir = ir.to_dicts()[0]
@@ -92,6 +96,9 @@ def evaluate_expr(individual, points):
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
         return float('nan'),  # float('nan'),
 
+    # print(col)
+    # if col == 'GP_0022':
+    #     test =1
     # IC绝对值越大越好
     return _abs(IC.get(col, float('nan'))),  # IR.get(col, float('nan')),
 
@@ -105,6 +112,10 @@ def map_exprs(evaluate, invalid_ind):
     # 保存原始，方便复现
     with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
+
+    # TODO: test
+    # with open(LOG_DIR / f'deap_exprs_0012_test.pkl', 'rb') as f:
+    #     invalid_ind = pickle.load(f)
 
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式
@@ -150,10 +161,10 @@ toolbox.register('map', map_exprs)
 
 def main():
     # 伪随机种子，同种子可复现
-    random.seed(318)
+    random.seed(1015)
 
-    pop = toolbox.population(n=100)
-    hof = tools.HallOfFame(20)
+    pop = toolbox.population(n=300)
+    hof = tools.HallOfFame(30)
 
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)

@@ -118,14 +118,14 @@ class PolarsStrPrinter(StrPrinter):
 
     def _print_log(self, expr):
         PREC = precedence(expr)
-        if expr.args[0].is_number:
+        if expr.args[0].is_Number:
             return "np.log(%s)" % expr.args[0]
         else:
             return "%s.log()" % self.parenthesize(expr.args[0], PREC)
 
     def _print_abs(self, expr):
         PREC = precedence(expr)
-        if expr.args[0].is_number:
+        if expr.args[0].is_Number:
             return "np.abs(%s)" % expr.args[0]
         else:
             return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
@@ -138,7 +138,7 @@ class PolarsStrPrinter(StrPrinter):
 
     def _print_sign(self, expr):
         PREC = precedence(expr)
-        if expr.args[0].is_number:
+        if expr.args[0].is_Number:
             return "np.sign(%s)" % expr.args[0]
         else:
             return "%s.sign()" % self.parenthesize(expr.args[0], PREC)
