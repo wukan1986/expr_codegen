@@ -28,6 +28,7 @@ def string_to_exprs(exprs_src, dict):
 
 
 def safe_eval(string, dict):
+    # print(string)
     code = compile(string, '<user input>', 'eval')
     reason = None
     banned = ('eval', 'compile', 'exec', 'getattr', 'hasattr', 'setattr', 'delattr',
@@ -40,6 +41,7 @@ def safe_eval(string, dict):
             reason = 'code execution not allowed'
         if reason:
             raise NameError(f'{name} not allowed : {reason}')
+
     return eval(code, dict)
 
 

@@ -131,7 +131,7 @@ class PandasStrPrinter(StrPrinter):
         return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)
 
     def _print_cs_scale(self, expr):
-        return "scale(%s)" % self._print(expr.args[0])
+        return "_scale(%s)" % self._print(expr.args[0])
 
     def _print_log(self, expr):
         return "np.log(%s)" % self._print(expr.args[0])
@@ -154,11 +154,11 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_signed_power(self, expr):
         # 太长了，所以这里简化一下
-        return "signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_gp_rank(self, expr):
         PREC = precedence(expr)
         return "%s.rank(pct=True)" % self.parenthesize(expr.args[0], PREC)
 
     def _print_gp_neutralize(self, expr):
-        return "neutralize(%s)" % self._print(expr.args[1])
+        return "_neutralize(%s)" % self._print(expr.args[1])

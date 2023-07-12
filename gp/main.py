@@ -118,13 +118,15 @@ def map_exprs(evaluate, invalid_ind):
     with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
 
-    # TODO: test
-    # with open(LOG_DIR / f'deap_exprs_0012_test.pkl', 'rb') as f:
+    # # TODO: test
+    # with open(LOG_DIR / f'deap_exprs_0001.pkl', 'rb') as f:
     #     invalid_ind = pickle.load(f)
 
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式
     expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
+    # ts_decay_linear(Mul(ts_arg_max(Add(ts_max(CLOSE, 3), Mul(-1,20)), 20),20), 5)
+    # AttributeError: 'Mul' object has no attribute 'map'
     expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
 
     # 通过字典特性删除重复表达式
@@ -144,6 +146,7 @@ def map_exprs(evaluate, invalid_ind):
 
     logger.info("代码执行...")
     # 执行，一定要带globals()
+    # !!!这里执行的东西会改变外层变量，如模板中的ts_decay_linear修改了sympy中同名变量，一定注意
     exec(codes, globals())
     # print(df_input, '111')
     # print(df_output, '222')
@@ -166,9 +169,9 @@ toolbox.register('map', map_exprs)
 
 def main():
     # 伪随机种子，同种子可复现
-    random.seed(1015)
+    random.seed(901)
 
-    pop = toolbox.population(n=300)
+    pop = toolbox.population(n=500)
     hof = tools.HallOfFame(30)
 
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)

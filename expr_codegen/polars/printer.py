@@ -64,10 +64,10 @@ class PolarsStrPrinter(StrPrinter):
         return "%s.rolling_std(%s, ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_arg_max(self, expr):
-        return "rolling_argmax(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_rolling_argmax(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_arg_min(self, expr):
-        return "rolling_argmin(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_rolling_argmin(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_product(self, expr):
         PREC = precedence(expr)
@@ -96,21 +96,21 @@ class PolarsStrPrinter(StrPrinter):
         return "pl.rolling_cov(%s, %s, window_size=%s, ddof=0)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
     def _print_ts_rank(self, expr):
-        return "rolling_rank(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_rolling_rank(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_sum(self, expr):
         PREC = precedence(expr)
         return "%s.rolling_sum(%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_decay_linear(self, expr):
-        return "ts_decay_linear(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_ts_decay_linear(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_cs_rank(self, expr):
         # TODO: 此处最好有官方的解决方法
-        return "rank_pct(%s)" % self._print(expr.args[0])
+        return "_rank_pct(%s)" % self._print(expr.args[0])
 
     def _print_cs_scale(self, expr):
-        return "scale(%s)" % self._print(expr.args[0])
+        return "_scale(%s)" % self._print(expr.args[0])
 
     def _print_log(self, expr):
         PREC = precedence(expr)
@@ -141,11 +141,10 @@ class PolarsStrPrinter(StrPrinter):
 
     def _print_signed_power(self, expr):
         # 太长了，所以这里简化一下
-        return "signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
+        return "_signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_gp_rank(self, expr):
-        # TODO: 此处最好有官方的解决方法
-        return "rank_pct(%s)" % self._print(expr.args[1])
+        return "_rank_pct(%s)" % self._print(expr.args[1])
 
     def _print_gp_neutralize(self, expr):
-        return "neutralize(%s)" % self._print(expr.args[1])
+        return "_neutralize(%s)" % self._print(expr.args[1])
