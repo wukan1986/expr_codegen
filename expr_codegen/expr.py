@@ -286,6 +286,8 @@ def replace__repeat(e):
     replacements = []
     for node in preorder_traversal(e):
         # print(node)
+        if len(node.args) == 0:
+            continue
         if hasattr(node, 'name') and hasattr(node.args[0], 'name'):
             if node.name == node.args[0].name:
                 if node.name in ('cs_rank', 'sign', 'abs'):

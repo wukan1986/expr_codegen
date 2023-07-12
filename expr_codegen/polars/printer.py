@@ -64,14 +64,10 @@ class PolarsStrPrinter(StrPrinter):
         return "%s.rolling_std(%s, ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_arg_max(self, expr):
-        # TODO: 是否换成bottleneck版
-        PREC = precedence(expr)
-        return "%s.rolling_apply(np.argmax, window_size=%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+        return "rolling_argmax(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_arg_min(self, expr):
-        # TODO: 是否换成bottleneck版
-        PREC = precedence(expr)
-        return "%s.rolling_apply(np.argmin, window_size=%s)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+        return "rolling_argmin(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_product(self, expr):
         PREC = precedence(expr)

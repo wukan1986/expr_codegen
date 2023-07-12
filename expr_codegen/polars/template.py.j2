@@ -25,6 +25,12 @@ def rolling_rank(expr: pl.Expr, window) -> pl.Expr:
     """-1~1 TO 0~1"""
     return expr.map(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
 
+def rolling_argmax(expr: pl.Expr, window) -> pl.Expr:
+    return expr.map(lambda x: pl.Series(bn.move_argmax(x, window)))
+
+
+def rolling_argmin(expr: pl.Expr, window) -> pl.Expr:
+    return expr.map(lambda x: pl.Series(bn.move_argmin(x, window)))
 
 def ts_decay_linear(expr: pl.Expr, window) -> pl.Expr:
     return expr.map(lambda x: ta.WMA(x, window))

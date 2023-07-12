@@ -82,14 +82,10 @@ class PandasStrPrinter(StrPrinter):
         return "%s.rolling(%s).std(ddof=0)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
 
     def _print_ts_arg_max(self, expr):
-        # TODO: 是否换成bottleneck版
-        PREC = precedence(expr)
-        return "%s.rolling(%s).apply(np.argmax, engine='numba', raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+        return "bn.move_argmax(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_arg_min(self, expr):
-        # TODO: 是否换成bottleneck版
-        PREC = precedence(expr)
-        return "%s.rolling(%s).apply(np.argmin, engine='numba', raw=True)" % (self.parenthesize(expr.args[0], PREC), self._print(expr.args[1]))
+        return "bn.move_argmin(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_ts_product(self, expr):
         PREC = precedence(expr)
