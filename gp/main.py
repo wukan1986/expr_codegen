@@ -76,9 +76,9 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
     ic = df.select(cs.numeric().mean())
     ir = df.select(cs.numeric().mean() / cs.numeric().std(ddof=0))
 
-    # 居然有部分算出来是None
-    ic = ic.fill_null(float('nan'))
-    ir = ir.fill_null(float('nan'))
+    # 居然有部分算出来是None, fill_null虽然只有一行，但对几百列太慢，所以放在之后处理
+    # ic = ic.fill_null(float('nan'))
+    # ir = ir.fill_null(float('nan'))
 
     ic = ic.to_dicts()[0]
     ir = ir.to_dicts()[0]
@@ -99,8 +99,13 @@ def evaluate_expr(individual, points):
     # print(col)
     # if col == 'GP_0022':
     #     test =1
+    ic = IC.get(col, None)
+    ir = IR.get(col, None)
+
+    ic = float('nan') if ic is None else ic
+    ir = float('nan') if ir is None else ir
     # IC绝对值越大越好
-    return _abs(IC.get(col, float('nan'))),  # IR.get(col, float('nan')),
+    return _abs(ic),  # ir,
 
 
 def map_exprs(evaluate, invalid_ind):
