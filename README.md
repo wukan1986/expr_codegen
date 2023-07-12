@@ -58,10 +58,10 @@ https://exprcodegen0710.streamlit.app (可能地址有变更，新地址请参�
 
 ## 工作原理
 
-本项目主于依赖于`sympy`项目。所用到的主要函数如下：
+本项目依赖于`sympy`项目。所用到的主要函数如下：
 
 1. `simplify`: 对复杂表达式进行化简
-2. `cse`: Common Subexpression Elimination公共子表达式消除
+2. `cse`: `Common Subexpression Elimination`公共子表达式消除
 3. `StrPrinter`: 根据不同的函数输出不同字符串。定制此代码可以支持其它语种或库
 
 因为`groupby`,`sort`都比较占用时间。如果提前将公式分类，不同的类别使用不同的`groupby`，可以减少计算时间。
