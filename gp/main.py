@@ -2,6 +2,7 @@ import operator
 import pathlib
 import pickle
 import random
+import time
 # abs在examples.sympy_define中已经被替换成了sympy的symbol，如果用后要用到正必需别名一下
 from builtins import abs as _abs
 from itertools import count
@@ -145,13 +146,17 @@ def map_exprs(evaluate, invalid_ind):
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
         f.write(codes)
 
-    logger.info("代码执行...")
+    __cnt = len(expr_dict)
+    logger.info(f"代码执行。共 {__cnt} 条")
     # 执行，一定要带globals()
     # !!!这里执行的东西会改变外层变量，如模板中的ts_decay_linear修改了sympy中同名变量，一定注意
+    __tic = time.time()
     exec(codes, globals())
+    __toc = time.time()
+    elapsed_time = __toc - __tic
     # print(df_input, '111')
     # print(df_output, '222')
-    logger.info("执行完成")
+    logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / __cnt:.3f} 秒/条")
 
     global IC
     global IR
@@ -170,7 +175,7 @@ toolbox.register('map', map_exprs)
 
 def main():
     # TODO: 伪随机种子，同种子可复现
-    random.seed(901)
+    random.seed(9527)
 
     # TODO: 初始种群大小
     pop = toolbox.population(n=500)
