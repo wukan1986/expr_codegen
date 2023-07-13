@@ -13,7 +13,7 @@ from loguru import logger
 
 
 # TODO: 数据加载或外部传入
-# df = pl.DataFrame()
+df = df_input
 
 
 def bn_wrap(func, x, window):
@@ -70,7 +70,7 @@ def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:
     return df
 {% endfor %}
 
-logger.info("start...")
+#logger.info("start...")
 
 {% for key, value in groupbys.items() %}
 {{ value-}}
@@ -94,12 +94,16 @@ logger.info("start...")
 df = df.drop(columns=filter(lambda x: re.search(r'^_x_\d+', x), df.columns))
 
 # shrink
+# https://github.com/pola-rs/polars/issues/9809
 df = df.select(cs.all().shrink_dtype())
 df = df.shrink_to_fit()
 
-logger.info('done')
+# logger.info('done')
 
 # save
 # df.write_parquet('output.parquet', compression='zstd')
 
-print(df.tail(5))
+# print(df.tail(5))
+
+# 向外部传出数据
+df_output = df

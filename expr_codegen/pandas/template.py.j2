@@ -14,13 +14,13 @@ from loguru import logger
 # TODO: 数据加载或外部传入
 # df = pd.DataFrame()
 
-def signed_power(x, y):
+def _signed_power(x, y):
     return x.sign() * (x.abs() ** y)
 
-def scale(x, scale=1):
+def _scale(x, scale=1):
     return x / x.abs().sum() * scale
 
-def neutralize(x):
+def _neutralize(x):
     return x - x.mean()
 
 {% for key, value in funcs.items() %}

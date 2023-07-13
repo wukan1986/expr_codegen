@@ -197,6 +197,9 @@ def create_dag_exprs(exprs):
             for sym in syms:
                 # 由于边的原因，这里会主动生成一些源节点
                 G.add_edge(sym, symbol.name)
+            if len(syms) == 0:
+                # GP_0033=log(1/2400)
+                G.add_edge(expr.name, symbol.name)
 
     # 源始因子，添加属性
     for node in zero_indegree(G):
