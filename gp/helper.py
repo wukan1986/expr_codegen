@@ -79,10 +79,10 @@ def invalid_number_type(e, pset):
                 if node.args[i].is_Number:
                     return True
             elif issubclass(arg, int):
-                # 应当是浮点，结果却是整数
+                # 应当是整数，结果却是浮点
                 if node.args[i].is_Float:
                     return True
-            elif issubclass(arg, int):
+            elif issubclass(arg, float):
                 pass
     return False
 

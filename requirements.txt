@@ -1,6 +1,7 @@
 black
 Jinja2
 loguru
+polars>=0.18.7
 streamlit
 streamlit-ace
 sympy

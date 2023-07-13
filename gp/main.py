@@ -114,7 +114,7 @@ def map_exprs(evaluate, invalid_ind):
     但这里考虑到表达式很相似，可以重复利用公共子表达式，所以决定种群一起进行计算，最后由其它地方取结果评估即可
     """
     g = next(GEN_COUNT)
-    # 保存原始，方便复现
+    # 保存原始表达式，方便复现
     with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
 
@@ -141,6 +141,7 @@ def map_exprs(evaluate, invalid_ind):
     # 表达式转脚本
     codes = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
 
+    # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
         f.write(codes)
 
@@ -154,7 +155,7 @@ def map_exprs(evaluate, invalid_ind):
 
     global IC
     global IR
-    # 计算ic, ir，需指定对应的标签字段
+    # TODO: 计算ic, ir，需指定对应的标签字段
     IC, IR = calc_ic_ir(df_output, expr_dict.keys(), 'LABEL_OO_1')
 
     # 封装，加传数据存储的字段名
@@ -168,11 +169,13 @@ toolbox.register('map', map_exprs)
 
 
 def main():
-    # 伪随机种子，同种子可复现
+    # TODO: 伪随机种子，同种子可复现
     random.seed(901)
 
+    # TODO: 初始种群大小
     pop = toolbox.population(n=500)
-    hof = tools.HallOfFame(30)
+    # TODO: 名人堂，表示最终选优多少个体
+    hof = tools.HallOfFame(50)
 
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
@@ -183,7 +186,9 @@ def main():
     mstats.register("max", np.nanmax)
 
     pop, log = gp.harm(pop, toolbox,
+                       # 交叉率、变异率，代数
                        cxpb=0.5, mutpb=0.1, ngen=50,
+                       # 名人堂参数
                        alpha=0.05, beta=10, gamma=0.25, rho=0.9,
                        stats=mstats, halloffame=hof, verbose=True)
     # print log
