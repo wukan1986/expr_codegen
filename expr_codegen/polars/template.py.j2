@@ -16,24 +16,16 @@ from loguru import logger
 # df = pl.DataFrame()
 
 
-def bn_wrap(func, x, window):
-    """https://github.com/pydata/bottleneck/issues/434"""
-    if len(x) < window:
-        return pl.Series(np.full_like(x, fill_value=np.nan))
-    else:
-        return pl.Series(func(x, window))
-
-
 def _rolling_rank(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: (bn_wrap(bn.move_rank, x, window) + 1) / 2)
+    return expr.map(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
 
 
 def _rolling_argmax(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: bn_wrap(bn.move_argmax, x, window))
+    return expr.map(lambda x: pl.Series(bn.move_argmax(x, window)))
 
 
 def _rolling_argmin(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: bn_wrap(bn.move_argmin, x, window))
+    return expr.map(lambda x: pl.Series(bn.move_argmin(x, window)))
 
 
 # !!! 函数的命名一定不能与sympy中定义的一样，否则在exec(,globals())后会修改同名变量，最终导致第二次eval(expr)时报错。所以全加下划线

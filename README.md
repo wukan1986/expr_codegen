@@ -6,7 +6,7 @@
 
 `polars`语法不同于`pandas`,也不同于常见的表达式，导致学习难度大，转译还容易出错。所以创建此项目为解决以下问题：
 
-1. 提取公共表达式，减少代码量和重复计算
+1. 提取公共子表达式，减少代码量和重复计算
 2. 对表达式进行化简，便于人理解
 3. 时序与横截面表达式自动进行分离，解决人难于处理多层嵌套表达式问题
 
@@ -33,10 +33,45 @@ https://exprcodegen0710.streamlit.app (可能地址有变更，新地址请参�
 3. 使用IDE(例如PyCharm或VSCode)，打开项目，按需定制
 4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存等部分即可
 
+## 遗传算法依赖库安装
+
+通过`pip install -r requirements_pg.txt`安装依赖
+
+expr_codegen项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
+为了提高速度，对于有些算子使用了TA-Lib和bottleneck。但现实情况下，数据是多变的，我们在使用时会遇到一些问题打断工作。
+
+- Exception: inputs are all NaN
+https://github.com/TA-Lib/ta-lib-python/issues/585
+
+- ValueError: Moving window (=10) must between 1 and 5
+https://github.com/pydata/bottleneck/issues/434
+
+所以目前对版本做了要求
+- TA-Lib>=0.4.27
+- Bottleneck>=1.3.8
+
+很有可能你当前环境还没有提供`pip`安装，得自己编译
+
+建议先安装`TA-Lib`，只要这个库能编译安装成功，`bottleneck`一般也能直接安装成功。
+
+### TA-Lib
+
+1. `ta-lib-0.4.0-msvc.zip`下载后，**必须**解压到`C:\ta-lib`
+2. 安装`visual-cpp-build-tools`
+3. 由于步骤太多，建议参考《TA-Lib使用预编译版本和自己编译安装的教程》https://blog.csdn.net/seriseri/article/details/128671743
+4. Linux用户参考TA-Lib的Readme即可
+
+### bottleneck
+
+1. 下载源码或git clone后，进入到目录中
+2. `pip install -e .` # 注意有一个英文句号
+3. 如果bottleneck主库还没有合并PR，可以先使用 https://github.com/wukan1986/bottleneck 这个版本
+
 ## 目录结构
 
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
+│  requirements_gp.txt # 通过`pip install -r requirements_gp.txt`安装遗传编程依赖
 ├─examples
 │      alpha101.py # WorldQuant Alpha101示例
 │      demo_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
@@ -110,15 +145,13 @@ https://exprcodegen0710.streamlit.app (可能地址有变更，新地址请参�
 
 ## 小技巧
 
-`sympy`不支持`==`，而是当成两个对象比较。例如：
+1. `sympy`不支持`==`，而是当成两个对象比较。例如：
+   1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
+   2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
 
-1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
-2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
-
-`sympy`不支持`bool`转`int`。例如：
-
-1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
-2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
+2. `sympy`不支持`bool`转`int`。例如：
+   1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
+   2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
 
 ## 示例片段
 
@@ -181,7 +214,9 @@ df = func_0_cl(df)
 ```
 
 ## 生成代码不写文件直接执行
-参考示例中的`demo_exec.py`, 它提前准备了数据，然后将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
+
+参考示例中的`demo_exec.py`, 它提前准备数据，然后将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
 
 ## 遗传算法
+
 请参考`gp`目录

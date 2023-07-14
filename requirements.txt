@@ -5,5 +5,3 @@ streamlit
 streamlit-ace
 sympy
 networkx
-polars>=0.18.7
-TA-Lib>=0.4.27

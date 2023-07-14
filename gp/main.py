@@ -95,18 +95,21 @@ def evaluate_expr(individual, points):
     ind, col = individual
     if col not in df_output.columns:
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
-        return float('nan'),  # float('nan'),
+        return float('-999'),  # float('nan'),
 
     # print(col)
     # if col == 'GP_0022':
     #     test =1
-    ic = IC.get(col, None)
-    ir = IR.get(col, None)
 
-    ic = float('nan') if ic is None else ic
-    ir = float('nan') if ir is None else ir
-    # IC绝对值越大越好
-    return _abs(ic),  # ir,
+    # IC内部的值可能是None或nan，所以都要处理, 这里全转nan
+    ic = IC.get(col, None) or float('nan')
+    ir = IR.get(col, None) or float('nan')
+
+    # IC绝对值越大越好，使得==判断是否nan
+    ic = _abs(ic) if ic == ic else float('-999')
+    ir = ir if ir == ir else float('-999')
+
+    return ic,  # ir,
 
 
 def map_exprs(evaluate, invalid_ind):
@@ -146,17 +149,17 @@ def map_exprs(evaluate, invalid_ind):
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
         f.write(codes)
 
-    __cnt = len(expr_dict)
-    logger.info(f"代码执行。共 {__cnt} 条")
+    # 使用两下划线，减少与生成代码间冲突可能性
+    _cnt_ = len(expr_dict)
+    logger.info(f"代码执行。共 {_cnt_} 条")
     # 执行，一定要带globals()
     # !!!这里执行的东西会改变外层变量，如模板中的ts_decay_linear修改了sympy中同名变量，一定注意
-    __tic = time.time()
+    _tic_ = time.time()
     exec(codes, globals())
-    __toc = time.time()
-    elapsed_time = __toc - __tic
+    elapsed_time = time.time() - _tic_
     # print(df_input, '111')
     # print(df_output, '222')
-    logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / __cnt:.3f} 秒/条")
+    logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / _cnt_:.3f} 秒/条")
 
     global IC
     global IR
@@ -178,7 +181,7 @@ def main():
     random.seed(9527)
 
     # TODO: 初始种群大小
-    pop = toolbox.population(n=500)
+    pop = toolbox.population(n=100)
     # TODO: 名人堂，表示最终选优多少个体
     hof = tools.HallOfFame(50)
 
@@ -192,7 +195,7 @@ def main():
 
     pop, log = gp.harm(pop, toolbox,
                        # 交叉率、变异率，代数
-                       cxpb=0.5, mutpb=0.1, ngen=50,
+                       cxpb=0.5, mutpb=0.1, ngen=2,
                        # 名人堂参数
                        alpha=0.05, beta=10, gamma=0.25, rho=0.9,
                        stats=mstats, halloffame=hof, verbose=True)
@@ -202,6 +205,11 @@ def main():
 
 if __name__ == "__main__":
     pop, log, hof = main()
+
+    # 保存名人堂
+    with open(LOG_DIR / f'hall_of_fame.pkl', 'wb') as f:
+        pickle.dump(hof, f)
+
     print('=' * 60)
     for i, h in enumerate(hof):
-        print(i, h)
+        print(i, h.fitness, h)
