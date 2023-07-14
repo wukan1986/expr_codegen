@@ -52,6 +52,10 @@ class PolarsStrPrinter(StrPrinter):
         # return expr.name
         return f"pl.col('{expr.name}')"
 
+    def _print_Equality(self, expr):
+        PREC = precedence(expr)
+        return "%s==%s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
     def _print_if_else(self, expr):
         return "pl.when(%s).then(%s).otherwise(%s)" % (self._print(expr.args[0]), self._print(expr.args[1]), self._print(expr.args[2]))
 
@@ -119,17 +123,17 @@ class PolarsStrPrinter(StrPrinter):
         else:
             return "%s.log()" % self.parenthesize(expr.args[0], PREC)
 
-    def _print_abs(self, expr):
+    def _print_Abs(self, expr):
         PREC = precedence(expr)
         if expr.args[0].is_Number:
             return "np.abs(%s)" % expr.args[0]
         else:
             return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
 
-    def _print_max(self, expr):
+    def _print_Max(self, expr):
         return "pl.max_horizontal([%s, %s])" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
-    def _print_min(self, expr):
+    def _print_Min(self, expr):
         return "pl.min_horizontal([%s, %s])" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_sign(self, expr):

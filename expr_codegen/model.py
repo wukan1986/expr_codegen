@@ -199,7 +199,10 @@ def create_dag_exprs(exprs):
                 G.add_edge(sym, symbol.name)
             if len(syms) == 0:
                 # GP_0033=log(1/2400)
-                G.add_edge(expr.name, symbol.name)
+                if hasattr(expr, 'name'):
+                    G.add_edge(expr.name, symbol.name)
+                else:
+                    G.add_edge(str(expr), symbol.name)
 
     # 源始因子，添加属性
     for node in zero_indegree(G):
@@ -385,4 +388,4 @@ def dag_end(G):
 
     exprs_ldl._list = exprs_ldl.values()[1:]
 
-    return exprs_ldl
+    return exprs_ldl, G

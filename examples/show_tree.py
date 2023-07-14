@@ -11,7 +11,7 @@ exprs_src = {
     "alpha_002": (-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6)),
     "alpha_003": (-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)),
     "alpha_004": (-1 * ts_rank(cs_rank(LOW), 9)),
-    "alpha_005": (cs_rank((OPEN - (ts_sum(VWAP, 10) / 10))) * (-1 * abs(cs_rank((CLOSE - VWAP))))),
+    "alpha_005": (cs_rank((OPEN - (ts_sum(VWAP, 10) / 10))) * (-1 * Abs(cs_rank((CLOSE - VWAP))))),
     "alpha_006": -1 * ts_corr(OPEN, VOLUME, 10),
 }
 

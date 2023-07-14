@@ -11,7 +11,7 @@ gp_rank, = symbols('gp_rank, ', cls=Function)
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
     "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),  # + gp_rank(OPEN, CLOSE),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - Abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),  # + gp_rank(OPEN, CLOSE),
     "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),
@@ -22,7 +22,7 @@ exprs_src = {
 # TODO: 一定要正确设定时间列名和资产列名
 tool = ExprTool(date='date', asset='asset')
 # 生成代码
-codes = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=False)
+codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=False)
 
 output_file = 'output_polars.py'
 with open(output_file, 'w', encoding='utf-8') as f:

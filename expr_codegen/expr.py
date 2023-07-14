@@ -1,7 +1,7 @@
 import re
 from functools import reduce
 
-from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add
+from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
@@ -263,15 +263,46 @@ def get_key(children):
         assert False, f'{children} 无法正确分类，之前没有分清'
 
 
-def replace__ts_sum__to__ts_mean(e):
+def replace_exprs(exprs):
+    """使用替换的方式简化表达式"""
+    # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
+    exprs = {k: _replace__ts_sum__to__ts_mean(v) for k, v in exprs.items()}
+    # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
+    exprs = {k: _replace__repeat(v) for k, v in exprs.items()}
+    # 1.0*VWAP转VWAP
+    exprs = {k: _replace__one_mul(v) for k, v in exprs.items()}
+    # 将部分参数为1的ts函数进行简化
+    exprs = {k: _replace__ts_xxx_1(v) for k, v in exprs.items()}
+    # ts_delay转成ts_delta
+    exprs = {k: _replace__ts_delay__to__ts_delta(v) for k, v in exprs.items()}
+
+    return exprs
+
+
+def get_node_name(node):
+    """得到节点名"""
+    if hasattr(node, 'name'):
+        # 如 ts_arg_max
+        node_name = node.name
+    else:
+        # 如 log
+        node_name = str(node.func)
+    return node_name
+
+
+def _replace__ts_sum__to__ts_mean(e):
     """将ts_sum(x, y)/y 转成 ts_mean(x, y)"""
+    if not isinstance(e, Basic):
+        return e
+
     # TODO: 这里重新定义的ts_mean与外部已经定义好的是否同一个？
     ts_mean = symbols('ts_mean', cls=Function)
 
     replacements = []
     for node in preorder_traversal(e):
         if node.is_Mul and node.args[0].is_Rational and node.args[1].is_Function:
-            if node.args[1].name == 'ts_sum':
+            node_name = get_node_name(node.args[1])
+            if node_name == 'ts_sum':
                 if node.args[1].args[1] == node.args[0].q and node.args[0].p == 1:
                     replacements.append((node, ts_mean(node.args[1].args[0], node.args[1].args[1])))
     for node, replacement in replacements:
@@ -280,28 +311,35 @@ def replace__ts_sum__to__ts_mean(e):
     return e
 
 
-def replace__repeat(e):
+def _replace__repeat(e):
     """cs_rank(cs_rank(x)) 转成 cs_rank(x)
     sign(sign(x)) 转成 sign(x)
-    abs(abs(x)) 转成 abs(x)
+    Abs(Abs(x)) 转成 Abs(x)
     """
+    if not isinstance(e, Basic):
+        return e
+
     replacements = []
     for node in preorder_traversal(e):
         # print(node)
         if len(node.args) == 0:
             continue
-        if hasattr(node, 'name') and hasattr(node.args[0], 'name'):
-            if node.name == node.args[0].name:
-                if node.name in ('cs_rank', 'sign', 'abs'):
-                    replacements.append((node, node.args[0]))
+        node_name = get_node_name(node)
+        node_args0_name = get_node_name(node.args[0])
+        if node_name == node_args0_name:
+            if node.name in ('cs_rank', 'sign', 'Abs'):
+                replacements.append((node, node.args[0]))
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
     return e
 
 
-def replace__one_mul(e):
+def _replace__one_mul(e):
     """1.0*VWAP转成VWAP"""
+    if not isinstance(e, Basic):
+        return e
+
     replacements = []
     for node in preorder_traversal(e):
         # print(node)
@@ -316,23 +354,26 @@ def replace__one_mul(e):
     return e
 
 
-def replace__ts_xxx_1(e):
+def _replace__ts_xxx_1(e):
     """ts_xxx部分函数如果参数为1，可直接丢弃"""
+    if not isinstance(e, Basic):
+        return e
+
     replacements = []
     for node in preorder_traversal(e):
-        if hasattr(node, 'name'):
-            if node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
-                             'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
-                             'ts_product', 'ts_std_dev', 'ts_rank'):
-                if node.args[1] <= 1:
-                    replacements.append((node, node.args[0]))
+        node_name = get_node_name(node)
+        if node_name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
+                         'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
+                         'ts_product', 'ts_std_dev', 'ts_rank'):
+            if node.args[1] <= 1:
+                replacements.append((node, node.args[0]))
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
     return e
 
 
-def replace__ts_delay__to__ts_delta(e):
+def _replace__ts_delay__to__ts_delta(e):
     """ 将-ts_delay(x, y)转成ts_delta(x, y)-x
 
     本质上为x-ts_delay(x, y) 转成 ts_delta(x, y)
@@ -340,6 +381,9 @@ def replace__ts_delay__to__ts_delta(e):
     例如 OPEN - ts_delay(OPEN, 5) + (CLOSE - ts_delay(CLOSE, 5))
     结果 ts_delta(CLOSE, 5) + ts_delta(OPEN, 5)
     """
+    if not isinstance(e, Basic):
+        return e
+
     ts_delta = symbols('ts_delta', cls=Function)
 
     replacements = []
@@ -348,7 +392,7 @@ def replace__ts_delay__to__ts_delta(e):
             new_args = []
             for arg in node.args:
                 if arg.is_Mul:
-                    if arg.args[0] == -1 and arg.args[1].is_Function and arg.args[1].name == 'ts_delay':
+                    if arg.args[0] == -1 and arg.args[1].is_Function and get_node_name(arg.args[1]) == 'ts_delay':
                         # 添加ts_delta(x, y)
                         new_args.append(ts_delta(arg.args[1].args[0], arg.args[1].args[1]))
                         # 添加-x
@@ -369,26 +413,34 @@ def replace__ts_delay__to__ts_delta(e):
     return e
 
 
-def meaningless__ts_xxx_1(e):
-    """ts_xxx部分函数如果参数为1，可直接丢弃"""
-    for node in preorder_traversal(e):
-        if hasattr(node, 'name'):
-            if node.name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
-                             'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
-                             'ts_product', 'ts_std_dev', 'ts_rank'):
-                if node.args[1] <= 1:
-                    return True
-            if node.name in ('ts_corr', 'ts_covariance',):
-                if node.args[2] <= 1:
-                    return True
+def is_meaningless(e):
+    if _meaningless__ts_xxx_1(e):
+        return True
+    if _meaningless__xx_xx(e):
+        return True
     return False
 
 
-def meaningless__xx_xx(e):
+def _meaningless__ts_xxx_1(e):
+    """ts_xxx部分函数如果参数为1，可直接丢弃"""
+    for node in preorder_traversal(e):
+        node_name = get_node_name(node)
+        if node_name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
+                         'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
+                         'ts_product', 'ts_std_dev', 'ts_rank'):
+            if node.args[1] <= 1:
+                return True
+        if node_name in ('ts_corr', 'ts_covariance',):
+            if node.args[2] <= 1:
+                return True
+    return False
+
+
+def _meaningless__xx_xx(e):
     """部分函数如果两参数完全一样，可直接丢弃"""
     for node in preorder_traversal(e):
-        if hasattr(node, 'name'):
-            if node.name in ('max', 'min', 'ts_corr', 'ts_covariance'):
-                if node.args[0] == node.args[1]:
-                    return True
+        node_name = get_node_name(node)
+        if node_name in ('Max', 'Min', 'ts_corr', 'ts_covariance'):
+            if node.args[0] == node.args[1]:
+                return True
     return False

@@ -20,15 +20,15 @@ def convert_inverse_prim(prim, args):
         'fdiv': lambda *args_: "Mul({}, Pow({}, -1))".format(*args_),
         'fmul': lambda *args_: "Mul({},{})".format(*args_),
         'fadd': lambda *args_: "Add({},{})".format(*args_),
-        'fmax': lambda *args_: "max({},{})".format(*args_),
-        'fmin': lambda *args_: "min({},{})".format(*args_),
+        'fmax': lambda *args_: "Max({},{})".format(*args_),
+        'fmin': lambda *args_: "Min({},{})".format(*args_),
 
         'isub': lambda *args_: "Add({}, Mul(-1,{}))".format(*args_),
         'idiv': lambda *args_: "Mul({}, Pow({}, -1))".format(*args_),
         'imul': lambda *args_: "Mul({},{})".format(*args_),
         'iadd': lambda *args_: "Add({},{})".format(*args_),
-        'imax': lambda *args_: "max({},{})".format(*args_),
-        'imin': lambda *args_: "min({},{})".format(*args_),
+        'imax': lambda *args_: "Max({},{})".format(*args_),
+        'imin': lambda *args_: "Min({},{})".format(*args_),
 
         'pass_int': lambda *args_: "{}".format(*args_),
     }
@@ -53,7 +53,16 @@ def stringify_for_sympy(f):
     return string
 
 
-def invalid_atom_infinite(e):
+def is_invalid(e, pset):
+    if _invalid_atom_infinite(e):
+        return True
+    if _invalid_number_type(e, pset):
+        return True
+
+    return False
+
+
+def _invalid_atom_infinite(e):
     """无效。单元素。无穷大或无穷小"""
     # 根是单元素，直接返回
     if e.is_Atom:
@@ -65,13 +74,17 @@ def invalid_atom_infinite(e):
     return False
 
 
-def invalid_number_type(e, pset):
+def _invalid_number_type(e, pset):
     """检查参数类型"""
     # 可能导致结果为1，然后当成float去别处计算
     for node in preorder_traversal(e):
         if not node.is_Function:
             continue
-        prim = pset.mapping.get(node.name, None)
+        if hasattr(node, 'name'):
+            node_name = node.name
+        else:
+            node_name = str(node.func)
+        prim = pset.mapping.get(node_name, None)
         if prim is None:
             continue
         for i, arg in enumerate(prim.args):

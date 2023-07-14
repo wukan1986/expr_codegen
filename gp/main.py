@@ -14,10 +14,10 @@ from deap import base, creator, gp, tools
 from loguru import logger
 
 from examples.sympy_define import *
-from expr_codegen.expr import safe_eval, meaningless__ts_xxx_1, meaningless__xx_xx
+from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors
-from gp.helper import stringify_for_sympy, invalid_atom_infinite, invalid_number_type
+from gp.helper import stringify_for_sympy, is_invalid
 
 _ = Eq, Add, Mul, Pow
 # ======================================
@@ -88,14 +88,14 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
 
 
 def evaluate_expr(individual, points):
-    """评估函数
+    """评估函数，需要返回元组。
 
-    需要返回元组，
+    !!! 元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
     """
     ind, col = individual
     if col not in df_output.columns:
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
-        return float('-999'),  # float('nan'),
+        return float('-999'),  # float('-999'),
 
     # print(col)
     # if col == 'GP_0022':
@@ -105,7 +105,7 @@ def evaluate_expr(individual, points):
     ic = IC.get(col, None) or float('nan')
     ir = IR.get(col, None) or float('nan')
 
-    # IC绝对值越大越好，使得==判断是否nan
+    # IC绝对值越大越好。使用==判断是否nan
     ic = _abs(ic) if ic == ic else float('-999')
     ir = ir if ir == ir else float('-999')
 
@@ -138,12 +138,12 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {v: k for k, v in expr_dict.items()}
 
     # 清理非法表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not (invalid_atom_infinite(v) or invalid_number_type(v, pset))}
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
     # 清理无意义表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not (meaningless__ts_xxx_1(v) or meaningless__xx_xx(v))}
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:

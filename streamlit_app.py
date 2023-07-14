@@ -5,14 +5,11 @@ import sympy
 from black import format_str, Mode
 from loguru import logger
 from streamlit_ace import st_ace
-from sympy import numbered_symbols, Eq
+from sympy import numbered_symbols
 
 import expr_codegen
-from expr_codegen.expr import replace__ts_sum__to__ts_mean, replace__repeat, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta, string_to_exprs
+from expr_codegen.expr import string_to_exprs, replace_exprs
 from expr_codegen.tool import ExprTool
-
-# 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
-_ = Eq
 
 st.set_page_config(page_title='Expr Codegen', layout="wide")
 
@@ -49,10 +46,9 @@ with st.sidebar:
 version: {expr_codegen.__version__}
     """)
 
-
 st.title('表达式转译代码')
 
-with st.expander(label="预定义的**因子**和**算子**"):
+with st.expander(label="预定义**算子**"):
     st.write('如缺算子，可以在issue中申请添加，或下载代码进行二次开发')
 
     # import examples.sympy_define
@@ -97,16 +93,7 @@ if st.button('代码生成'):
 
     if is_pre_opt:
         logger.info('事前 表达式 化简')
-        # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-        exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
-        # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-        exprs_src = {k: replace__repeat(v) for k, v in exprs_src.items()}
-        # 1.0*VWAP转VWAP
-        exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
-        # 将部分参数为1的ts函数进行简化
-        exprs_src = {k: replace__ts_xxx_1(v) for k, v in exprs_src.items()}
-        # ts_delay转成ts_delta
-        exprs_src = {k: replace__ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+        exprs_src = replace_exprs(exprs_src)
 
     # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
     tool = ExprTool(date=date_name, asset=asset_name)
@@ -118,7 +105,7 @@ if st.button('代码生成'):
     tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
-    exprs_ldl = tool.dag(False)
+    exprs_ldl, G = tool.dag(False)
 
     logger.info('分组优化')
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
