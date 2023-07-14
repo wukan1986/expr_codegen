@@ -5,11 +5,20 @@ import sympy
 from black import format_str, Mode
 from loguru import logger
 from streamlit_ace import st_ace
-from sympy import numbered_symbols
+from sympy import numbered_symbols, Symbol, FunctionClass
 
 import expr_codegen
 from expr_codegen.expr import string_to_exprs, replace_exprs
 from expr_codegen.tool import ExprTool
+
+
+def get_symbols_functions(module):
+    """获取Symbol与Function"""
+
+    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass))]
+    symbols = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, Symbol))]
+    return symbols, functions
+
 
 st.set_page_config(page_title='Expr Codegen', layout="wide")
 
@@ -57,19 +66,24 @@ with st.expander(label="预定义**算子**"):
     # 本可以不用写这么复杂，但为了证明可以动态加载和执行，所以演示一下
     module = __import__('examples.sympy_define', fromlist=['*'])
 
-    codes = inspect.getsource(module)
-    st.code(codes)
+    source = inspect.getsource(module)
+    st.code(source)
     # 执行
-    exec(codes)
+    exec(source, globals())
 
 st.subheader('自定义因子')
-factors = st.text_area(label='可覆写已定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
+factors_text_area = st.text_area(label='可覆写已定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
 RETURNS, VWAP, CAP,
 ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
 SECTOR, INDUSTRY, SUBINDUSTRY,""")
 
 st.subheader('自定义表达式')
-exprs_src = st_ace(value="""# 请在此添加表达式，`=`右边为表达式，`=`左边为输出因子名。
+all_symbols, all_functions = get_symbols_functions(module)
+exprs_src = st_ace(value=f"""# 向编辑器登记自动完成关键字，按字母排序
+# {all_symbols}
+# {all_functions}
+
+# 请在此添加表达式，`=`右边为表达式，`=`左边为新因子名。
 alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
 alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
 alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
@@ -82,11 +96,9 @@ LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
                    auto_update=True,
                    )
 
-if st.button('代码生成'):
-    st.write('请点击**代码区 右上角 图标按钮**进行复制')
-
+if st.button('生成代码'):
     # 自定义注册到全局变量
-    sympy.var(factors)
+    sympy.var(factors_text_area)
 
     # eval处理，转成字典
     exprs_src = string_to_exprs(exprs_src, globals())
@@ -111,7 +123,11 @@ if st.button('代码生成'):
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
     logger.info('代码生成')
-    codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
+    source = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
-    res = format_str(codes, mode=Mode(line_length=500))
-    st.code(res, language='python')
+    res = format_str(source, mode=Mode(line_length=800))
+
+    with st.expander(label="预览代码"):
+        st.code(res, language='python')
+
+    st.download_button(label="下载代码", data=res, file_name='output.py')

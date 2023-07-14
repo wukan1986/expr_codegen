@@ -95,10 +95,6 @@ def evaluate_expr(individual, points):
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
         return float('-999'),  # float('-999'),
 
-    # print(col)
-    # if col == 'GP_0022':
-    #     test =1
-
     # IC内部的值可能是None或nan，所以都要处理, 这里全转nan
     ic = IC.get(col, None) or float('nan')
     ir = IR.get(col, None) or float('nan')
@@ -120,15 +116,9 @@ def map_exprs(evaluate, invalid_ind):
     with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
 
-    # # TODO: test
-    # with open(LOG_DIR / f'deap_exprs_0001.pkl', 'rb') as f:
-    #     invalid_ind = pickle.load(f)
-
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式
     expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
-    # ts_decay_linear(Mul(ts_arg_max(Add(ts_max(CLOSE, 3), Mul(-1,20)), 20),20), 5)
-    # AttributeError: 'Mul' object has no attribute 'map'
     expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
 
     # 通过字典特性删除重复表达式
@@ -155,8 +145,7 @@ def map_exprs(evaluate, invalid_ind):
     _tic_ = time.time()
     exec(codes, globals())
     elapsed_time = time.time() - _tic_
-    # print(df_input, '111')
-    # print(df_output, '222')
+
     logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / _cnt_:.3f} 秒/条")
 
     global IC
@@ -186,10 +175,11 @@ def main():
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
     mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-    mstats.register("avg", np.nanmean)
-    mstats.register("std", np.nanstd)
-    mstats.register("min", np.nanmin)
-    mstats.register("max", np.nanmax)
+    # 名人堂中不能出现nan, 无法比较排序
+    mstats.register("avg", np.mean)
+    mstats.register("std", np.std)
+    mstats.register("min", np.min)
+    mstats.register("max", np.max)
 
     pop, log = gp.harm(pop, toolbox,
                        # 交叉率、变异率，代数
