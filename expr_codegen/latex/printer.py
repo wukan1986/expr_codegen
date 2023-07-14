@@ -42,5 +42,14 @@ class ExprLatexPrinter(LatexPrinter):
         return expr.name.replace('_', r'\_')
 
 
-def latex(expr, **settings):
+def latex(expr, mode='equation*', mul_symbol='times', **settings):
+    """表达式转LATEX字符串"""
+    settings.update({'mode': mode, 'mul_symbol': mul_symbol})
     return ExprLatexPrinter(settings).doprint(expr)
+
+
+def display_latex(expr):
+    """显示LATEX表达式，在VSCode或Notebook中显示正常"""
+    from IPython.display import Markdown, display
+
+    return display(Markdown(latex(expr)))

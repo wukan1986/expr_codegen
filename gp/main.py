@@ -3,8 +3,6 @@ import pathlib
 import pickle
 import random
 import time
-# abs在examples.sympy_define中已经被替换成了sympy的symbol，如果用后要用到正必需别名一下
-from builtins import abs as _abs
 from itertools import count
 
 import numpy as np
@@ -106,7 +104,7 @@ def evaluate_expr(individual, points):
     ir = IR.get(col, None) or float('nan')
 
     # IC绝对值越大越好。使用==判断是否nan
-    ic = _abs(ic) if ic == ic else float('-999')
+    ic = abs(ic) if ic == ic else float('-999')
     ir = ir if ir == ir else float('-999')
 
     return ic,  # ir,

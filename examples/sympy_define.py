@@ -5,7 +5,7 @@ from sympy import symbols, Symbol, Function, Add, Mul, Pow
 
 # 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
 _ = Add, Mul, Pow
-# 容易冲突的算子还是用sympy中预定义的
+# 容易冲突的算子还是用sympy中预定义 !!!注意 Abs, Max, Min是首字母大写
 _ = Eq, Abs, Max, Min, log,
 
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
