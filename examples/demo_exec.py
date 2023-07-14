@@ -8,7 +8,7 @@ from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
 
 # 防止sympy_define导入被IDE删除
-_ = gp_neutralize
+_ = Eq
 
 # ======================================
 # 数据准备
