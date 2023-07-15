@@ -1,3 +1,4 @@
+import base64
 import inspect
 
 import streamlit as st
@@ -28,6 +29,11 @@ with st.sidebar:
     date_name = st.text_input('日期字段名', 'date')
     asset_name = st.text_input('资产字段名', 'asset')
 
+    factors_text_area = st.text_area(label='覆写预定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
+RETURNS, VWAP, CAP,
+ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
+SECTOR, INDUSTRY, SUBINDUSTRY,""")
+
     # 生成代码
     style = st.radio('代码风格', ('polars', 'pandas'))
     if style == 'polars':
@@ -55,8 +61,6 @@ with st.sidebar:
 version: {expr_codegen.__version__}
     """)
 
-st.title('表达式转译代码')
-
 with st.expander(label="预定义**算子**"):
     st.write('如缺算子，可以在issue中申请添加，或下载代码进行二次开发')
 
@@ -70,12 +74,6 @@ with st.expander(label="预定义**算子**"):
     st.code(source)
     # 执行
     exec(source, globals())
-
-st.subheader('自定义因子')
-factors_text_area = st.text_area(label='可覆写已定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
-RETURNS, VWAP, CAP,
-ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
-SECTOR, INDUSTRY, SUBINDUSTRY,""")
 
 st.subheader('自定义表达式')
 all_symbols, all_functions = get_symbols_functions(module)
@@ -97,37 +95,41 @@ LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
                    )
 
 if st.button('生成代码'):
-    # 自定义注册到全局变量
-    sympy.var(factors_text_area)
+    with st.spinner('生成中，请等待...'):
+        # 自定义注册到全局变量
+        sympy.var(factors_text_area)
 
-    # eval处理，转成字典
-    exprs_src = string_to_exprs(exprs_src, globals())
+        # eval处理，转成字典
+        exprs_src = string_to_exprs(exprs_src, globals())
 
-    if is_pre_opt:
-        logger.info('事前 表达式 化简')
-        exprs_src = replace_exprs(exprs_src)
+        if is_pre_opt:
+            logger.info('事前 表达式 化简')
+            exprs_src = replace_exprs(exprs_src)
 
-    # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
-    tool = ExprTool(date=date_name, asset=asset_name)
+        # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
+        tool = ExprTool(date=date_name, asset=asset_name)
 
-    logger.info('表达式 抽取 合并')
-    exprs_dst, syms_dst = tool.merge(**exprs_src)
+        logger.info('表达式 抽取 合并')
+        exprs_dst, syms_dst = tool.merge(**exprs_src)
 
-    logger.info('提取公共表达式')
-    tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
+        logger.info('提取公共表达式')
+        tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
 
-    logger.info('生成有向无环图')
-    exprs_ldl, G = tool.dag(False)
+        logger.info('生成有向无环图')
+        exprs_ldl, G = tool.dag(False)
 
-    logger.info('分组优化')
-    exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
+        logger.info('分组优化')
+        exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
-    logger.info('代码生成')
-    source = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
+        logger.info('代码生成')
+        source = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
-    res = format_str(source, mode=Mode(line_length=800))
+        res = format_str(source, mode=Mode(line_length=800))
 
-    with st.expander(label="预览代码"):
-        st.code(res, language='python')
+        b64 = base64.b64encode(res.encode('utf-8'))
+        st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>', unsafe_allow_html=True)
+        # 下载按钮点击后会刷新页面，不推荐
+        # st.download_button(label="下载代码", data=res, file_name='output.py')
 
-    st.download_button(label="下载代码", data=res, file_name='output.py')
+        with st.expander(label="预览代码"):
+            st.code(res, language='python')
