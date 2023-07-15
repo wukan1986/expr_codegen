@@ -8,7 +8,7 @@ from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
 
 # 防止sympy_define导入被IDE删除
-_ = gp_neutralize
+_ = Eq
 
 # ======================================
 # 数据准备
@@ -36,7 +36,7 @@ exprs_src = string_to_exprs(exprs_src, globals())
 
 # 生成代码
 tool = ExprTool(date='date', asset='asset')
-codes = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
+codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
 
 # 打印代码
 print(codes)

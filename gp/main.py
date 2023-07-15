@@ -3,8 +3,6 @@ import pathlib
 import pickle
 import random
 import time
-# abs在examples.sympy_define中已经被替换成了sympy的symbol，如果用后要用到正必需别名一下
-from builtins import abs as _abs
 from itertools import count
 
 import numpy as np
@@ -14,10 +12,10 @@ from deap import base, creator, gp, tools
 from loguru import logger
 
 from examples.sympy_define import *
-from expr_codegen.expr import safe_eval, meaningless__ts_xxx_1, meaningless__xx_xx
+from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors
-from gp.helper import stringify_for_sympy, invalid_atom_infinite, invalid_number_type
+from gp.helper import stringify_for_sympy, is_invalid
 
 _ = Eq, Add, Mul, Pow
 # ======================================
@@ -88,25 +86,21 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
 
 
 def evaluate_expr(individual, points):
-    """评估函数
+    """评估函数，需要返回元组。
 
-    需要返回元组，
+    !!! 元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
     """
     ind, col = individual
     if col not in df_output.columns:
         # 没有此表达式，表示之前表达式不合法，所以不参与计算
-        return float('-999'),  # float('nan'),
-
-    # print(col)
-    # if col == 'GP_0022':
-    #     test =1
+        return float('-999'),  # float('-999'),
 
     # IC内部的值可能是None或nan，所以都要处理, 这里全转nan
     ic = IC.get(col, None) or float('nan')
     ir = IR.get(col, None) or float('nan')
 
-    # IC绝对值越大越好，使得==判断是否nan
-    ic = _abs(ic) if ic == ic else float('-999')
+    # IC绝对值越大越好。使用==判断是否nan
+    ic = abs(ic) if ic == ic else float('-999')
     ir = ir if ir == ir else float('-999')
 
     return ic,  # ir,
@@ -122,15 +116,9 @@ def map_exprs(evaluate, invalid_ind):
     with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
 
-    # # TODO: test
-    # with open(LOG_DIR / f'deap_exprs_0001.pkl', 'rb') as f:
-    #     invalid_ind = pickle.load(f)
-
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式
     expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
-    # ts_decay_linear(Mul(ts_arg_max(Add(ts_max(CLOSE, 3), Mul(-1,20)), 20),20), 5)
-    # AttributeError: 'Mul' object has no attribute 'map'
     expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
 
     # 通过字典特性删除重复表达式
@@ -138,12 +126,12 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {v: k for k, v in expr_dict.items()}
 
     # 清理非法表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not (invalid_atom_infinite(v) or invalid_number_type(v, pset))}
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
     # 清理无意义表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not (meaningless__ts_xxx_1(v) or meaningless__xx_xx(v))}
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
@@ -157,8 +145,7 @@ def map_exprs(evaluate, invalid_ind):
     _tic_ = time.time()
     exec(codes, globals())
     elapsed_time = time.time() - _tic_
-    # print(df_input, '111')
-    # print(df_output, '222')
+
     logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / _cnt_:.3f} 秒/条")
 
     global IC
@@ -188,10 +175,11 @@ def main():
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
     mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-    mstats.register("avg", np.nanmean)
-    mstats.register("std", np.nanstd)
-    mstats.register("min", np.nanmin)
-    mstats.register("max", np.nanmax)
+    # 名人堂中不能出现nan, 无法比较排序
+    mstats.register("avg", np.mean)
+    mstats.register("std", np.std)
+    mstats.register("min", np.min)
+    mstats.register("max", np.max)
 
     pop, log = gp.harm(pop, toolbox,
                        # 交叉率、变异率，代数

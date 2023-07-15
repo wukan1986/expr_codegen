@@ -5,14 +5,20 @@ import sympy
 from black import format_str, Mode
 from loguru import logger
 from streamlit_ace import st_ace
-from sympy import numbered_symbols, Eq
+from sympy import numbered_symbols, Symbol, FunctionClass
 
 import expr_codegen
-from expr_codegen.expr import replace__ts_sum__to__ts_mean, replace__repeat, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta, string_to_exprs
+from expr_codegen.expr import string_to_exprs, replace_exprs
 from expr_codegen.tool import ExprTool
 
-# 引用一次，防止被IDE格式化。因为之后表达式中可能因为==被换成了Eq
-_ = Eq
+
+def get_symbols_functions(module):
+    """获取Symbol与Function"""
+
+    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass))]
+    symbols = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, Symbol))]
+    return symbols, functions
+
 
 st.set_page_config(page_title='Expr Codegen', layout="wide")
 
@@ -49,10 +55,9 @@ with st.sidebar:
 version: {expr_codegen.__version__}
     """)
 
-
 st.title('表达式转译代码')
 
-with st.expander(label="预定义的**因子**和**算子**"):
+with st.expander(label="预定义**算子**"):
     st.write('如缺算子，可以在issue中申请添加，或下载代码进行二次开发')
 
     # import examples.sympy_define
@@ -61,19 +66,24 @@ with st.expander(label="预定义的**因子**和**算子**"):
     # 本可以不用写这么复杂，但为了证明可以动态加载和执行，所以演示一下
     module = __import__('examples.sympy_define', fromlist=['*'])
 
-    codes = inspect.getsource(module)
-    st.code(codes)
+    source = inspect.getsource(module)
+    st.code(source)
     # 执行
-    exec(codes)
+    exec(source, globals())
 
 st.subheader('自定义因子')
-factors = st.text_area(label='可覆写已定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
+factors_text_area = st.text_area(label='可覆写已定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
 RETURNS, VWAP, CAP,
 ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
 SECTOR, INDUSTRY, SUBINDUSTRY,""")
 
 st.subheader('自定义表达式')
-exprs_src = st_ace(value="""# 请在此添加表达式，`=`右边为表达式，`=`左边为输出因子名。
+all_symbols, all_functions = get_symbols_functions(module)
+exprs_src = st_ace(value=f"""# 向编辑器登记自动完成关键字，按字母排序
+# {all_symbols}
+# {all_functions}
+
+# 请在此添加表达式，`=`右边为表达式，`=`左边为新因子名。
 alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
 alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
 alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
@@ -86,27 +96,16 @@ LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
                    auto_update=True,
                    )
 
-if st.button('代码生成'):
-    st.write('请点击**代码区 右上角 图标按钮**进行复制')
-
+if st.button('生成代码'):
     # 自定义注册到全局变量
-    sympy.var(factors)
+    sympy.var(factors_text_area)
 
     # eval处理，转成字典
     exprs_src = string_to_exprs(exprs_src, globals())
 
     if is_pre_opt:
         logger.info('事前 表达式 化简')
-        # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-        exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
-        # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-        exprs_src = {k: replace__repeat(v) for k, v in exprs_src.items()}
-        # 1.0*VWAP转VWAP
-        exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
-        # 将部分参数为1的ts函数进行简化
-        exprs_src = {k: replace__ts_xxx_1(v) for k, v in exprs_src.items()}
-        # ts_delay转成ts_delta
-        exprs_src = {k: replace__ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+        exprs_src = replace_exprs(exprs_src)
 
     # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
     tool = ExprTool(date=date_name, asset=asset_name)
@@ -118,13 +117,17 @@ if st.button('代码生成'):
     tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
 
     logger.info('生成有向无环图')
-    exprs_ldl = tool.dag(False)
+    exprs_ldl, G = tool.dag(False)
 
     logger.info('分组优化')
     exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
     logger.info('代码生成')
-    codes = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
+    source = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
 
-    res = format_str(codes, mode=Mode(line_length=500))
-    st.code(res, language='python')
+    res = format_str(source, mode=Mode(line_length=800))
+
+    with st.expander(label="预览代码"):
+        st.code(res, language='python')
+
+    st.download_button(label="下载代码", data=res, file_name='output.py')

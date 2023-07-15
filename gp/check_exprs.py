@@ -1,17 +1,31 @@
+# !!! 以下代码在VSCode或Notebook中执行更好，能显示LATEX表达式和画表达式树状图
+# %%
+import os
+
+os.chdir(os.path.dirname(__file__))
+print(os.getcwd())
+
+import sys
+
+sys.path.append('..')
+# %%
 import operator
 import pathlib
 import pickle
 
 from deap import base, creator, gp, tools
 
-from examples.sympy_define import *
-from expr_codegen.expr import safe_eval, meaningless__ts_xxx_1, meaningless__xx_xx
+from expr_codegen.expr import safe_eval, is_meaningless
+from expr_codegen.latex.printer import display_latex
 from expr_codegen.tool import ExprTool
-from gp.custom import add_constants, add_operators, add_factors
-from gp.helper import stringify_for_sympy, invalid_atom_infinite, invalid_number_type
+from examples.sympy_define import *
 
-_ = Eq, Add, Mul, Pow
-# ======================================
+from gp.custom import add_constants, add_operators, add_factors
+from gp.helper import stringify_for_sympy, is_invalid
+
+_ = Eq
+
+# %%
 pset = gp.PrimitiveSetTyped("MAIN", [], float)
 pset = add_constants(pset)
 pset = add_operators(pset)
@@ -31,32 +45,48 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-# ======================================
+# %%
 
 LOG_DIR = pathlib.Path('log')
-with open(LOG_DIR / f'deap_exprs_0004.pkl', 'rb') as f:
+with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
     invalid_ind = pickle.load(f)
 
 for i, ind in enumerate(invalid_ind):
-    print(i, ind)
+    print(i, ind.fitness, ind)
 
-# ======================================
+# %%
 expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
 expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
-
-# TODO: test
-expr_dict = {'test': cs_scale(log(ts_rank(CLOSE, 20))) + sign(3*min(OPEN, HIGH*OPEN))}
 
 # 通过字典特性删除重复表达式
 expr_dict = {v: k for k, v in expr_dict.items()}
 expr_dict = {v: k for k, v in expr_dict.items()}
 
 # 清理非法表达式
-expr_dict = {k: v for k, v in expr_dict.items() if not (invalid_atom_infinite(v) or invalid_number_type(v, pset))}
+expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
 # 清理无意义表达式
-expr_dict = {k: v for k, v in expr_dict.items() if not (meaningless__ts_xxx_1(v) or meaningless__xx_xx(v))}
+expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
+for i, (k, v) in enumerate(expr_dict.items()):
+    print(i, k, v)
+# %%
+expr = expr_dict['GP_0007']
+expr = ((OPEN / CLOSE) - 1) ** (-1 / 2)
+
+# 这部分Latex代码放在VSCode中显示更直观
+display_latex(expr)
+# %%
+# 生成代码和有向无环图
 tool = ExprTool(date='date', asset='asset')
 # 表达式转脚本
-codes = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+codes, G = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+# %%
+from expr_codegen.model import draw_expr_tree
+
+# 画某树
+draw_expr_tree(G, 'GP_0007')
+
+# %%
+# 打印代码
 print(codes)
+# %%

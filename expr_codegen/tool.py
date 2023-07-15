@@ -1,7 +1,7 @@
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
-from expr_codegen.expr import get_current_by_prefix, get_children, replace__ts_sum__to__ts_mean, replace__repeat, replace__one_mul, replace__ts_xxx_1, replace__ts_delay__to__ts_delta
+from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
 
@@ -168,16 +168,7 @@ class ExprTool:
         assert style in ('polars', 'pandas')
 
         if not fast:
-            # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-            exprs_src = {k: replace__ts_sum__to__ts_mean(v) for k, v in exprs_src.items()}
-            # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-            exprs_src = {k: replace__repeat(v) for k, v in exprs_src.items()}
-            # 1.0*VWAP转VWAP
-            exprs_src = {k: replace__one_mul(v) for k, v in exprs_src.items()}
-            # 将部分参数为1的ts函数进行简化
-            exprs_src = {k: replace__ts_xxx_1(v) for k, v in exprs_src.items()}
-            # ts_delay转成ts_delta
-            exprs_src = {k: replace__ts_delay__to__ts_delta(v) for k, v in exprs_src.items()}
+            exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
         exprs_dst, syms_dst = self.merge(**exprs_src)
@@ -185,7 +176,7 @@ class ExprTool:
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
-        exprs_ldl = self.dag(fast)
+        exprs_ldl, G = self.dag(fast)
 
         if not fast:
             # 因为遗传算法中的表达式是单个输入，所以没有必要优化
@@ -202,4 +193,4 @@ class ExprTool:
             # 格式化。在遗传算法中没有必要
             codes = format_str(codes, mode=Mode(line_length=1000))
 
-        return codes
+        return codes, G
