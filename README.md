@@ -19,7 +19,7 @@
 
 ## 在线演示
 
-https://exprcodegen0710.streamlit.app (可能地址有变更，新地址请参考置顶issue)
+https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置顶issue)
 
 初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。
 此工具免费部署在国外，打开可能有些慢
