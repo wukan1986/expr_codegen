@@ -40,10 +40,10 @@ https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置
 expr_codegen项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
 为了提高速度，对于有些算子使用了TA-Lib和bottleneck。但现实情况下，数据是多变的，我们在使用时会遇到一些问题打断工作。
 
-- Exception: inputs are all NaN
+- Exception: inputs are all NaN  
 https://github.com/TA-Lib/ta-lib-python/issues/585
 
-- ValueError: Moving window (=10) must between 1 and 5
+- ValueError: Moving window (=10) must between 1 and 5  
 https://github.com/pydata/bottleneck/issues/434
 
 所以目前对版本做了要求
@@ -73,10 +73,11 @@ https://github.com/pydata/bottleneck/issues/434
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 │  requirements_gp.txt # 通过`pip install -r requirements_gp.txt`安装遗传编程依赖
 ├─examples
-│      alpha101.py # WorldQuant Alpha101示例
+│      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
 │      demo_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
 │      demo_exec.py # 演示表达式不生成文件直接生成结果画图
 │      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
+│      prepare_date.py # 准备数据
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
 ├─expr_codegen
@@ -215,7 +216,7 @@ df = func_0_cl(df)
 
 ## 生成代码不写文件直接执行
 
-参考示例中的`demo_exec.py`, 它提前准备数据，然后将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
+参考示例中的`demo_exec.py`, 它将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
 
 ## 遗传算法
 

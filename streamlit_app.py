@@ -29,7 +29,8 @@ with st.sidebar:
     date_name = st.text_input('日期字段名', 'date')
     asset_name = st.text_input('资产字段名', 'asset')
 
-    factors_text_area = st.text_area(label='覆写预定义因子', value="""OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
+    factors_text_area = st.text_area(label='覆写预定义因子', value="""# Alpha101基础因子
+OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
 RETURNS, VWAP, CAP,
 ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
 SECTOR, INDUSTRY, SUBINDUSTRY,""")

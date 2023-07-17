@@ -17,7 +17,7 @@ from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors
 from gp.helper import stringify_for_sympy, is_invalid
 
-_ = Eq, Add, Mul, Pow
+_ = Eq
 # ======================================
 # 每代计数
 GEN_COUNT = count()
@@ -26,9 +26,7 @@ LOG_DIR = pathlib.Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ======================================
-# 数据准备
-
-# 向脚本输入数据
+# TODO: 数据准备，脚本将取df_input，可运行`prepare_date.py`生成
 df_input = pl.read_parquet('data.parquet')
 # 从脚本获取数据
 df_output: pl.DataFrame = None
@@ -131,7 +129,7 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes, G = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', fast=True)
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
