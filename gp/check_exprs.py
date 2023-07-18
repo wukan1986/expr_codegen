@@ -79,7 +79,7 @@ display_latex(expr)
 # 生成代码和有向无环图
 tool = ExprTool(date='date', asset='asset')
 # 表达式转脚本
-codes, G = tool.all(expr_dict, style='polars', template_file='template_gp.py.j2', fast=True)
+codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', fast=True)
 # %%
 from expr_codegen.model import draw_expr_tree
 

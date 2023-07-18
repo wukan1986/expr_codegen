@@ -1,3 +1,7 @@
+"""
+准备测试数据，可用于遗传算法
+
+"""
 import numpy as np
 import pandas as pd
 import polars as pl
