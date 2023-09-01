@@ -12,7 +12,7 @@ _ = Eq
 # ======================================
 # 数据准备，请先运行同目录下的`prepare_data.py`
 df_input = pl.read_parquet('data.parquet')
-df_input = pd.read_parquet('data.parquet')
+# df_input = pd.read_parquet('data.parquet')
 df_output = None
 
 
@@ -26,7 +26,7 @@ def main():
 
     # 生成代码
     tool = ExprTool(date='date', asset='asset')
-    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2', fast=True)
+    codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
 
     # 打印代码
     print(codes)

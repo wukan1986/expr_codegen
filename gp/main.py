@@ -67,7 +67,7 @@ def rank_ic(a, b):
 
 def calc_ic_ir(df: pl.DataFrame, factors, label):
     """计算IC和IR"""
-    df = df.groupby(by=['date'], maintain_order=False).agg(
+    df = df.group_by(by=['date'], maintain_order=False).agg(
         [rank_ic(x, label) for x in factors]
     )
     ic = df.select(cs.numeric().mean())
