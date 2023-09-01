@@ -17,20 +17,20 @@ df = df_input
 
 
 def _rolling_rank(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
+    return expr.map_batches(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
 
 
 def _rolling_argmax(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: pl.Series(bn.move_argmax(x, window)))
+    return expr.map_batches(lambda x: pl.Series(bn.move_argmax(x, window)))
 
 
 def _rolling_argmin(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: pl.Series(bn.move_argmin(x, window)))
+    return expr.map_batches(lambda x: pl.Series(bn.move_argmin(x, window)))
 
 
 # !!! 函数的命名一定不能与sympy中定义的一样，否则在exec(,globals())后会修改同名变量，最终导致第二次eval(expr)时报错。所以全加下划线
 def _ts_decay_linear(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map(lambda x: ta.WMA(x, window))
+    return expr.map_batches(lambda x: ta.WMA(x, window))
 
 
 def _rank_pct(expr: pl.Expr) -> pl.Expr:
@@ -76,7 +76,7 @@ def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:
 """
 
 # drop intermediate columns
-df = df.drop(columns=filter(lambda x: re.search(r'^_x_\d+', x), df.columns))
+df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
 # shrink
 # https://github.com/pola-rs/polars/issues/9809
