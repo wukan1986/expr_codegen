@@ -15,7 +15,7 @@ setuptools.setup(
     description="symbol expression to polars expression tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/wukan1986/sympy_polars",
+    url="https://github.com/wukan1986/expr_codegen",
     packages=setuptools.find_packages(),
     install_requires=[
         'black',

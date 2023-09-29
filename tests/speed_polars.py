@@ -49,7 +49,7 @@ def func_0_ts__asset__date_1(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-def func_0_ts__asset__date_2(df: pd.DataFrame) -> pd.DataFrame:
+def func_0_ts__asset__date_2(df: pl.DataFrame) -> pl.DataFrame:
     df = df.sort(by=["date"])
     df = df.with_columns(
         # x_0 = ts_mean(OPEN, 10)
@@ -81,7 +81,6 @@ print('=' * 60)
 print(timeit.timeit('df_sort_by_asset.sort(by=["date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date_1)', number=5, globals=locals()))
 print(timeit.timeit('df_sort_by_asset.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date_1)', number=5, globals=locals()))
 print(timeit.timeit('df_sort_by_asset.groupby(by=["asset"], maintain_order=False).apply(func_0_ts__asset__date_2)', number=5, globals=locals()))
-
 
 print('=' * 60)
 # 2年，乱序后，结果差异很大
