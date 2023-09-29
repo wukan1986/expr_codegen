@@ -6,6 +6,9 @@ from expr_codegen.dag import zero_outdegree
 from expr_codegen.model import create_dag_exprs, init_dag_exprs, draw_expr_tree, merge_nodes_1, merge_nodes_2
 from expr_codegen.tool import ExprTool
 
+
+RETURNS, VWAP,  = symbols('RETURNS, VWAP, ', cls=Symbol)
+
 exprs_src = {
     "alpha_001": (cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5),
     "alpha_002": (-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6)),

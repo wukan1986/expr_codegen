@@ -40,8 +40,8 @@ def main():
     print(df_input.columns)
     print(df_output.columns)
 
-    # df = df_output.to_pandas()
-    df = df_output
+    df = df_output.to_pandas()
+    # df = df_output
     df = df.set_index(['asset', 'date'])
 
     for s in ['s_100', 's_200']:

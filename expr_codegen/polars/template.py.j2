@@ -79,7 +79,6 @@ def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:
 df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
 # shrink
-# https://github.com/pola-rs/polars/issues/9809
 df = df.select(cs.all().shrink_dtype())
 df = df.shrink_to_fit()
 
