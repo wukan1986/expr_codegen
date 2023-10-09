@@ -228,7 +228,7 @@ def init_dag_exprs(G, func, func_kwargs, date, asset):
     return G
 
 
-def merge_nodes_1(G: nx.DiGraph, *args):
+def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
     """合并节点，从当前节点开始，查看是否可能替换前后两端的节点"""
     # 准备一个当前节点列表
     this_pred = args
@@ -249,12 +249,12 @@ def merge_nodes_1(G: nx.DiGraph, *args):
             if key[0] == CL:
                 if is_NegativeX(expr):
                     # 检查表达式是否很简单, 是就替换，可能会替换多个
-                    skip_expr_node(G, node)
+                    skip_expr_node(G, node, keep_nodes)
                 else:
                     succ = G.succ[node]
                     # 下游只有一个，直接替换。
                     if len(succ) == 1:
-                        skip_expr_node(G, node)
+                        skip_expr_node(G, node, keep_nodes)
             else:
                 # 复制一次，防止修改后报错
                 for p in pred.copy():
@@ -269,14 +269,14 @@ def merge_nodes_1(G: nx.DiGraph, *args):
                         succ = G.succ[p]
                         # 下游只有一个，直接替换。
                         if len(succ) == 1:
-                            skip_expr_node(G, p)
+                            skip_expr_node(G, p, keep_nodes)
             next_pred.extend(pred)
         # 更新下一次循环
         this_pred = list(set(next_pred))
     return G
 
 
-def merge_nodes_2(G: nx.DiGraph, *args):
+def merge_nodes_2(G: nx.DiGraph, keep_nodes,*args):
     """合并节点，从当前节点开始，查看是否需要被替换，只做用于根节点"""
     # 准备一个当前节点列表
     this_pred = args
@@ -294,7 +294,7 @@ def merge_nodes_2(G: nx.DiGraph, *args):
                 if len(succ) > 1:
                     # 上游节点只有一个下游，当前就是自己了
                     continue
-                skip_expr_node(G, p)
+                skip_expr_node(G, p, keep_nodes)
             # 只做根节点，所以没有下一次了
             # next_pred.extend(pred)
         # 更新下一次循环
@@ -328,12 +328,15 @@ def draw_expr_tree(G: nx.DiGraph, root: str, ax=None):
     nx.draw(view, ax=ax, pos=pos, labels=labels)
 
 
-def skip_expr_node(G: nx.DiGraph, node):
+def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
     """跳过中间节点，将两端的节点直接连接起来，同时更新表达式
 
     1. (A,B,C) 模式，直接成 (A,C)
     2. (A,B,C), (D, B) 模式，变成 (A,C),(D,C)
     """
+    if node in keep_nodes:
+        return G
+
     pred = G.pred[node]
     succ = G.succ[node]
     if len(pred) == 0 or len(succ) == 0:
@@ -365,8 +368,8 @@ def dag_start(exprs_dict, func, func_kwargs, date, asset):
 
 def dag_middle(G, exprs_names, func, func_kwargs, date, asset):
     G = remove_paths_by_zero_outdegree(G, exprs_names)
-    G = merge_nodes_1(G, *exprs_names)
-    G = merge_nodes_2(G, *exprs_names)
+    G = merge_nodes_1(G, exprs_names, *exprs_names)
+    G = merge_nodes_2(G, exprs_names, *exprs_names)
 
     # 由于表达式修改，需再次更新表达式
     G = init_dag_exprs(G, func, func_kwargs, date, asset)

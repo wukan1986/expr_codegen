@@ -1,7 +1,7 @@
 import re
 from functools import reduce
 
-from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic
+from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic, Symbol
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
@@ -22,8 +22,18 @@ def string_to_exprs(exprs_src, dict):
     alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
     alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
     """
+    # 提取有=号的行
     exprs_src = [expr.split('=') for expr in exprs_src.splitlines() if '=' in expr]
-    exprs_src = {expr[0].strip(): safe_eval(expr[1].strip(), dict) for expr in exprs_src if '#' not in expr[0]}
+    # 过滤表达式左变有#注释的，同时去了空格
+    exprs_src = {expr[0].strip(): expr[1].strip() for expr in exprs_src if '#' not in expr[0]}
+
+    # 注册符号
+    syms = symbols(','.join(exprs_src.keys()), cls=Symbol, seq=True)
+    syms = {s.name: s for s in syms}
+    # 更新到eval所需要的变量中
+    dict.update(syms)
+
+    exprs_src = {k: safe_eval(v, dict) for k, v in exprs_src.items()}
     return exprs_src
 
 

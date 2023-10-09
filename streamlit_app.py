@@ -86,6 +86,7 @@ exprs_src = st_ace(value=f"""# 向编辑器登记自动完成关键字，按字�
 alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
 alpha_006=-1 * ts_corr(OPEN, VOLUME, 10)
 alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
+alpha_201=alpha_101+CLOSE # 中间变量示例
 
 LABEL_OO_1=ts_delay(OPEN, -2)/ts_delay(OPEN, -1)-1 # 第二天开盘交易
 LABEL_OO_2=ts_delay(OPEN, -3)/ts_delay(OPEN, -1)-1 # 第二天开盘交易，持有二天
@@ -128,7 +129,8 @@ if st.button('生成代码'):
         res = format_str(source, mode=Mode(line_length=800))
 
         b64 = base64.b64encode(res.encode('utf-8'))
-        st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>', unsafe_allow_html=True)
+        st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>',
+                    unsafe_allow_html=True)
         # 下载按钮点击后会刷新页面，不推荐
         # st.download_button(label="下载代码", data=res, file_name='output.py')
 

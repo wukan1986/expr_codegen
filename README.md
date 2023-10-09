@@ -21,8 +21,7 @@
 
 https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置顶issue)
 
-初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。
-此工具免费部署在国外，打开可能有些慢
+初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。(此工具免费部署在国外，打开可能有些慢)
 
 ## 使用方法
 
@@ -38,7 +37,7 @@ https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置
 通过`pip install -r requirements_pg.txt`安装依赖
 
 expr_codegen项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
-为了提高速度，对于有些算子使用了TA-Lib和bottleneck。但现实情况下，数据是多变的，我们在使用时会遇到一些问题打断工作。
+为了提高速度，对于有些算子使用了`TA-Lib`和`bottleneck`。但现实情况下，数据是多变的，我们在使用时会遇到一些问题打断工作。
 
 - Exception: inputs are all NaN  
 https://github.com/TA-Lib/ta-lib-python/issues/585
@@ -217,6 +216,9 @@ df = func_0_cl(df)
 ## 生成代码不写文件直接执行
 
 参考示例中的`demo_exec.py`, 它将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
+
+## 本地部署交互网页
+只需运行`streamlit run streamlit_app.py`
 
 ## 遗传算法
 
