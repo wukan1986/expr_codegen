@@ -21,6 +21,7 @@ def main():
     exprs_src = """
     MA_10=ts_mean(CLOSE, 10)
     MA_40=ts_mean(ts_mean(CLOSE, 5), 40)
+    MA_60=ts_mean(MA_10, 40)
     """
     exprs_src = string_to_exprs(exprs_src, globals())
 

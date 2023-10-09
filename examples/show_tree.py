@@ -3,14 +3,15 @@ from sympy import numbered_symbols
 
 from examples.sympy_define import *
 from expr_codegen.dag import zero_outdegree
+from expr_codegen.expr import string_to_exprs
 from expr_codegen.model import create_dag_exprs, init_dag_exprs, draw_expr_tree, merge_nodes_1, merge_nodes_2
 from expr_codegen.tool import ExprTool
 
-
-RETURNS, VWAP,  = symbols('RETURNS, VWAP, ', cls=Symbol)
+RETURNS, VWAP, = symbols('RETURNS, VWAP, ', cls=Symbol)
 
 exprs_src = {
-    "alpha_001": (cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5),
+    "alpha_001": (
+            cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5),
     "alpha_002": (-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6)),
     "alpha_003": (-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)),
     "alpha_004": (-1 * ts_rank(cs_rank(LOW), 9)),
@@ -18,9 +19,15 @@ exprs_src = {
     "alpha_006": -1 * ts_corr(OPEN, VOLUME, 10),
 }
 
+# 表达式设置
+exprs_src = """
+alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
+alpha_201=alpha_101+CLOSE # 中间变量示例
+"""
+exprs_src = string_to_exprs(exprs_src, globals())
+
 # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
 tool = ExprTool(date='date', asset='asset')
-
 # 子表达式在前，原表式在最后
 exprs_dst, syms_dst = tool.merge(**exprs_src)
 
@@ -38,7 +45,7 @@ for z in zero:
     # 在同一画布上画上下两图
     fig, axs = plt.subplots(2, 1)
     draw_expr_tree(G, z, ax=axs[0])
-    merge_nodes_1(G, z)
-    merge_nodes_2(G, z)
+    merge_nodes_1(G, exprs_src.keys(), z)
+    merge_nodes_2(G, exprs_src.keys(), z)
     draw_expr_tree(G, z, ax=axs[1])
     plt.show()
