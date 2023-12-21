@@ -19,7 +19,7 @@
 
 ## 在线演示
 
-https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置顶issue)
+https://exprcodegen.streamlit.app
 
 初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。(此工具免费部署在国外，打开可能有些慢)
 
@@ -34,49 +34,22 @@ https://exprcodegen.streamlit.app (可能地址有变更，新地址请参考置
 
 ## 遗传算法依赖库安装
 
-通过`pip install -r requirements_pg.txt`安装依赖
-
-expr_codegen项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
-为了提高速度，对于有些算子使用了`TA-Lib`和`bottleneck`。但现实情况下，数据是多变的，我们在使用时会遇到一些问题打断工作。
-
-- Exception: inputs are all NaN  
-https://github.com/TA-Lib/ta-lib-python/issues/585
-
-- ValueError: Moving window (=10) must between 1 and 5  
-https://github.com/pydata/bottleneck/issues/434
-
-所以目前对版本做了要求
-- TA-Lib>=0.4.27
-- Bottleneck>=1.3.8
-
-很有可能你当前环境还没有提供`pip`安装，得自己编译
-
-建议先安装`TA-Lib`，只要这个库能编译安装成功，`bottleneck`一般也能直接安装成功。
-
-### TA-Lib
-
-1. `ta-lib-0.4.0-msvc.zip`下载后，**必须**解压到`C:\ta-lib`
-2. 安装`visual-cpp-build-tools`
-3. 由于步骤太多，建议参考《TA-Lib使用预编译版本和自己编译安装的教程》https://blog.csdn.net/seriseri/article/details/128671743
-4. Linux用户参考TA-Lib的Readme即可
-
-### bottleneck
-
-1. 下载源码或git clone后，进入到目录中
-2. `pip install -e .` # 注意有一个英文句号
-3. 如果bottleneck主库还没有合并PR，可以先使用 https://github.com/wukan1986/bottleneck 这个版本
+`expr_codegen`项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
+为了简化代码，还推出了一个`polars_ta`算子库，欢迎使用
 
 ## 目录结构
 
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
 │  requirements_gp.txt # 通过`pip install -r requirements_gp.txt`安装遗传编程依赖
+├─data
+│      prepare_date.py # 准备数据
 ├─examples
 │      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
 │      demo_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
-│      demo_exec.py # 演示表达式不生成文件直接生成结果画图
+│      demo_exec_pd.py # 可通过`cudf.pandas`运行的示例
+│      demo_exec_pl.py # 演示表达式不生成文件直接生成结果画图
 │      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
-│      prepare_date.py # 准备数据
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
 ├─expr_codegen
@@ -146,12 +119,12 @@ https://github.com/pydata/bottleneck/issues/434
 ## 小技巧
 
 1. `sympy`不支持`==`，而是当成两个对象比较。例如：
-   1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
-   2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
+    1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
+    2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
 
 2. `sympy`不支持`bool`转`int`。例如：
-   1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
-   2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
+    1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
+    2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
 
 ## 示例片段
 
@@ -218,6 +191,7 @@ df = func_0_cl(df)
 参考示例中的`demo_exec.py`, 它将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
 
 ## 本地部署交互网页
+
 只需运行`streamlit run streamlit_app.py`
 
 ## 遗传算法

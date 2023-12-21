@@ -1,5 +1,31 @@
+"""
+与`demo_exec_pl.py`代码基本相同，不过将生成代码换成了`pandas`
+
+支持`cudf.pandas`，推荐使用方法如下
+
+`python -m cudf.pandas demo_exec_pd.py`
+"""
+import os
+import sys
+from pathlib import Path
+
+# 修改当前目录到上层目录，方便跨不同IDE中使用
+pwd = str(Path(__file__).parents[1])
+os.chdir(pwd)
+sys.path.append(pwd)
+
+# 在Linux平台下，两种方法任选一种即可
+# # python -m cudf.pandas demo_exec_pd.py
+#
+# if os.name != 'nt':
+#     try:
+#         import cudf.pandas
+#
+#         cudf.pandas.install()
+#     except:
+#         pass
+
 import pandas as pd
-import polars as pl
 from matplotlib import pyplot as plt
 
 from examples.sympy_define import *
@@ -10,9 +36,8 @@ from expr_codegen.tool import ExprTool
 _ = Eq
 
 # ======================================
-# 数据准备，请先运行同目录下的`prepare_data.py`
-df_input = pl.read_parquet('data.parquet')
-# df_input = pd.read_parquet('data.parquet')
+# 数据准备，请先运行`data`目录下的`prepare_data.py`
+df_input = pd.read_parquet('data/data.parquet')
 df_output = None
 
 
@@ -27,7 +52,7 @@ def main():
 
     # 生成代码
     tool = ExprTool(date='date', asset='asset')
-    codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
+    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2', fast=True)
 
     # 打印代码
     print(codes)
@@ -41,8 +66,7 @@ def main():
     print(df_input.columns)
     print(df_output.columns)
 
-    df = df_output.to_pandas()
-    # df = df_output
+    df = df_output
     df = df.set_index(['asset', 'date'])
 
     for s in ['s_100', 's_200']:

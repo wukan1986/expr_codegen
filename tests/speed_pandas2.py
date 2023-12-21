@@ -6,9 +6,9 @@ def getCols(k) -> str:
     return [f'x_{i}' for i in range(k)]
 
 
-pd._testing.getCols = getCols
-pd._testing._N = 250 * 10
-pd._testing._K = 5000
+pd.testing.getCols = getCols
+pd.testing._N = 250 * 10
+pd.testing._K = 5000
 
 # 生成5000支股票实在太慢，所以改用其它方案
 # CLOSE = pd._testing.makeTimeDataFrame()

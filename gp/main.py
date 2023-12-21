@@ -1,5 +1,13 @@
+import os
+import sys
+from pathlib import Path
+
+# 修改当前目录到上层目录，方便跨不同IDE中使用
+pwd = str(Path(__file__).parents[1])
+os.chdir(pwd)
+sys.path.append(pwd)
+# ===============
 import operator
-import pathlib
 import pickle
 import random
 import time
@@ -22,12 +30,12 @@ _ = Eq
 # 每代计数
 GEN_COUNT = count()
 # 日志路径
-LOG_DIR = pathlib.Path('log')
+LOG_DIR = Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ======================================
-# TODO: 数据准备，脚本将取df_input，可运行`prepare_date.py`生成
-df_input = pl.read_parquet('data.parquet')
+# TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
+df_input = pl.read_parquet('data/data.parquet')
 # 从脚本获取数据
 df_output: pl.DataFrame = None
 
@@ -138,10 +146,16 @@ def map_exprs(evaluate, invalid_ind):
     # 使用两下划线，减少与生成代码间冲突可能性
     _cnt_ = len(expr_dict)
     logger.info(f"代码执行。共 {_cnt_} 条")
-    # 执行，一定要带globals()
-    # !!!这里执行的东西会改变外层变量，如模板中的ts_decay_linear修改了sympy中同名变量，一定注意
+
     _tic_ = time.time()
-    exec(codes, globals())
+
+    # TODO 只处理了两个变量，如果你要设置更多，请与 `template.py.j2` 一同修改
+    # 传globals()会导致sympy同名变量被修改，所以不能处理
+    global df_output
+    _globals = {'df_input': df_input, 'df_output': df_output}
+    exec(codes, _globals)
+    df_output = _globals['df_output']
+
     elapsed_time = time.time() - _tic_
 
     logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / _cnt_:.3f} 秒/条")

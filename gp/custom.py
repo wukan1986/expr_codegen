@@ -42,13 +42,14 @@ def add_operators(pset):
 
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delay')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delta')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_max')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_min')
+    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_max')
+    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_min')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_max')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_min')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_sum')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_mean')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_decay_linear')
+    # TODO 等待修复
+    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_decay_linear')
     # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_product')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_std_dev')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_rank')
