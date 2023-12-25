@@ -1,3 +1,12 @@
+import os
+import sys
+from pathlib import Path
+
+# 修改当前目录到上层目录，方便跨不同IDE中使用
+pwd = str(Path(__file__).parents[1])
+# os.chdir(pwd)
+sys.path.append(pwd)
+
 from examples.sympy_define import *
 # codegen工具类
 from expr_codegen.tool import ExprTool
@@ -14,7 +23,7 @@ expr_7, = symbols('expr_7, ', cls=Symbol)
 # TODO: 等待简化的表达式。多个表达式一起能简化最终表达式
 exprs_src = {
     "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - Abs(log(ts_mean(CLOSE, 10))), # + gp_rank(sw_l1, CLOSE),  # + gp_rank(OPEN, CLOSE),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - Abs(log(ts_mean(CLOSE, 10))),  # + gp_rank(sw_l1, CLOSE),  # + gp_rank(OPEN, CLOSE),
     "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),

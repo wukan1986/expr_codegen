@@ -1,4 +1,12 @@
-import pandas as pd
+import os
+import sys
+from pathlib import Path
+
+# 修改当前目录到上层目录，方便跨不同IDE中使用
+pwd = str(Path(__file__).parents[1])
+os.chdir(pwd)
+sys.path.append(pwd)
+
 import polars as pl
 from matplotlib import pyplot as plt
 
@@ -10,9 +18,8 @@ from expr_codegen.tool import ExprTool
 _ = Eq
 
 # ======================================
-# 数据准备，请先运行同目录下的`prepare_data.py`
-df_input = pl.read_parquet('data.parquet')
-# df_input = pd.read_parquet('data.parquet')
+# 数据准备，请先运行`data`目录下的`prepare_data.py`
+df_input = pl.read_parquet('data/data.parquet')
 df_output = None
 
 
@@ -42,7 +49,6 @@ def main():
     print(df_output.columns)
 
     df = df_output.to_pandas()
-    # df = df_output
     df = df.set_index(['asset', 'date'])
 
     for s in ['s_100', 's_200']:
