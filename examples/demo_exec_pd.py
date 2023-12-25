@@ -4,6 +4,8 @@
 支持`cudf.pandas`，推荐使用方法如下
 
 `python -m cudf.pandas demo_exec_pd.py`
+
+注意：GPU计算只有在大数据量下才有意义。因为在显存与内存之间复制数据也需要耗费不少时间
 """
 import os
 import sys
