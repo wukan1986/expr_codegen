@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -37,7 +36,7 @@ exprs_src = {
 # TODO: 一定要正确设定时间列名和资产列名
 tool = ExprTool(date='date', asset='asset')
 # 生成代码
-codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=False)
+codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', regroup=False)
 
 output_file = 'output_polars.py'
 with open(output_file, 'w', encoding='utf-8') as f:

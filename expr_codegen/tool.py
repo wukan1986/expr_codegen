@@ -140,14 +140,15 @@ class ExprTool:
 
         return self.exprs_dict
 
-    def dag(self, fast):
+    def dag(self, merge):
         """生成DAG"""
         G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
-        if not fast:
+        if merge:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2', fast: bool = False):
+    def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2',
+            replace: bool = True, regroup: bool = False, format: bool = True):
         """功能集成版，将几个功能写到一起方便使用
 
         Parameters
@@ -158,8 +159,12 @@ class ExprTool:
             代码风格。可选值 ('polars', 'pandas')
         template_file: str
             根据需求可定制模板
-        fast:bool
-            快速模式。将跳过表达式化简。生成代码的分组重排，以及代码格式化这类为人类体验而服务的功能
+        replace:bool
+            表达式提换
+        regroup:bool
+            分组重排。注意：目前好像不稳定
+        format:bool
+            代码格式化
         Returns
         -------
         代码字符串
@@ -167,7 +172,7 @@ class ExprTool:
         """
         assert style in ('polars', 'pandas')
 
-        if not fast:
+        if replace:
             exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
@@ -176,9 +181,9 @@ class ExprTool:
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
-        exprs_ldl, G = self.dag(fast)
+        exprs_ldl, G = self.dag(True)
 
-        if not fast:
+        if regroup:
             # 因为遗传算法中的表达式是单个输入，所以没有必要优化
             exprs_ldl.optimize(back_opt=True, chain_opt=True)
 
@@ -189,7 +194,7 @@ class ExprTool:
 
         codes = codegen(exprs_ldl, exprs_src, syms_dst, filename=template_file)
 
-        if not fast:
+        if format:
             # 格式化。在遗传算法中没有必要
             codes = format_str(codes, mode=Mode(line_length=1000))
 

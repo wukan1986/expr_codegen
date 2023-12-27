@@ -12,8 +12,8 @@
 
 第一阶段开发完成后，发现此项目其实也可以用于生成其它库的代码或语言。所以又重新更名和调整代码。目前已经支持
 
-1. Polars
-2. Pandas
+1. polars
+2. pandas / cudf.pandas
 
 还有很多算子还没实现完全，欢迎贡献代码
 
@@ -35,7 +35,7 @@ https://exprcodegen.streamlit.app
 ## 遗传算法依赖库安装
 
 `expr_codegen`项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
-为了简化代码，还推出了一个`polars_ta`算子库，欢迎使用
+为了简化代码，还推出了一个[polars_ta](https://github.com/wukan1986/polars_ta)算子库，欢迎使用
 
 ## 目录结构
 

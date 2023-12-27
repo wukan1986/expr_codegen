@@ -36,17 +36,17 @@ ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, AD
 SECTOR, INDUSTRY, SUBINDUSTRY,""")
 
     # 生成代码
-    style = st.radio('代码风格', ('polars', 'pandas'))
+    style = st.radio('代码风格', ('polars', 'pandas/cudf.pandas'))
     if style == 'polars':
         from expr_codegen.polars.code import codegen
     else:
         from expr_codegen.pandas.code import codegen
 
     st.subheader("优化")
-    is_pre_opt = st.checkbox('事前`表达式`化简', True)
+    is_pre_opt = st.checkbox('事前`表达式`替换', True)
     # TODO: 好像这个还有问题等有空再改
-    is_back_opt = st.checkbox('事后`整列分组`向前合并', True)
-    is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
+    is_back_opt = st.checkbox('事后`整列分组`向前合并', False)
+    is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', False)
 
     st.subheader("关于")
     st.markdown(f"""[Github仓库](https://github.com/wukan1986/expr_codegen)
@@ -105,7 +105,7 @@ if st.button('生成代码'):
         exprs_src = string_to_exprs(exprs_src, globals())
 
         if is_pre_opt:
-            logger.info('事前 表达式 化简')
+            logger.info('事前 表达式 替换')
             exprs_src = replace_exprs(exprs_src)
 
         # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
@@ -118,7 +118,7 @@ if st.button('生成代码'):
         tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
 
         logger.info('生成有向无环图')
-        exprs_ldl, G = tool.dag(False)
+        exprs_ldl, G = tool.dag(merge=True)
 
         logger.info('分组优化')
         exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)

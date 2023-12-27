@@ -37,10 +37,10 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
 # 从脚本获取数据
-df_output: pl.DataFrame = None
+df_output: pl.DataFrame = pl.DataFrame()
 
-IC = None
-IR = None
+IC = {}
+IR = {}
 
 # 添加下期收益率标签
 tool = ExprTool(date='date', asset='asset')
@@ -78,8 +78,12 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
     df = df.group_by(by=['date'], maintain_order=False).agg(
         [rank_ic(x, label) for x in factors]
     )
-    ic = df.select(cs.numeric().mean())
-    ir = df.select(cs.numeric().mean() / cs.numeric().std(ddof=0))
+    # polars升级后，需要先drop_nans
+    NUM_DROP = cs.numeric().drop_nans().drop_nulls()
+    ic = df.select(NUM_DROP.mean())
+    ir = df.select(NUM_DROP.mean() / NUM_DROP.std(ddof=0))
+    # print(ic)
+    # print(ic)
 
     # 居然有部分算出来是None, fill_null虽然只有一行，但对几百列太慢，所以放在之后处理
     # ic = ic.fill_null(float('nan'))
@@ -137,7 +141,7 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', fast=True)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', replace=False, regroup=False, format=False)
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
@@ -150,7 +154,7 @@ def map_exprs(evaluate, invalid_ind):
     _tic_ = time.time()
 
     # TODO 只处理了两个变量，如果你要设置更多，请与 `template.py.j2` 一同修改
-    # 传globals()会导致sympy同名变量被修改，所以不能处理
+    # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
     global df_output
     _globals = {'df_input': df_input, 'df_output': df_output}
     exec(codes, _globals)

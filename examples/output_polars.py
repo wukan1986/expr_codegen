@@ -4,51 +4,15 @@
 
 import re
 
-import bottleneck as bn
 import numpy as np
 import polars as pl
 import polars.selectors as cs
-import talib as ta
-from loguru import logger
 
+from loguru import logger
+from polars_ta.imports.expr import *
 
 # TODO: 数据加载或外部传入
-df_input = pl.read_parquet('data.parquet')
 df = df_input
-
-
-def _rolling_rank(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map_batches(lambda x: pl.Series((bn.move_rank(x, window) + 1) / 2))
-
-
-def _rolling_argmax(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map_batches(lambda x: pl.Series(bn.move_argmax(x, window)))
-
-
-def _rolling_argmin(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map_batches(lambda x: pl.Series(bn.move_argmin(x, window)))
-
-
-# !!! 函数的命名一定不能与sympy中定义的一样，否则在exec(,globals())后会修改同名变量，最终导致第二次eval(expr)时报错。所以全加下划线
-def _ts_decay_linear(expr: pl.Expr, window) -> pl.Expr:
-    return expr.map_batches(lambda x: ta.WMA(x, window))
-
-
-def _rank_pct(expr: pl.Expr) -> pl.Expr:
-    """rank(pct=True)"""
-    return expr.rank() / (expr.len() - expr.null_count())
-
-
-def _signed_power(x, y):
-    return x.sign() * (x.abs() ** y)
-
-
-def _scale(x, scale=1):
-    return x / x.abs().sum() * scale
-
-
-def _neutralize(x):
-    return x - x.mean()
 
 
 def func_0_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
@@ -56,15 +20,15 @@ def func_0_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_0 = ts_mean(OPEN, 10)
-        _x_0=(pl.col("OPEN").rolling_mean(10)),
+        _x_0=(ts_mean(pl.col("OPEN"), 10)),
         # expr_6 = ts_delta(OPEN, 10)
-        expr_6=(pl.col("OPEN").diff(10)),
+        expr_6=(ts_delta(pl.col("OPEN"), 10)),
         # expr_7 = ts_rank(OPEN + 1, 10)
-        expr_7=(_rolling_rank(pl.col("OPEN") + 1, 10)),
+        expr_7=(ts_rank(pl.col("OPEN") + 1, 10)),
         # _x_1 = ts_mean(CLOSE, 10)
-        _x_1=(pl.col("CLOSE").rolling_mean(10)),
+        _x_1=(ts_mean(pl.col("CLOSE"), 10)),
         # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-        expr_5=(-pl.rolling_corr(pl.col("OPEN"), pl.col("CLOSE"), window_size=10, ddof=0)),
+        expr_5=(-ts_corr(pl.col("OPEN"), pl.col("CLOSE"), 10)),
     )
     return df
 
@@ -73,14 +37,18 @@ def func_0_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_5 = cs_rank(OPEN)
-        _x_5=(_rank_pct(pl.col("OPEN"))),
+        _x_5=(cs_rank(pl.col("OPEN"))),
     )
+    return df
+
+
+def func_1_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_2 = cs_rank(_x_0)
-        _x_2=(_rank_pct(pl.col("_x_0"))),
+        _x_2=(cs_rank(pl.col("_x_0"))),
         # _x_3 = cs_rank(_x_1)
-        _x_3=(_rank_pct(pl.col("_x_1"))),
+        _x_3=(cs_rank(pl.col("_x_1"))),
     )
     return df
 
@@ -90,19 +58,30 @@ def func_1_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_6 = ts_mean(_x_5, 10)
-        _x_6=(pl.col("_x_5").rolling_mean(10)),
+        _x_6=(ts_mean(pl.col("_x_5"), 10)),
+        # expr_8 = ts_rank(expr_7 + 1, 10)
+        expr_8=(ts_rank(pl.col("expr_7") + 1, 10)),
     )
-    # ========================================
-    df = df.with_columns(
-        # expr_3 = ts_mean(_x_2, 10)
-        expr_3=(pl.col("_x_2").rolling_mean(10)),
-        # expr_1 = -ts_corr(_x_2, _x_3, 10)
-        expr_1=(-pl.rolling_corr(pl.col("_x_2"), pl.col("_x_3"), window_size=10, ddof=0)),
-    )
+    return df
+
+
+def func_2_cl(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_2 = _x_2 - Abs(log(_x_1))
-        expr_2=(pl.col("_x_2") - (pl.col("_x_1").log()).abs()),
+        expr_2=(pl.col("_x_2") - abs_(log(pl.col("_x_1")))),
+    )
+    return df
+
+
+def func_2_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.sort(by=["date"])
+    # ========================================
+    df = df.with_columns(
+        # expr_3 = ts_mean(_x_2, 10)
+        expr_3=(ts_mean(pl.col("_x_2"), 10)),
+        # expr_1 = -ts_corr(_x_2, _x_3, 10)
+        expr_1=(-ts_corr(pl.col("_x_2"), pl.col("_x_3"), 10)),
     )
     return df
 
@@ -111,7 +90,7 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_4 = cs_rank(_x_6)
-        expr_4=(_rank_pct(pl.col("_x_6"))),
+        expr_4=(cs_rank(pl.col("_x_6"))),
     )
     return df
 
@@ -120,9 +99,12 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
 
 
 df = df.sort(by=["date", "asset"])
-df = df.group_by(by=["asset"], maintain_order=True).map_groups(func_0_ts__asset__date)
+df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_0_ts__asset__date)
 df = df.group_by(by=["date"], maintain_order=False).map_groups(func_0_cs__date)
-df = df.group_by(by=["asset"], maintain_order=True).map_groups(func_1_ts__asset__date)
+df = df.group_by(by=["date"], maintain_order=False).map_groups(func_1_cs__date)
+df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_1_ts__asset__date)
+df = func_2_cl(df)
+df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_2_ts__asset__date)
 df = df.group_by(by=["date"], maintain_order=False).map_groups(func_2_cs__date)
 
 
@@ -134,21 +116,22 @@ df = df.group_by(by=["date"], maintain_order=False).map_groups(func_2_cs__date)
 # expr_5 = -ts_corr(OPEN, CLOSE, 10)
 # #========================================func_0_cs__date
 # _x_5 = cs_rank(OPEN)
-# #========================================func_0_cs__date
+# #========================================func_1_cs__date
 # _x_2 = cs_rank(_x_0)
 # _x_3 = cs_rank(_x_1)
 # #========================================func_1_ts__asset__date
 # _x_6 = ts_mean(_x_5, 10)
-# #========================================func_1_ts__asset__date
+# expr_8 = ts_rank(expr_7 + 1, 10)
+# #========================================func_2_cl
+# expr_2 = _x_2 - Abs(log(_x_1))
+# #========================================func_2_ts__asset__date
 # expr_3 = ts_mean(_x_2, 10)
 # expr_1 = -ts_corr(_x_2, _x_3, 10)
-# #========================================func_1_ts__asset__date
-# expr_2 = _x_2 - Abs(log(_x_1))
 # #========================================func_2_cs__date
 # expr_4 = cs_rank(_x_6)
 
 """
-[OPEN, CLOSE]
+[OPEN, CLOSE, expr_7]
 """
 
 """
@@ -158,6 +141,7 @@ expr_3 = ts_mean(cs_rank(ts_mean(OPEN, 10)), 10)
 expr_4 = cs_rank(ts_mean(cs_rank(OPEN), 10))
 expr_5 = -ts_corr(OPEN, CLOSE, 10)
 expr_6 = ts_delta(OPEN, 10)
+expr_8 = ts_rank(expr_7 + 1, 10)
 expr_7 = ts_rank(OPEN + 1, 10)
 """
 
@@ -165,7 +149,6 @@ expr_7 = ts_rank(OPEN + 1, 10)
 df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
 # shrink
-# https://github.com/pola-rs/polars/issues/9809
 df = df.select(cs.all().shrink_dtype())
 df = df.shrink_to_fit()
 
