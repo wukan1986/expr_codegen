@@ -34,7 +34,7 @@ def main():
 
     # 生成代码
     tool = ExprTool(date='date', asset='asset')
-    codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', fast=True)
+    codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', regroup=True)
 
     # 打印代码
     print(codes)

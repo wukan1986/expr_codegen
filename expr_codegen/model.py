@@ -359,6 +359,7 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
 
 
 def dag_start(exprs_dict, func, func_kwargs, date, asset):
+    """初始生成DAG"""
     G = create_dag_exprs(exprs_dict)
     G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
@@ -367,6 +368,7 @@ def dag_start(exprs_dict, func, func_kwargs, date, asset):
 
 
 def dag_middle(G, exprs_names, func, func_kwargs, date, asset):
+    """删除几个没有必要的节点"""
     G = remove_paths_by_zero_outdegree(G, exprs_names)
     G = merge_nodes_1(G, exprs_names, *exprs_names)
     G = merge_nodes_2(G, exprs_names, *exprs_names)
