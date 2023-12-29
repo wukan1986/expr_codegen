@@ -19,7 +19,7 @@ ts_rank, = symbols('ts_rank, ', cls=Function)
 cs_rank, cs_scale, = symbols('cs_rank, cs_scale, ', cls=Function)
 
 # TODO: 分组算子。需要提前按时间、行业分组。必需以`gp_`开头
-gp_neutralize, = symbols('gp_neutralize, ', cls=Function)
+gp_rank, gp_demean, = symbols('gp_rank, gp_demean, ', cls=Function)
 
 # TODO: 因子。请根据需要补充
 OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)

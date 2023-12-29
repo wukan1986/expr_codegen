@@ -79,7 +79,7 @@ def calc_ic_ir(df: pl.DataFrame, factors, label):
         [rank_ic(x, label) for x in factors]
     )
     # polars升级后，需要先drop_nans
-    NUM_DROP = cs.numeric().drop_nans().drop_nulls()
+    NUM_DROP = cs.numeric().fill_nan(None).drop_nulls()
     ic = df.select(NUM_DROP.mean())
     ir = df.select(NUM_DROP.mean() / NUM_DROP.std(ddof=0))
     # print(ic)
