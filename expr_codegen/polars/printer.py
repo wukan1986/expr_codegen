@@ -140,7 +140,7 @@ class PolarsStrPrinter(StrPrinter):
         return "signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_gp_rank(self, expr):
-        return "_rank_pct(%s)" % self._print(expr.args[1])
+        return "cs_rank(%s)" % self._print(expr.args[1])
 
-    def _print_gp_neutralize(self, expr):
-        return "_neutralize(%s)" % self._print(expr.args[1])
+    def _print_gp_demean(self, expr):
+        return "neutralize_demean(%s)" % self._print(expr.args[1])
