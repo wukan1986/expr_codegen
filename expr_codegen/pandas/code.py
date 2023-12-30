@@ -26,6 +26,12 @@ def get_groupby_from_tuple(tup, func_name):
     return f'df = {func_name}(df)'
 
 
+def symbols_to_code(syms):
+    a = [f"{s}" for s in syms]
+    b = [f"'{s}'" for s in syms]
+    return f"({','.join(a)},) = ({','.join(b)},)"
+
+
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.j2'):
     """基于模板的代码生成"""
     # 打印Pandas风格代码
@@ -37,6 +43,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
     groupbys = {'sort': 'df = df'}
     # 处理过后的表达式
     exprs_dst = []
+    syms_out = []
 
     for i, row in enumerate(exprs_ldl.values()):
         for k, vv in row.items():
@@ -48,11 +55,12 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
             for kv in vv:
                 if kv is None:
                     func_code.append(f"    # " + '=' * 40)
-                    exprs_dst.append(f"# #" + '=' * 40 + func_name)
+                    exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
                     va, ex = kv
-                    func_code.append(f"    # {va} = {ex}\n    df['{va}'] = {p.doprint(ex)}")
-                    exprs_dst.append(f"# {va} = {ex}")
+                    func_code.append(f"    # {va} = {ex}\n    df[{va}] = {p.doprint(ex)}")
+                    exprs_dst.append(f"{va} = {ex}")
+                    syms_out.append(va)
 
             if k[0] == TS:
                 groupbys['sort'] = f'df = df.sort_values(by=["{k[2]}", "{k[1]}"]).reset_index(drop=True)'
@@ -64,7 +72,11 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name)
 
+    syms1 = symbols_to_code(syms_dst)
+    syms2 = symbols_to_code(syms_out)
+
     env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
     template = env.get_template(filename)
     return template.render(funcs=funcs, groupbys=groupbys,
-                           exprs_src=exprs_src, syms_dst=syms_dst, exprs_dst=exprs_dst)
+                           exprs_src=exprs_src, exprs_dst=exprs_dst,
+                           syms1=syms1, syms2=syms2)
