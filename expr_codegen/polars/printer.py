@@ -49,8 +49,8 @@ class PolarsStrPrinter(StrPrinter):
             self._print_level -= 1
 
     def _print_Symbol(self, expr):
-        # return expr.name
-        return f"pl.col('{expr.name}')"
+        # return f"pl.col('{expr.name}')"
+        return expr.name
 
     # 此处代码保留做为二次开发的示例
     # def _print_Equality(self, expr):

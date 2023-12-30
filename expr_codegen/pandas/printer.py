@@ -52,7 +52,8 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_Symbol(self, expr):
         # return expr.name
-        return f"df['{expr.name}']"
+        # return f"df['{expr.name}']"
+        return f"df[{expr.name}]"
 
     def _print_Equality(self, expr):
         PREC = precedence(expr)

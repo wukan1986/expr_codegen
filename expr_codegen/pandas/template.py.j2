@@ -14,6 +14,10 @@ from loguru import logger
 # TODO: 数据加载或外部传入
 df = df_input
 
+{{ syms1 }}
+
+{{ syms2 }}
+
 def signed_power(x, y):
     return x.sign() * (x.abs() ** y)
 
@@ -35,12 +39,10 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 {{ value-}}
 {% endfor %}
 
-{% for row in exprs_dst %}
+"""
+{%-for row in exprs_dst %}
 {{ row-}}
 {% endfor %}
-
-"""
-{{ syms_dst }}
 """
 
 """
