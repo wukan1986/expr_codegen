@@ -26,8 +26,7 @@ alpha_201=alpha_101+CLOSE # 中间变量示例
 """
 exprs_src = string_to_exprs(exprs_src, globals())
 
-# TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
-tool = ExprTool(date='date', asset='asset')
+tool = ExprTool()
 # 子表达式在前，原表式在最后
 exprs_dst, syms_dst = tool.merge(**exprs_src)
 
@@ -36,7 +35,7 @@ exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_re
 
 # 创建DAG
 G = create_dag_exprs(exprs_dict)
-G = init_dag_exprs(G, tool.get_current_func, tool.get_current_func_kwargs, tool.date, tool.asset)
+G = init_dag_exprs(G, tool.get_current_func, tool.get_current_func_kwargs)
 
 # 以下可以看到节点的合并过程
 zero = zero_outdegree(G)

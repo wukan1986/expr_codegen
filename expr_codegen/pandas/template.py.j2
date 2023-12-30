@@ -12,11 +12,15 @@ from loguru import logger
 
 
 # TODO: 数据加载或外部传入
-df = df_input
+df: pd.DataFrame = df_input
 
 {{ syms1 }}
 
 {{ syms2 }}
+
+_DATE_ = '{{ date }}'
+_ASSET_ = '{{ asset }}'
+
 
 def signed_power(x, y):
     return x.sign() * (x.abs() ** y)

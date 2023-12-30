@@ -108,8 +108,7 @@ if st.button('生成代码'):
             logger.info('事前 表达式 替换')
             exprs_src = replace_exprs(exprs_src)
 
-        # TODO: 一定要正确设定时间列名和资产列名，以及表达式识别类
-        tool = ExprTool(date=date_name, asset=asset_name)
+        tool = ExprTool()
 
         logger.info('表达式 抽取 合并')
         exprs_dst, syms_dst = tool.merge(**exprs_src)
@@ -124,9 +123,11 @@ if st.button('生成代码'):
         exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
         logger.info('代码生成')
-        source = codegen(exprs_ldl, exprs_src, syms_dst, filename='template.py.j2')
+        source = codegen(exprs_ldl, exprs_src, syms_dst,
+                         filename='template.py.j2',
+                         date=date_name, asset=asset_name)
 
-        res = format_str(source, mode=Mode(line_length=800))
+        res = format_str(source, mode=Mode(line_length=600, magic_trailing_comma=False))
 
         b64 = base64.b64encode(res.encode('utf-8'))
         st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>',

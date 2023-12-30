@@ -53,8 +53,10 @@ def main():
     exprs_src = string_to_exprs(exprs_src, globals())
 
     # 生成代码
-    tool = ExprTool(date='date', asset='asset')
-    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2', regroup=True)
+    tool = ExprTool()
+    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2',
+                        regroup=True,
+                        date='date', asset='asset')
 
     # 打印代码
     print(codes)

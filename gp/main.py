@@ -43,7 +43,7 @@ IC = {}
 IR = {}
 
 # 添加下期收益率标签
-tool = ExprTool(date='date', asset='asset')
+tool = ExprTool()
 # ======================================
 
 pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
@@ -141,7 +141,9 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', replace=False, regroup=False, format=False)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
+                        replace=False, regroup=False, format=False,
+                        date='date', asset='asset')
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
