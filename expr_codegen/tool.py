@@ -196,6 +196,6 @@ class ExprTool:
 
         if format:
             # 格式化。在遗传算法中没有必要
-            codes = format_str(codes, mode=Mode(line_length=1000))
+            codes = format_str(codes, mode=Mode(line_length=1000, magic_trailing_comma=False))
 
         return codes, G
