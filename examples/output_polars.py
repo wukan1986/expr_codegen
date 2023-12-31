@@ -16,23 +16,30 @@ from loguru import logger
 from polars_ta.prefix.wq import *  # noqa
 
 # TODO: 数据加载或外部传入
-df = df_input
+df: pl.DataFrame = df_input
+
+(OPEN, CLOSE, sw_l1, expr_7) = (pl.col("OPEN"), pl.col("CLOSE"), pl.col("sw_l1"), pl.col("expr_7"))
+
+(_x_0, expr_6, expr_7, _x_1, expr_5, _x_7, _x_5, _x_6, _x_2, _x_3, _x_8, expr_8, expr_2, expr_3, expr_1, expr_4) = (pl.col("_x_0"), pl.col("expr_6"), pl.col("expr_7"), pl.col("_x_1"), pl.col("expr_5"), pl.col("_x_7"), pl.col("_x_5"), pl.col("_x_6"), pl.col("_x_2"), pl.col("_x_3"), pl.col("_x_8"), pl.col("expr_8"), pl.col("expr_2"), pl.col("expr_3"), pl.col("expr_1"), pl.col("expr_4"))
+
+_DATE_ = "date"
+_ASSET_ = "asset"
 
 
-def func_0_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.sort(by=["date"])
+def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
         # _x_0 = ts_mean(OPEN, 10)
-        _x_0=(ts_mean(pl.col("OPEN"), 10)),
+        _x_0=ts_mean(OPEN, 10),
         # expr_6 = ts_delta(OPEN, 10)
-        expr_6=(ts_delta(pl.col("OPEN"), 10)),
+        expr_6=ts_delta(OPEN, 10),
         # expr_7 = ts_rank(OPEN + 1, 10)
-        expr_7=(ts_rank(pl.col("OPEN") + 1, 10)),
+        expr_7=ts_rank(OPEN + 1, 10),
         # _x_1 = ts_mean(CLOSE, 10)
-        _x_1=(ts_mean(pl.col("CLOSE"), 10)),
+        _x_1=ts_mean(CLOSE, 10),
         # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-        expr_5=(-ts_corr(pl.col("OPEN"), pl.col("CLOSE"), 10)),
+        expr_5=-ts_corr(OPEN, CLOSE, 10),
     )
     return df
 
@@ -41,7 +48,7 @@ def func_0_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_7 = cs_rank(OPEN)
-        _x_7=(cs_rank(pl.col("OPEN"))),
+        _x_7=cs_rank(OPEN)
     )
     return df
 
@@ -50,9 +57,9 @@ def func_0_gp__date__sw_l1(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_5 = gp_demean(sw_l1, CLOSE)
-        _x_5=(neutralize_demean(pl.col("CLOSE"))),
+        _x_5=neutralize_demean(CLOSE),
         # _x_6 = gp_rank(sw_l1, CLOSE)
-        _x_6=(cs_rank(pl.col("CLOSE"))),
+        _x_6=cs_rank(CLOSE),
     )
     return df
 
@@ -61,21 +68,21 @@ def func_1_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_2 = cs_rank(_x_0)
-        _x_2=(cs_rank(pl.col("_x_0"))),
+        _x_2=cs_rank(_x_0),
         # _x_3 = cs_rank(_x_1)
-        _x_3=(cs_rank(pl.col("_x_1"))),
+        _x_3=cs_rank(_x_1),
     )
     return df
 
 
-def func_1_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.sort(by=["date"])
+def func_1_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
         # _x_8 = ts_mean(_x_7, 10)
-        _x_8=(ts_mean(pl.col("_x_7"), 10)),
+        _x_8=ts_mean(_x_7, 10),
         # expr_8 = ts_rank(expr_7 + 1, 10)
-        expr_8=(ts_rank(pl.col("expr_7") + 1, 10)),
+        expr_8=ts_rank(expr_7 + 1, 10),
     )
     return df
 
@@ -84,19 +91,22 @@ def func_2_cl(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_2 = _x_2 + _x_5 + _x_6 - Abs(log(_x_1))
-        expr_2=(pl.col("_x_2") + pl.col("_x_5") + pl.col("_x_6") - abs_(log(pl.col("_x_1")))),
+        expr_2=_x_2
+        + _x_5
+        + _x_6
+        - abs_(log(_x_1))
     )
     return df
 
 
-def func_2_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.sort(by=["date"])
+def func_2_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
         # expr_3 = ts_mean(_x_2, 10)
-        expr_3=(ts_mean(pl.col("_x_2"), 10)),
+        expr_3=ts_mean(_x_2, 10),
         # expr_1 = -ts_corr(_x_2, _x_3, 10)
-        expr_1=(-ts_corr(pl.col("_x_2"), pl.col("_x_3"), 10)),
+        expr_1=-ts_corr(_x_2, _x_3, 10),
     )
     return df
 
@@ -105,7 +115,7 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_4 = cs_rank(_x_8)
-        expr_4=(cs_rank(pl.col("_x_8"))),
+        expr_4=cs_rank(_x_8)
     )
     return df
 
@@ -113,44 +123,41 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
 # logger.info("start...")
 
 
-df = df.sort(by=["date", "asset"])
-df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_0_ts__asset__date)
-df = df.group_by(by=["date"], maintain_order=False).map_groups(func_0_cs__date)
-df = df.group_by(by=["date", "sw_l1"], maintain_order=False).map_groups(func_0_gp__date__sw_l1)
-df = df.group_by(by=["date"], maintain_order=False).map_groups(func_1_cs__date)
-df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_1_ts__asset__date)
+df = df.sort(by=[_DATE_, _ASSET_])
+df = df.group_by(by=[_ASSET_]).map_groups(func_0_ts__asset)
+df = df.group_by(by=[_DATE_]).map_groups(func_0_cs__date)
+df = df.group_by(by=[_DATE_, "sw_l1"]).map_groups(func_0_gp__date__sw_l1)
+df = df.group_by(by=[_DATE_]).map_groups(func_1_cs__date)
+df = df.group_by(by=[_ASSET_]).map_groups(func_1_ts__asset)
 df = func_2_cl(df)
-df = df.group_by(by=["asset"], maintain_order=False).map_groups(func_2_ts__asset__date)
-df = df.group_by(by=["date"], maintain_order=False).map_groups(func_2_cs__date)
-
-
-# #========================================func_0_ts__asset__date
-# _x_0 = ts_mean(OPEN, 10)
-# expr_6 = ts_delta(OPEN, 10)
-# expr_7 = ts_rank(OPEN + 1, 10)
-# _x_1 = ts_mean(CLOSE, 10)
-# expr_5 = -ts_corr(OPEN, CLOSE, 10)
-# #========================================func_0_cs__date
-# _x_7 = cs_rank(OPEN)
-# #========================================func_0_gp__date__sw_l1
-# _x_5 = gp_demean(sw_l1, CLOSE)
-# _x_6 = gp_rank(sw_l1, CLOSE)
-# #========================================func_1_cs__date
-# _x_2 = cs_rank(_x_0)
-# _x_3 = cs_rank(_x_1)
-# #========================================func_1_ts__asset__date
-# _x_8 = ts_mean(_x_7, 10)
-# expr_8 = ts_rank(expr_7 + 1, 10)
-# #========================================func_2_cl
-# expr_2 = _x_2 + _x_5 + _x_6 - Abs(log(_x_1))
-# #========================================func_2_ts__asset__date
-# expr_3 = ts_mean(_x_2, 10)
-# expr_1 = -ts_corr(_x_2, _x_3, 10)
-# #========================================func_2_cs__date
-# expr_4 = cs_rank(_x_8)
+df = df.group_by(by=[_ASSET_]).map_groups(func_2_ts__asset)
+df = df.group_by(by=[_DATE_]).map_groups(func_2_cs__date)
 
 """
-[OPEN, CLOSE, sw_l1, expr_7]
+#========================================func_0_ts__asset
+_x_0 = ts_mean(OPEN, 10)
+expr_6 = ts_delta(OPEN, 10)
+expr_7 = ts_rank(OPEN + 1, 10)
+_x_1 = ts_mean(CLOSE, 10)
+expr_5 = -ts_corr(OPEN, CLOSE, 10)
+#========================================func_0_cs__date
+_x_7 = cs_rank(OPEN)
+#========================================func_0_gp__date__sw_l1
+_x_5 = gp_demean(sw_l1, CLOSE)
+_x_6 = gp_rank(sw_l1, CLOSE)
+#========================================func_1_cs__date
+_x_2 = cs_rank(_x_0)
+_x_3 = cs_rank(_x_1)
+#========================================func_1_ts__asset
+_x_8 = ts_mean(_x_7, 10)
+expr_8 = ts_rank(expr_7 + 1, 10)
+#========================================func_2_cl
+expr_2 = _x_2 + _x_5 + _x_6 - Abs(log(_x_1))
+#========================================func_2_ts__asset
+expr_3 = ts_mean(_x_2, 10)
+expr_1 = -ts_corr(_x_2, _x_3, 10)
+#========================================func_2_cs__date
+expr_4 = cs_rank(_x_8)
 """
 
 """

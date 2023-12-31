@@ -18,12 +18,10 @@ from deap import base, creator, gp, tools
 from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.latex.printer import display_latex
 from expr_codegen.tool import ExprTool
-from examples.sympy_define import *
+from examples.sympy_define import *  # noqa
 
 from gp.custom import add_constants, add_operators, add_factors
 from gp.helper import stringify_for_sympy, is_invalid
-
-_ = Eq
 
 # %%
 pset = gp.PrimitiveSetTyped("MAIN", [], float)

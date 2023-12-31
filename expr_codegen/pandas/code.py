@@ -14,14 +14,14 @@ def get_groupby_from_tuple(tup, func_name):
 
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
-        prefix2, asset, date = tup
-        return f'df = df.groupby(by={[asset]}, group_keys=False).apply({func_name})'
+        prefix2, asset = tup
+        return f'df = df.groupby(by=[_ASSET_], group_keys=False).apply({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = df.groupby(by={[date]}, group_keys=False).apply({func_name})'
+        return f'df = df.groupby(by=[_DATE_], group_keys=False).apply({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = df.groupby(by={[date, group]}, group_keys=False).apply({func_name})'
+        return f'df = df.groupby(by=[_DATE_, "{group}"], group_keys=False).apply({func_name})'
 
     return f'df = {func_name}(df)'
 
@@ -32,7 +32,9 @@ def symbols_to_code(syms):
     return f"({','.join(a)},) = ({','.join(b)},)"
 
 
-def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.j2'):
+def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
+            filename='template.py.j2',
+            date='date', asset='asset'):
     """基于模板的代码生成"""
     # 打印Pandas风格代码
     p = PandasStrPrinter()
@@ -63,9 +65,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
                     syms_out.append(va)
 
             if k[0] == TS:
-                groupbys['sort'] = f'df = df.sort_values(by=["{k[2]}", "{k[1]}"]).reset_index(drop=True)'
+                groupbys['sort'] = f'df = df.sort_values(by=[_DATE_, _ASSET_]).reset_index(drop=True)'
                 # 时序需要排序
-                func_code = [f'    df = df.sort_values(by=["{k[2]}"])'] + func_code
+                func_code = [f'    df = df.sort_values(by=[_DATE_])'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)
@@ -79,4 +81,5 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
     template = env.get_template(filename)
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
-                           syms1=syms1, syms2=syms2)
+                           syms1=syms1, syms2=syms2,
+                           date=date, asset=asset)

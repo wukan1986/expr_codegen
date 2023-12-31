@@ -16,11 +16,15 @@ from loguru import logger
 from polars_ta.prefix.wq import *  # noqa
 
 # TODO: 数据加载或外部传入
-df = df_input
+df: pl.DataFrame = df_input
 
 {{ syms1 }}
 
 {{ syms2 }}
+
+_DATE_ = '{{ date }}'
+_ASSET_ = '{{ asset }}'
+
 
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:

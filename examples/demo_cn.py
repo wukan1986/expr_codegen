@@ -30,10 +30,11 @@ exprs_src = {
     "expr_7": ts_rank(OPEN + 1, 10),
 }
 
-# TODO: 一定要正确设定时间列名和资产列名
-tool = ExprTool(date='date', asset='asset')
+tool = ExprTool()
 # 生成代码
-codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2', regroup=False, format=True)
+codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2',
+                    regroup=False, format=True,
+                    date='date', asset='asset')  # TODO: 一定要正确设定时间列名和资产列名
 
 output_file = 'output_polars.py'
 with open(output_file, 'w', encoding='utf-8') as f:

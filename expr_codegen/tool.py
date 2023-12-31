@@ -7,18 +7,7 @@ from expr_codegen.model import dag_start, dag_end, dag_middle
 
 class ExprTool:
 
-    def __init__(self, date: str, asset: str):
-        """指定分组时用到的时间和资产的字段名
-
-        Parameters
-        ----------
-        date: str
-            日期时间字段名
-        asset: str
-            资产字段名
-        """
-        self.date = date
-        self.asset = asset
+    def __init__(self):
         self.get_current_func = get_current_by_prefix
         self.get_current_func_kwargs = {}
         self.exprs_dict = {}
@@ -48,8 +37,7 @@ class ExprTool:
         syms = []
         get_children(self.get_current_func, self.get_current_func_kwargs,
                      expr,
-                     output_exprs=exprs, output_symbols=syms,
-                     date=self.date, asset=self.asset)
+                     output_exprs=exprs, output_symbols=syms)
         # print('=' * 20, expr)
         # print(exprs)
         return exprs, syms
@@ -142,13 +130,14 @@ class ExprTool:
 
     def dag(self, merge):
         """生成DAG"""
-        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
+        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs)
         if merge:
-            G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, self.date, self.asset)
+            G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs)
         return dag_end(G)
 
     def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2',
-            replace: bool = True, regroup: bool = False, format: bool = True):
+            replace: bool = True, regroup: bool = False, format: bool = True,
+            date='date', asset='asset'):
         """功能集成版，将几个功能写到一起方便使用
 
         Parameters
@@ -165,6 +154,11 @@ class ExprTool:
             分组重排。注意：目前好像不稳定
         format:bool
             代码格式化
+        date:str
+            日期字段名
+        asset:str
+            资产字段名
+
         Returns
         -------
         代码字符串
@@ -192,10 +186,11 @@ class ExprTool:
         else:
             from expr_codegen.pandas.code import codegen
 
-        codes = codegen(exprs_ldl, exprs_src, syms_dst, filename=template_file)
+        codes = codegen(exprs_ldl, exprs_src, syms_dst,
+                        filename=template_file, date=date, asset=asset)
 
         if format:
             # 格式化。在遗传算法中没有必要
-            codes = format_str(codes, mode=Mode(line_length=1000, magic_trailing_comma=False))
+            codes = format_str(codes, mode=Mode(line_length=600, magic_trailing_comma=False))
 
         return codes, G

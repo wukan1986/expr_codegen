@@ -19,13 +19,12 @@ import polars.selectors as cs
 from deap import base, creator, gp, tools
 from loguru import logger
 
-from examples.sympy_define import *
+from examples.sympy_define import *  # noqa
 from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors
 from gp.helper import stringify_for_sympy, is_invalid
 
-_ = Eq
 # ======================================
 # 每代计数
 GEN_COUNT = count()
@@ -43,7 +42,7 @@ IC = {}
 IR = {}
 
 # 添加下期收益率标签
-tool = ExprTool(date='date', asset='asset')
+tool = ExprTool()
 # ======================================
 
 pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
@@ -141,7 +140,9 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
     # 表达式转脚本
-    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', replace=False, regroup=False, format=False)
+    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
+                        replace=False, regroup=False, format=False,
+                        date='date', asset='asset')
 
     # 保存生成的代码
     with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:

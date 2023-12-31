@@ -30,12 +30,9 @@ sys.path.append(pwd)
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from examples.sympy_define import *
+from examples.sympy_define import *  # noqa
 from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
-
-# 防止sympy_define导入被IDE删除
-_ = Eq
 
 # ======================================
 # 数据准备，请先运行`data`目录下的`prepare_data.py`
@@ -53,8 +50,10 @@ def main():
     exprs_src = string_to_exprs(exprs_src, globals())
 
     # 生成代码
-    tool = ExprTool(date='date', asset='asset')
-    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2', regroup=True)
+    tool = ExprTool()
+    codes, G = tool.all(exprs_src, style='pandas', template_file='template.py.j2',
+                        regroup=True,
+                        date='date', asset='asset')
 
     # 打印代码
     print(codes)

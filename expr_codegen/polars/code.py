@@ -14,14 +14,14 @@ def get_groupby_from_tuple(tup, func_name):
 
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
-        prefix2, asset, date = tup
-        return f'df = df.group_by(by={[asset]}, maintain_order=False).map_groups({func_name})'
+        prefix2, asset = tup
+        return f'df = df.group_by(by=[_ASSET_]).map_groups({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = df.group_by(by={[date]}, maintain_order=False).map_groups({func_name})'
+        return f'df = df.group_by(by=[_DATE_]).map_groups({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = df.group_by(by={[date, group]}, maintain_order=False).map_groups({func_name})'
+        return f'df = df.group_by(by=[_DATE_, "{group}"]).map_groups({func_name})'
 
     return f'df = {func_name}(df)'
 
@@ -32,7 +32,9 @@ def symbols_to_code(syms):
     return f"({','.join(a)},) = ({','.join(b)},)"
 
 
-def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.j2'):
+def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
+            filename='template.py.j2',
+            date='date', asset='asset'):
     """基于模板的代码生成"""
     # 打印Polars风格代码
     p = PolarsStrPrinter()
@@ -60,16 +62,16 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
                     va, ex = kv
-                    func_code.append(f"# {va} = {ex}\n{va}=({p.doprint(ex)}),")
+                    func_code.append(f"# {va} = {ex}\n{va}={p.doprint(ex)},")
                     exprs_dst.append(f"{va} = {ex}")
                     syms_out.append(va)
             func_code.append(f"    )")
             func_code = func_code[1:]
 
             if k[0] == TS:
-                groupbys['sort'] = f'df = df.sort(by=["{k[2]}", "{k[1]}"])'
+                groupbys['sort'] = f'df = df.sort(by=[_DATE_, _ASSET_])'
                 # 时序需要排序
-                func_code = [f'    df = df.sort(by=["{k[2]}"])'] + func_code
+                func_code = [f'    df = df.sort(by=[_DATE_])'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)
@@ -83,4 +85,5 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst, filename='template.py.
     template = env.get_template(filename)
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
-                           syms1=syms1, syms2=syms2)
+                           syms1=syms1, syms2=syms2,
+                           date=date, asset=asset)
