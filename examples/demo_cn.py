@@ -28,6 +28,7 @@ exprs_src = {
     # expr_7 为某步的中间变量
     "expr_8": ts_rank(expr_7 + 1, 10),
     "expr_7": ts_rank(OPEN + 1, 10),
+    "expr_9": Max(OPEN, HIGH, LOW, CLOSE),
 }
 
 tool = ExprTool()

@@ -2,7 +2,7 @@ from sympy import Basic, Function, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
 
 
-# TODO: 如有新添加函数，需要在此补充对应的打印代码
+# TODO: 如有新添加函数，但表达式有变更才需要在此补充对应的打印代码，否则可以省略
 
 class PandasStrPrinter(StrPrinter):
     def _print(self, expr, **kwargs) -> str:
@@ -51,8 +51,6 @@ class PandasStrPrinter(StrPrinter):
             self._print_level -= 1
 
     def _print_Symbol(self, expr):
-        # return expr.name
-        # return f"df['{expr.name}']"
         return f"df[{expr.name}]"
 
     def _print_Equality(self, expr):
@@ -156,9 +154,6 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_sign(self, expr):
         return "np.sign(%s)" % self._print(expr.args[0])
-
-    def _print_signed_power(self, expr):
-        return "signed_power(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_gp_rank(self, expr):
         PREC = precedence(expr)

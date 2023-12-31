@@ -18,9 +18,9 @@ from polars_ta.prefix.wq import *  # noqa
 # TODO: 数据加载或外部传入
 df: pl.DataFrame = df_input
 
-(OPEN, CLOSE, sw_l1, expr_7) = (pl.col("OPEN"), pl.col("CLOSE"), pl.col("sw_l1"), pl.col("expr_7"))
+(OPEN, CLOSE, sw_l1, expr_7, HIGH, LOW) = (pl.col("OPEN"), pl.col("CLOSE"), pl.col("sw_l1"), pl.col("expr_7"), pl.col("HIGH"), pl.col("LOW"))
 
-(_x_0, expr_6, expr_7, _x_1, expr_5, _x_7, _x_5, _x_6, _x_2, _x_3, _x_8, expr_8, expr_2, expr_3, expr_1, expr_4) = (pl.col("_x_0"), pl.col("expr_6"), pl.col("expr_7"), pl.col("_x_1"), pl.col("expr_5"), pl.col("_x_7"), pl.col("_x_5"), pl.col("_x_6"), pl.col("_x_2"), pl.col("_x_3"), pl.col("_x_8"), pl.col("expr_8"), pl.col("expr_2"), pl.col("expr_3"), pl.col("expr_1"), pl.col("expr_4"))
+(_x_0, expr_6, expr_7, _x_1, expr_5, _x_7, _x_5, _x_6, expr_9, _x_2, _x_3, _x_8, expr_8, expr_2, expr_3, expr_1, expr_4) = (pl.col("_x_0"), pl.col("expr_6"), pl.col("expr_7"), pl.col("_x_1"), pl.col("expr_5"), pl.col("_x_7"), pl.col("_x_5"), pl.col("_x_6"), pl.col("expr_9"), pl.col("_x_2"), pl.col("_x_3"), pl.col("_x_8"), pl.col("expr_8"), pl.col("expr_2"), pl.col("expr_3"), pl.col("expr_1"), pl.col("expr_4"))
 
 _DATE_ = "date"
 _ASSET_ = "asset"
@@ -60,6 +60,15 @@ def func_0_gp__date__sw_l1(df: pl.DataFrame) -> pl.DataFrame:
         _x_5=neutralize_demean(CLOSE),
         # _x_6 = gp_rank(sw_l1, CLOSE)
         _x_6=cs_rank(CLOSE),
+    )
+    return df
+
+
+def func_0_cl(df: pl.DataFrame) -> pl.DataFrame:
+    # ========================================
+    df = df.with_columns(
+        # expr_9 = Max(CLOSE, HIGH, LOW, OPEN)
+        expr_9=max_(CLOSE, HIGH, LOW, OPEN)
     )
     return df
 
@@ -127,6 +136,7 @@ df = df.sort(by=[_DATE_, _ASSET_])
 df = df.group_by(by=[_ASSET_]).map_groups(func_0_ts__asset)
 df = df.group_by(by=[_DATE_]).map_groups(func_0_cs__date)
 df = df.group_by(by=[_DATE_, "sw_l1"]).map_groups(func_0_gp__date__sw_l1)
+df = func_0_cl(df)
 df = df.group_by(by=[_DATE_]).map_groups(func_1_cs__date)
 df = df.group_by(by=[_ASSET_]).map_groups(func_1_ts__asset)
 df = func_2_cl(df)
@@ -145,6 +155,8 @@ _x_7 = cs_rank(OPEN)
 #========================================func_0_gp__date__sw_l1
 _x_5 = gp_demean(sw_l1, CLOSE)
 _x_6 = gp_rank(sw_l1, CLOSE)
+#========================================func_0_cl
+expr_9 = Max(CLOSE, HIGH, LOW, OPEN)
 #========================================func_1_cs__date
 _x_2 = cs_rank(_x_0)
 _x_3 = cs_rank(_x_1)
@@ -169,6 +181,7 @@ expr_5 = -ts_corr(OPEN, CLOSE, 10)
 expr_6 = ts_delta(OPEN, 10)
 expr_8 = ts_rank(expr_7 + 1, 10)
 expr_7 = ts_rank(OPEN + 1, 10)
+expr_9 = Max(CLOSE, HIGH, LOW, OPEN)
 """
 
 # drop intermediate columns
