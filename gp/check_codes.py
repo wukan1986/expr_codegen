@@ -1,8 +1,7 @@
 import polars as pl
 
-from examples.sympy_define import *
+from examples.sympy_define import *  # noqa
 
-_ = Eq, Add, Mul, Pow
 # ======================================
 # 数据准备
 

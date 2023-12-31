@@ -10,12 +10,9 @@ sys.path.append(pwd)
 import polars as pl
 from matplotlib import pyplot as plt
 
-from examples.sympy_define import *
+from examples.sympy_define import *  # noqa
 from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
-
-# 防止sympy_define导入被IDE删除
-_ = Eq
 
 # ======================================
 # 数据准备，请先运行`data`目录下的`prepare_data.py`

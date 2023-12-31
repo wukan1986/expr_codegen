@@ -142,6 +142,7 @@ def get_current_by_name(expr, ts_names, cs_names, gp_names, **kwargs):
 
     Parameters
     ----------
+    expr
     ts_names
         时序算子名称字符串集合
     cs_names
@@ -187,10 +188,6 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols):
         输出分割后的了表达式
     output_symbols
         输出每个子表达式中的符号
-    date
-        分组用的日期字段名
-    asset
-        分组用的资产字段名
 
     Returns
     -------

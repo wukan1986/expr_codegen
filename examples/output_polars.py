@@ -31,15 +31,15 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_0 = ts_mean(OPEN, 10)
-        _x_0=(ts_mean(OPEN, 10)),
+        _x_0=ts_mean(OPEN, 10),
         # expr_6 = ts_delta(OPEN, 10)
-        expr_6=(ts_delta(OPEN, 10)),
+        expr_6=ts_delta(OPEN, 10),
         # expr_7 = ts_rank(OPEN + 1, 10)
-        expr_7=(ts_rank(OPEN + 1, 10)),
+        expr_7=ts_rank(OPEN + 1, 10),
         # _x_1 = ts_mean(CLOSE, 10)
-        _x_1=(ts_mean(CLOSE, 10)),
+        _x_1=ts_mean(CLOSE, 10),
         # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-        expr_5=(-ts_corr(OPEN, CLOSE, 10)),
+        expr_5=-ts_corr(OPEN, CLOSE, 10),
     )
     return df
 
@@ -48,7 +48,7 @@ def func_0_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_7 = cs_rank(OPEN)
-        _x_7=(cs_rank(OPEN))
+        _x_7=cs_rank(OPEN)
     )
     return df
 
@@ -57,9 +57,9 @@ def func_0_gp__date__sw_l1(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_5 = gp_demean(sw_l1, CLOSE)
-        _x_5=(neutralize_demean(CLOSE)),
+        _x_5=neutralize_demean(CLOSE),
         # _x_6 = gp_rank(sw_l1, CLOSE)
-        _x_6=(cs_rank(CLOSE)),
+        _x_6=cs_rank(CLOSE),
     )
     return df
 
@@ -68,9 +68,9 @@ def func_1_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_2 = cs_rank(_x_0)
-        _x_2=(cs_rank(_x_0)),
+        _x_2=cs_rank(_x_0),
         # _x_3 = cs_rank(_x_1)
-        _x_3=(cs_rank(_x_1)),
+        _x_3=cs_rank(_x_1),
     )
     return df
 
@@ -80,9 +80,9 @@ def func_1_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # _x_8 = ts_mean(_x_7, 10)
-        _x_8=(ts_mean(_x_7, 10)),
+        _x_8=ts_mean(_x_7, 10),
         # expr_8 = ts_rank(expr_7 + 1, 10)
-        expr_8=(ts_rank(expr_7 + 1, 10)),
+        expr_8=ts_rank(expr_7 + 1, 10),
     )
     return df
 
@@ -91,7 +91,10 @@ def func_2_cl(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_2 = _x_2 + _x_5 + _x_6 - Abs(log(_x_1))
-        expr_2=(_x_2 + _x_5 + _x_6 - abs_(log(_x_1)))
+        expr_2=_x_2
+        + _x_5
+        + _x_6
+        - abs_(log(_x_1))
     )
     return df
 
@@ -101,9 +104,9 @@ def func_2_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_3 = ts_mean(_x_2, 10)
-        expr_3=(ts_mean(_x_2, 10)),
+        expr_3=ts_mean(_x_2, 10),
         # expr_1 = -ts_corr(_x_2, _x_3, 10)
-        expr_1=(-ts_corr(_x_2, _x_3, 10)),
+        expr_1=-ts_corr(_x_2, _x_3, 10),
     )
     return df
 
@@ -112,7 +115,7 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         # expr_4 = cs_rank(_x_8)
-        expr_4=(cs_rank(_x_8))
+        expr_4=cs_rank(_x_8)
     )
     return df
 
