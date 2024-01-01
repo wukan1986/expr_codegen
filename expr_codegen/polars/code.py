@@ -28,7 +28,7 @@ def get_groupby_from_tuple(tup, func_name):
 
 def symbols_to_code(syms):
     a = [f"{s}" for s in syms]
-    b = [f"pl.col('{s}')" for s in syms]
+    b = [f"C('{s}')" for s in syms]
     return f"({','.join(a)},) = ({','.join(b)},)"
 
 
