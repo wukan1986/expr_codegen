@@ -7,8 +7,8 @@ import numpy as np
 
 def add_constants(pset):
     """添加常量"""
-    # 名字一定不能与其它名字重，上次与int一样，结果其它地方报错 [<class 'deap.gp.random_int'>]
-    pset.addEphemeralConstant('random_int', lambda: random.choice([1, 3, 5, 10, 20, 40, 60]), int)
+    # !!! 名字一定不能与其它名字重，上次与int一样，结果其它地方报错 [<class 'deap.gp.random_int'>]
+    pset.addEphemeralConstant('_random_int_', lambda: random.choice([1, 3, 5, 10, 20, 40, 60]), int)
     return pset
 
 
@@ -19,7 +19,7 @@ def add_operators(pset):
     # 会导致层数过多，但暂时没办法
     pset.addPrimitive(pass_through, [int], int, name='pass_int')
 
-    # 无法给一个算子定义多种类型，只好定义多个不同名算子
+    # 无法给一个算子定义多种类型，只好定义多个不同名算子，之后通过helper.py中的convert_inverse_prim修正
     pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fadd')
     pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fsub')
     pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fmul')
@@ -31,7 +31,7 @@ def add_operators(pset):
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='isub')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imul')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='idiv')
-    # !!!max(x,1)这类表达式是合法的，但生成数量太多价值就低了，所以屏蔽
+    # !!! max(x,1)这类表达式是合法的，但生成数量太多价值就低了，所以屏蔽
     # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imax')
     # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imin')
 

@@ -12,6 +12,7 @@ import pickle
 import random
 import time
 from itertools import count
+from typing import Dict, Sequence
 
 import numpy as np
 import polars as pl
@@ -26,32 +27,146 @@ from gp.custom import add_constants, add_operators, add_factors
 from gp.helper import stringify_for_sympy, is_invalid
 
 # ======================================
+# TODO 必须元组，1表示找最大值,-1表示找最小值
+FITNESS_WEIGHTS = (1.0,)
+# TODO 排序和统计时nan和inf都会导致结果异常，所以选一个**反向**的**离群值**当成无效值
+# 前面FITNESS_WEIGHTS要找最大值，所以这里要用非常小的值，fitness函数计算IC，值在-1到1之前
+FITNESS_NAN = -99.0
+
+# TODO y表示类别标签、因变量、输出变量，需要与数据文件字段对应
+LABEL_y = 'LABEL_OO_1'
+
+# TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
+df_input = pl.read_parquet('data/data.parquet')
+
+# 从脚本获取数据。注意，要与`template.py.j2`文件相对应
+df_output: pl.DataFrame = pl.DataFrame()
+
+# ======================================
+# 当前种群的fitness目标，可添加多个目标
+IC: Dict[str, float] = {}
+IR: Dict[str, float] = {}
+
 # 每代计数
 GEN_COUNT = count()
 # 日志路径
 LOG_DIR = Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+
 # ======================================
-# TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
-df_input = pl.read_parquet('data/data.parquet')
-# 从脚本获取数据
-df_output: pl.DataFrame = pl.DataFrame()
+def fitness_individual(a: str, b: str) -> pl.Expr:
+    """个体fitness函数"""
+    # 这使用的是rank_ic
+    return pl.corr(a, b, method='spearman', ddof=0, propagate_nans=False)
 
-IC = {}
-IR = {}
 
-# 添加下期收益率标签
-tool = ExprTool()
+def fitness_population(df: pl.DataFrame, columns: Sequence[str]) -> None:
+    """种群fitness函数"""
+    df = df.group_by(by=['date']).agg(
+        [fitness_individual(X, LABEL_y) for X in columns]
+    )
+
+    _expr = cs.numeric().fill_nan(None).drop_nulls()
+    ic = df.select(_expr.mean())
+    ir = df.select(_expr.mean() / _expr.std(ddof=0))
+
+    # TODO 可添加多套适应度函数
+    global IC
+    global IR
+
+    IC = ic.to_dicts()[0]
+    IR = ir.to_dicts()[0]
+
+
+def evaluate_expr(individual, points=None):
+    """评估函数。需要返回元组"""
+    ind, col = individual
+    #  元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
+    ic, ic = FITNESS_NAN, FITNESS_NAN
+
+    if col not in df_output.columns:
+        # 如果没有此表达式，表示之前表达式 不合法或重复 没有参与计算
+        pass
+    else:
+        # !!! IC内部的值可能是None或nan，都要处理, 全转nan
+        ic = IC.get(col, None) or float('nan')
+        ir = IR.get(col, None) or float('nan')
+
+        # IC绝对值越大越好。使用==判断是否nan
+        ic = abs(ic) if ic == ic else FITNESS_NAN
+        ir = ir if ir == ir else FITNESS_NAN
+
+    # TODO 需返回元组，数量必须与weights对应
+    return ic,  # ir,
+
+
+def map_exprs(evaluate, invalid_ind):
+    """原本是一个普通的map或多进程map，个体都是独立计算
+    但这里考虑到表达式很相似，可以重复利用公共子表达式，
+    所以决定种群一起进行计算，将结果保存，最后其它地方取结果评估即可
+    """
+    g = next(GEN_COUNT)
+    # 保存原始表达式，立即保存是防止崩溃后丢失信息, 注意：这里没有存fitness
+    with open(LOG_DIR / f'exprs_{g:04d}.pkl', 'wb') as f:
+        pickle.dump(invalid_ind, f)
+
+    logger.info("表达式转码...")
+    # DEAP表达式转sympy表达式。约定以GP_开头，表示遗传编程
+    expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
+    expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
+
+    # 清理重复表达式，通过字典特性删除
+    expr_dict = {v: k for k, v in expr_dict.items()}
+    expr_dict = {v: k for k, v in expr_dict.items()}
+    # 清理非法表达式
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
+    # 清理无意义表达式
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
+
+    # 注意：以上的简化操作并没有修改种群，只是是在计算前做了预处理。所以还是会出现不同代重复计算
+
+    tool = ExprTool()
+    # 表达式转脚本
+    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
+                        replace=False, regroup=False, format=False,
+                        date='date', asset='asset')
+
+    # 备份生成的代码
+    with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
+        f.write(codes)
+
+    cnt = len(expr_dict)
+    logger.info("代码执行。共 {} 条 表达式", cnt)
+    tic = time.perf_counter()
+
+    # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
+    global df_output
+    # TODO 只处理了两个变量，如果你要设置更多变量，请与 `template.py.j2` 一同修改
+    _globals = {'df_input': df_input, 'df_output': df_output}
+    exec(codes, _globals)
+    df_output = _globals['df_output']
+
+    elapsed_time = time.perf_counter() - tic
+    logger.info("执行完成。共用时 {:.3f} 秒，平均 {:.3f} 秒/条，或 {:.3f} 条/秒", elapsed_time, elapsed_time / cnt, cnt / elapsed_time)
+
+    # 计算种群适应度
+    fitness_population(df_output, list(expr_dict.keys()))
+
+    # 封装，加传数据存储的字段名
+    invalid_ind2 = [(expr, f'GP_{i:04d}') for i, expr in enumerate(invalid_ind)]
+    # 调用评估函数
+    return map(evaluate, invalid_ind2)
+
+
 # ======================================
-
 pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
 pset = add_constants(pset)
 pset = add_operators(pset)
 pset = add_factors(pset)
 
-# 多目标优化、单目标优化
-creator.create("FitnessMulti", base.Fitness, weights=(1.0,))
+# 多目标优化
+creator.create("FitnessMulti", base.Fitness, weights=FITNESS_WEIGHTS)
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMulti)
 
 toolbox = base.Toolbox()
@@ -65,118 +180,7 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-
-
-def rank_ic(a, b):
-    """计算RankIC"""
-    return pl.corr(pl.col(a), pl.col(b), method='spearman', ddof=0, propagate_nans=False)
-
-
-def calc_ic_ir(df: pl.DataFrame, factors, label):
-    """计算IC和IR"""
-    df = df.group_by(by=['date'], maintain_order=False).agg(
-        [rank_ic(x, label) for x in factors]
-    )
-    # polars升级后，需要先drop_nans
-    NUM_DROP = cs.numeric().fill_nan(None).drop_nulls()
-    ic = df.select(NUM_DROP.mean())
-    ir = df.select(NUM_DROP.mean() / NUM_DROP.std(ddof=0))
-    # print(ic)
-    # print(ic)
-
-    # 居然有部分算出来是None, fill_null虽然只有一行，但对几百列太慢，所以放在之后处理
-    # ic = ic.fill_null(float('nan'))
-    # ir = ir.fill_null(float('nan'))
-
-    ic = ic.to_dicts()[0]
-    ir = ir.to_dicts()[0]
-
-    return ic, ir
-
-
-def evaluate_expr(individual, points):
-    """评估函数，需要返回元组。
-
-    !!! 元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
-    """
-    ind, col = individual
-    if col not in df_output.columns:
-        # 没有此表达式，表示之前表达式不合法，所以不参与计算
-        return float('-999'),  # float('-999'),
-
-    # IC内部的值可能是None或nan，所以都要处理, 这里全转nan
-    ic = IC.get(col, None) or float('nan')
-    ir = IR.get(col, None) or float('nan')
-
-    # IC绝对值越大越好。使用==判断是否nan
-    ic = abs(ic) if ic == ic else float('-999')
-    ir = ir if ir == ir else float('-999')
-
-    return ic,  # ir,
-
-
-def map_exprs(evaluate, invalid_ind):
-    """原本是一个普通的map或多进程map，个体都是独立计算
-
-    但这里考虑到表达式很相似，可以重复利用公共子表达式，所以决定种群一起进行计算，最后由其它地方取结果评估即可
-    """
-    g = next(GEN_COUNT)
-    # 保存原始表达式，方便复现
-    with open(LOG_DIR / f'deap_exprs_{g:04d}.pkl', 'wb') as f:
-        pickle.dump(invalid_ind, f)
-
-    logger.info("表达式转码...")
-    # DEAP表达式转sympy表达式
-    expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
-    expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
-
-    # 通过字典特性删除重复表达式
-    expr_dict = {v: k for k, v in expr_dict.items()}
-    expr_dict = {v: k for k, v in expr_dict.items()}
-
-    # 清理非法表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
-    # 清理无意义表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
-
-    # 表达式转脚本
-    codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
-                        replace=False, regroup=False, format=False,
-                        date='date', asset='asset')
-
-    # 保存生成的代码
-    with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
-        f.write(codes)
-
-    # 使用两下划线，减少与生成代码间冲突可能性
-    _cnt_ = len(expr_dict)
-    logger.info(f"代码执行。共 {_cnt_} 条")
-
-    _tic_ = time.time()
-
-    # TODO 只处理了两个变量，如果你要设置更多，请与 `template.py.j2` 一同修改
-    # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
-    global df_output
-    _globals = {'df_input': df_input, 'df_output': df_output}
-    exec(codes, _globals)
-    df_output = _globals['df_output']
-
-    elapsed_time = time.time() - _tic_
-
-    logger.info(f"执行完成。共用时 {elapsed_time:.3f} 秒，平均 {elapsed_time / _cnt_:.3f} 秒/条")
-
-    global IC
-    global IR
-    # TODO: 计算ic, ir，需指定对应的标签字段
-    IC, IR = calc_ic_ir(df_output, expr_dict.keys(), 'LABEL_OO_1')
-
-    # 封装，加传数据存储的字段名
-    invalid_ind2 = [(expr, f'GP_{i:04d}') for i, expr in enumerate(invalid_ind)]
-    # 调用评估函数
-    return map(evaluate, invalid_ind2)
-
-
-toolbox.register("evaluate", evaluate_expr, points=[x / 10. for x in range(-10, 10)])
+toolbox.register("evaluate", evaluate_expr, points=None)
 toolbox.register('map', map_exprs)
 
 
@@ -217,4 +221,4 @@ if __name__ == "__main__":
 
     print('=' * 60)
     for i, h in enumerate(hof):
-        print(i, h.fitness, h)
+        print(f'{i:03d}', '\t', h.fitness, '\t', h)

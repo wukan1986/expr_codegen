@@ -1,83 +1,44 @@
 # !!! 以下代码在VSCode或Notebook中执行更好，能显示LATEX表达式和画表达式树状图
 # %%
 import os
-
-os.chdir(os.path.dirname(__file__))
-print(os.getcwd())
-
 import sys
+from pathlib import Path
 
-sys.path.append('..')
+# 修改当前目录到上层目录，方便跨不同IDE中使用
+pwd = str(Path(__file__).parents[1])
+os.chdir(pwd)
+sys.path.append(pwd)
+# ===============
 # %%
-import operator
-import pathlib
-import pickle
+# 从main中导入，可以大大减少代码
+from main import *
 
-from deap import base, creator, gp, tools
+with open(LOG_DIR / f'exprs_0000.pkl', 'rb') as f:
+    population = pickle.load(f)
 
-from expr_codegen.expr import safe_eval, is_meaningless
-from expr_codegen.latex.printer import display_latex
-from expr_codegen.tool import ExprTool
-from examples.sympy_define import *  # noqa
-
-from gp.custom import add_constants, add_operators, add_factors
-from gp.helper import stringify_for_sympy, is_invalid
-
-# %%
-pset = gp.PrimitiveSetTyped("MAIN", [], float)
-pset = add_constants(pset)
-pset = add_operators(pset)
-pset = add_factors(pset)
-
-creator.create("FitnessMulti", base.Fitness, weights=(1,))
-creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMulti)
-
-toolbox = base.Toolbox()
-toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=2)
-toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-# toolbox.register("compile", gp.compile, pset=pset)
-toolbox.register("select", tools.selTournament, tournsize=3)
-toolbox.register("mate", gp.cxOnePoint)
-toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
-toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
-toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-# %%
-
-LOG_DIR = pathlib.Path('log')
-with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
-    invalid_ind = pickle.load(f)
-
-for i, ind in enumerate(invalid_ind):
-    print(i, ind.fitness, ind)
+for i, h in enumerate(population):
+    print(f'{i:03d}', '\t', h.fitness, '\t', h)
 
 # %%
-expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
+expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(population)}
 expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
 
-# 通过字典特性删除重复表达式
-expr_dict = {v: k for k, v in expr_dict.items()}
-expr_dict = {v: k for k, v in expr_dict.items()}
-
-# 清理非法表达式
-expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
-# 清理无意义表达式
-expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
-
 for i, (k, v) in enumerate(expr_dict.items()):
-    print(i, k, v)
+    print(f'{i:03d}', k, v)
 # %%
 expr = expr_dict['GP_0007']
-expr = ((OPEN / CLOSE) - 1) ** (-1 / 2)
+# expr = ((OPEN / CLOSE) - 1) ** (-1 / 2)
 
 # 这部分Latex代码放在VSCode中显示更直观
+from expr_codegen.latex.printer import display_latex
+
 display_latex(expr)
 # %%
 # 生成代码和有向无环图
-tool = ExprTool(date='date', asset='asset')
-# 表达式转脚本
-codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2', fast=True)
+tool = ExprTool()
+codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
+                    replace=False, regroup=False, format=False,
+                    date='date', asset='asset')
 # %%
 from expr_codegen.model import draw_expr_tree
 
@@ -86,5 +47,5 @@ draw_expr_tree(G, 'GP_0007')
 
 # %%
 # 打印代码
-print(codes)
+# print(codes)
 # %%

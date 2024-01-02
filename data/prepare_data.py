@@ -49,7 +49,7 @@ def func_0_ts__asset__date(df: pl.DataFrame) -> pl.DataFrame:
 
 
 df = df.sort(by=["date", "asset"])
-df = df.group_by(by=["asset"], maintain_order=True).map_groups(func_0_ts__asset__date)
+df = df.group_by(by=["asset"]).map_groups(func_0_ts__asset__date)
 
 # save
 df.write_parquet('data.parquet', compression='zstd')
