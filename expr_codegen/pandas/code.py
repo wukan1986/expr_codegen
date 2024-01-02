@@ -29,7 +29,8 @@ def get_groupby_from_tuple(tup, func_name):
 def symbols_to_code(syms):
     a = [f"{s}" for s in syms]
     b = [f"'{s}'" for s in syms]
-    return f"({','.join(a)},) = ({','.join(b)},)"
+    return f"""_ = ({','.join(b)},)
+({','.join(a)},) = _"""
 
 
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
