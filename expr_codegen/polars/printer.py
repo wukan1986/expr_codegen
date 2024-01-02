@@ -61,17 +61,11 @@ class PolarsStrPrinter(StrPrinter):
         else:
             return "log(%s)" % self._print(expr.args[0])
 
-    def _print_Abs(self, expr):
+    def _print_abs_(self, expr):
         if expr.args[0].is_Number:
             return "np.abs(%s)" % expr.args[0]
         else:
             return "abs_(%s)" % self._print(expr.args[0])
-
-    def _print_Max(self, expr):
-        return "max_(%s)" % (', '.join(self._print(a) for a in expr.args))
-
-    def _print_Min(self, expr):
-        return "min_(%s)" % (', '.join(self._print(a) for a in expr.args))
 
     def _print_sign(self, expr):
         if expr.args[0].is_Number:

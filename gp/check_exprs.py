@@ -13,11 +13,14 @@ sys.path.append(pwd)
 # 从main中导入，可以大大减少代码
 from main import *
 
-with open(LOG_DIR / f'exprs_0000.pkl', 'rb') as f:
+with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
     population = pickle.load(f)
 
-for i, h in enumerate(population):
-    print(f'{i:03d}', '\t', h.fitness, '\t', h)
+for i, e in enumerate(population):
+    # 小心globals()中的log等变量与内部函数冲突
+    print(f'{i:03d}', '\t', e.fitness, '\t', e, end='\t<--->\t')
+    # 分两行，冲突时可以知道是哪出错
+    print(safe_eval(stringify_for_sympy(e), globals()))
 
 # %%
 expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(population)}
@@ -27,12 +30,15 @@ for i, (k, v) in enumerate(expr_dict.items()):
     print(f'{i:03d}', k, v)
 # %%
 expr = expr_dict['GP_0007']
-# expr = ((OPEN / CLOSE) - 1) ** (-1 / 2)
+expr = ((OPEN / CLOSE) - OPEN_INTEREST) ** (-1 / 2)
+# expr = max_(OPEN, HIGH, LOW, abs_(CLOSE))
 
 # 这部分Latex代码放在VSCode中显示更直观
 from expr_codegen.latex.printer import display_latex
+from expr_codegen.latex.printer import latex
 
 display_latex(expr)
+latex(expr)
 # %%
 # 生成代码和有向无环图
 tool = ExprTool()

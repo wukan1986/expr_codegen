@@ -15,9 +15,10 @@ from expr_codegen.tool import ExprTool
 
 def get_symbols_functions(module):
     """获取Symbol与Function"""
-
-    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass))]
     symbols = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, Symbol))]
+    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass))]
+    # 去一个特殊值
+    functions = [_ for _ in functions if _ != 'Function']
     return symbols, functions
 
 
@@ -29,7 +30,7 @@ with st.sidebar:
     date_name = st.text_input('日期字段名', 'date')
     asset_name = st.text_input('资产字段名', 'asset')
 
-    factors_text_area = st.text_area(label='覆写预定义因子', value="""# Alpha101基础因子
+    factors_text_area = st.text_area(label='新增预定义因子', value="""# Alpha101基础因子
 OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
 RETURNS, VWAP, CAP,
 ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
@@ -44,9 +45,9 @@ SECTOR, INDUSTRY, SUBINDUSTRY,""")
 
     st.subheader("优化")
     is_pre_opt = st.checkbox('事前`表达式`替换', True)
+    is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
     # TODO: 好像这个还有问题等有空再改
     is_back_opt = st.checkbox('事后`整列分组`向前合并', False)
-    is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', False)
 
     st.subheader("关于")
     st.markdown(f"""[Github仓库](https://github.com/wukan1986/expr_codegen)

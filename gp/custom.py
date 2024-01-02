@@ -35,10 +35,9 @@ def add_operators(pset):
     # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imax')
     # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imin')
 
-    # TODO: 其它算子
     pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='log')
     pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='sign')
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='Abs')
+    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='abs_')
 
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delay')
     pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delta')

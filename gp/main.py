@@ -202,23 +202,26 @@ def main():
     mstats.register("min", np.min)
     mstats.register("max", np.max)
 
-    pop, log = gp.harm(pop, toolbox,
-                       # 交叉率、变异率，代数
-                       cxpb=0.5, mutpb=0.1, ngen=2,
-                       # 名人堂参数
-                       alpha=0.05, beta=10, gamma=0.25, rho=0.9,
-                       stats=mstats, halloffame=hof, verbose=True)
-    # print log
-    return pop, log, hof
+    pop, _log = gp.harm(pop, toolbox,
+                        # 交叉率、变异率，代数
+                        cxpb=0.5, mutpb=0.1, ngen=2,
+                        # 名人堂参数
+                        alpha=0.05, beta=10, gamma=0.25, rho=0.9,
+                        stats=mstats, halloffame=hof, verbose=True)
+
+    return pop, _log, hof
 
 
 if __name__ == "__main__":
-    pop, log, hof = main()
+    pop, _log, hof = main()
 
     # 保存名人堂
     with open(LOG_DIR / f'hall_of_fame.pkl', 'wb') as f:
-        pickle.dump(hof, f)
+        pickle.dump(pop, f)
 
     print('=' * 60)
-    for i, h in enumerate(hof):
-        print(f'{i:03d}', '\t', h.fitness, '\t', h)
+    for i, e in enumerate(pop):
+        # 小心globals()中的log等变量与内部函数冲突
+        print(f'{i:03d}', '\t', e.fitness, '\t', e, end='\t<--->\t')
+        # 分两行，冲突时可以知道是哪出错
+        print(safe_eval(stringify_for_sympy(e), globals()))

@@ -2,6 +2,13 @@
 
 本项目演示如何在遗传算法中使用表达式转代码工具。本人很早就用`deap`做过遗传算法，没用过`gplearn`，所以这次继续沿用`deap`
 
+## 安装
+
+```commandline
+pip install -r requirements.txt # 安装依赖
+pip install -r requirements_gp.txt # 安装遗传编程依赖
+```
+
 # 快速运行最简示例
 
 1. 运行`data/prepare_date.py`准备数据
@@ -38,3 +45,15 @@
 2. `log`目录提前备份并清空一下
 3. `prepare_date.py`参考准备数据，一定要注意准备标签字段用于计算IC等指标。直接执行生成测试数据
 4. `main.py`中修改遗传算法种群、代数、随机数种子等参数，运行
+
+## Q&A
+
+Q: 为何生成的表达式无法直接使用?
+
+A: 项目涉及到几个模块`sympy`、`deap`、`LaTeX`，`polars_ta`，需要取舍。以`max`为例
+
+1. `polar_ta`，为了不与`buildins`冲突，所以命名为`max_`
+2. `deap`中，为了按参数类型生成表达式更合理，所以定义了`imax(OPEN, 1)`与`fmax(OPEN, CLOSE)`
+3. `deap`生成后通过`convert_inverse_prim`生成`sympy`进行简化提取公共子表达式
+4. `sympy`有`Max`内部可通过`LatexPrinter`转到`LaTeX`后是`max`，`LaTeX`支持的好处是Notebook中更直观
+5. 建议参考`main.py`中最后一行，通过`safe_eval(stringify_for_sympy(e), globals())`将表达式转换成可执行版

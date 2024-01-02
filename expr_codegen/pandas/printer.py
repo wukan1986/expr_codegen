@@ -139,17 +139,17 @@ class PandasStrPrinter(StrPrinter):
     def _print_log(self, expr):
         return "np.log(%s)" % self._print(expr.args[0])
 
-    def _print_Abs(self, expr):
+    def _print_abs_(self, expr):
         PREC = precedence(expr)
         if expr.args[0].is_Number:
             return "np.abs(%s)" % expr.args[0]
         else:
             return "%s.abs()" % self.parenthesize(expr.args[0], PREC)
 
-    def _print_Max(self, expr):
+    def _print_max_(self, expr):
         return "np.maximum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
-    def _print_Min(self, expr):
+    def _print_min_(self, expr):
         return "np.minimum(%s, %s)" % (self._print(expr.args[0]), self._print(expr.args[1]))
 
     def _print_sign(self, expr):

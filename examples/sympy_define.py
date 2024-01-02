@@ -1,10 +1,11 @@
 """
 !!! 所有新补充的`Function`都需要在`printer.py`中添加对应的处理代码
 """
-# !!! 注意: Abs, Max, Min是首字母大写。使用sympy内置符号在LaTex显示时更好看
-from sympy import Add, Mul, Pow, Eq, Abs, Max, Min, log  # noqa
-from sympy import symbols, Symbol, Function  # noqa
+from sympy import Add, Mul, Pow, Eq, log  # noqa
+from sympy import symbols, Symbol, Function
 
+# 由于与buildins中函数重复，所以重新定义
+max_, min_, abs_, = symbols('max_, min_, abs_, ', cls=Function)
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
 # sign由于会被翻译成Piecewise，所以使用自义函数
 if_else, signed_power, sign, = symbols('if_else, signed_power, sign, ', cls=Function)
@@ -23,4 +24,4 @@ cs_rank, cs_scale, = symbols('cs_rank, cs_scale, ', cls=Function)
 gp_rank, gp_demean, = symbols('gp_rank, gp_demean, ', cls=Function)
 
 # TODO: 因子。请根据需要补充
-OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, ', cls=Symbol)
+OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, ', cls=Symbol)
