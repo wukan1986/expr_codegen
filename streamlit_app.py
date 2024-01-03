@@ -1,5 +1,6 @@
 import base64
 import inspect
+from itertools import islice
 
 import streamlit as st
 import sympy
@@ -13,6 +14,26 @@ from expr_codegen.expr import string_to_exprs, replace_exprs
 from expr_codegen.tool import ExprTool
 
 
+def _batched(iterable, n):
+    """Batch data into lists of length *n*. The last batch may be shorter.
+
+    >>> list(batched('ABCDEFG', 3))
+    [('A', 'B', 'C'), ('D', 'E', 'F'), ('G',)]
+
+    On Python 3.12 and above, this is an alias for :func:`itertools.batched`.
+    """
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while True:
+        batch = tuple(islice(it, n))
+        if not batch:
+            break
+        yield batch
+
+
+# batched
+
 def get_symbols_functions(module):
     """获取Symbol与Function"""
     symbols = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, Symbol))]
@@ -20,6 +41,13 @@ def get_symbols_functions(module):
     # 去一个特殊值
     functions = [_ for _ in functions if _ != 'Function']
     return symbols, functions
+
+
+def list_to_string(items, n):
+    txts = []
+    for ss in _batched(items, n):
+        txts.append(f'# {",".join(ss)}')
+    return '\n'.join(txts)
 
 
 st.set_page_config(page_title='Expr Codegen', layout="wide")
@@ -66,9 +94,6 @@ version: {expr_codegen.__version__}
 with st.expander(label="预定义**算子**"):
     st.write('如缺算子，可以在issue中申请添加，或下载代码进行二次开发')
 
-    # import examples.sympy_define
-    # from examples.sympy_define import *
-
     # 本可以不用写这么复杂，但为了证明可以动态加载和执行，所以演示一下
     module = __import__('examples.sympy_define', fromlist=['*'])
 
@@ -79,9 +104,12 @@ with st.expander(label="预定义**算子**"):
 
 st.subheader('自定义表达式')
 all_symbols, all_functions = get_symbols_functions(module)
+
 exprs_src = st_ace(value=f"""# 向编辑器登记自动完成关键字，按字母排序
-# {all_symbols}
-# {all_functions}
+{list_to_string(all_symbols, 30)}
+
+{list_to_string(all_functions, 30)}
+
 
 # 请在此添加表达式，`=`右边为表达式，`=`左边为新因子名。
 alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
@@ -128,7 +156,7 @@ if st.button('生成代码'):
                          filename='template.py.j2',
                          date=date_name, asset=asset_name)
 
-        res = format_str(source, mode=Mode(line_length=600, magic_trailing_comma=False))
+        res = format_str(source, mode=Mode(line_length=600, magic_trailing_comma=True))
 
         b64 = base64.b64encode(res.encode('utf-8'))
         st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>',

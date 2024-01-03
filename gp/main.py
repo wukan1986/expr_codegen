@@ -217,10 +217,10 @@ if __name__ == "__main__":
 
     # 保存名人堂
     with open(LOG_DIR / f'hall_of_fame.pkl', 'wb') as f:
-        pickle.dump(pop, f)
+        pickle.dump(hof, f)
 
     print('=' * 60)
-    for i, e in enumerate(pop):
+    for i, e in enumerate(hof):
         # 小心globals()中的log等变量与内部函数冲突
         print(f'{i:03d}', '\t', e.fitness, '\t', e, end='\t<--->\t')
         # 分两行，冲突时可以知道是哪出错

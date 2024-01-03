@@ -17,11 +17,61 @@ from polars_ta.prefix.wq import *  # noqa
 # TODO: 数据加载或外部传入
 df: pl.DataFrame = df_input
 
-_ = ("OPEN", "CLOSE", "sw_l1", "expr_7", "HIGH", "LOW")
-(OPEN, CLOSE, sw_l1, expr_7, HIGH, LOW) = (pl.col(i) for i in _)
+_ = (
+    "OPEN",
+    "CLOSE",
+    "sw_l1",
+    "expr_7",
+    "HIGH",
+    "LOW",
+)
+(
+    OPEN,
+    CLOSE,
+    sw_l1,
+    expr_7,
+    HIGH,
+    LOW,
+) = (pl.col(i) for i in _)
 
-_ = ("_x_0", "expr_6", "expr_7", "_x_1", "expr_5", "_x_7", "_x_5", "_x_6", "expr_9", "_x_2", "_x_3", "_x_8", "expr_8", "expr_2", "expr_3", "expr_1", "expr_4")
-(_x_0, expr_6, expr_7, _x_1, expr_5, _x_7, _x_5, _x_6, expr_9, _x_2, _x_3, _x_8, expr_8, expr_2, expr_3, expr_1, expr_4) = (pl.col(i) for i in _)
+_ = (
+    "_x_0",
+    "expr_6",
+    "expr_7",
+    "_x_1",
+    "expr_5",
+    "_x_7",
+    "_x_5",
+    "_x_6",
+    "expr_9",
+    "_x_2",
+    "_x_3",
+    "_x_8",
+    "expr_8",
+    "expr_2",
+    "expr_3",
+    "expr_1",
+    "expr_4",
+)
+(
+    _x_0,
+    expr_6,
+    expr_7,
+    _x_1,
+    expr_5,
+    _x_7,
+    _x_5,
+    _x_6,
+    expr_9,
+    _x_2,
+    _x_3,
+    _x_8,
+    expr_8,
+    expr_2,
+    expr_3,
+    expr_1,
+    expr_4,
+) = (pl.col(i) for i in _)
 
 _DATE_ = "date"
 _ASSET_ = "asset"
@@ -31,15 +81,10 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
-        # _x_0 = ts_mean(OPEN, 10)
         _x_0=ts_mean(OPEN, 10),
-        # expr_6 = ts_delta(OPEN, 10)
         expr_6=ts_delta(OPEN, 10),
-        # expr_7 = ts_rank(OPEN + 1, 10)
         expr_7=ts_rank(OPEN + 1, 10),
-        # _x_1 = ts_mean(CLOSE, 10)
         _x_1=ts_mean(CLOSE, 10),
-        # expr_5 = -ts_corr(OPEN, CLOSE, 10)
         expr_5=-ts_corr(OPEN, CLOSE, 10),
     )
     return df
@@ -48,8 +93,7 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
 def func_0_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
-        # _x_7 = cs_rank(OPEN)
-        _x_7=cs_rank(OPEN)
+        _x_7=cs_rank(OPEN),
     )
     return df
 
@@ -68,8 +112,7 @@ def func_0_gp__date__sw_l1(df: pl.DataFrame) -> pl.DataFrame:
 def func_0_cl(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
-        # expr_9 = max_(OPEN, HIGH, LOW, abs_(CLOSE))
-        expr_9=max_(OPEN, HIGH, LOW, abs_(CLOSE))
+        expr_9=max_(OPEN, HIGH, LOW, abs_(CLOSE)),
     )
     return df
 
@@ -77,9 +120,7 @@ def func_0_cl(df: pl.DataFrame) -> pl.DataFrame:
 def func_1_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
-        # _x_2 = cs_rank(_x_0)
         _x_2=cs_rank(_x_0),
-        # _x_3 = cs_rank(_x_1)
         _x_3=cs_rank(_x_1),
     )
     return df
@@ -89,9 +130,7 @@ def func_1_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
-        # _x_8 = ts_mean(_x_7, 10)
         _x_8=ts_mean(_x_7, 10),
-        # expr_8 = ts_rank(expr_7 + 1, 10)
         expr_8=ts_rank(expr_7 + 1, 10),
     )
     return df
@@ -100,11 +139,7 @@ def func_1_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
 def func_2_cl(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
-        # expr_2 = _x_2 + _x_5 + _x_6 - abs_(log(_x_1))
-        expr_2=_x_2
-        + _x_5
-        + _x_6
-        - abs_(log(_x_1))
+        expr_2=_x_2 + _x_5 + _x_6 - abs_(log(_x_1)),
     )
     return df
 
@@ -113,9 +148,7 @@ def func_2_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     df = df.sort(by=[_DATE_])
     # ========================================
     df = df.with_columns(
-        # expr_3 = ts_mean(_x_2, 10)
         expr_3=ts_mean(_x_2, 10),
-        # expr_1 = -ts_corr(_x_2, _x_3, 10)
         expr_1=-ts_corr(_x_2, _x_3, 10),
     )
     return df
@@ -124,8 +157,7 @@ def func_2_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
 def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
-        # expr_4 = cs_rank(_x_8)
-        expr_4=cs_rank(_x_8)
+        expr_4=cs_rank(_x_8),
     )
     return df
 

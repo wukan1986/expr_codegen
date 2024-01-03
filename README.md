@@ -61,7 +61,9 @@ https://exprcodegen.streamlit.app
 │   │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
 ├─gp
 │   遗传算法相关代码
-
+├─tools
+│   │  codegen_primitive.py # 自动生成遗传算法算子
+│   │  codegen_symbols.py # 自动生成表达式的`symbols`
 ```
 
 ## 工作原理

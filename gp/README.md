@@ -32,12 +32,14 @@ pip install -r requirements_gp.txt # 安装遗传编程依赖
 
 ## 目录
 
-1. `log` # 记录每代种群的表达式，生成的代码
-2. `check_codes.py` # 当发现生成的代码有误或太慢时，可复制部分到此文件进行调试
-3. `check_exprs.py` # 当发现生成的表达式有误时，可在此对表达式进行调试。**可显示LATEX，可绘制表达式树**
-4. `custom.py` # 导入算子、因子、和常数
-5. `helper.py` # 一些辅助函数
-6. `main.py` # 入口函数，可在这调整参数或添加功能
+1. `check_codes.py` # 当发现生成的代码有误或太慢时，可复制部分到此文件进行调试
+2. `check_exprs.py` # 当发现生成的表达式有误时，可在此对表达式进行调试。**可显示LATEX，可绘制表达式树**
+3. `custom.py` # 导入算子、因子、和常数
+4. `helper.py` # 一些辅助函数
+5. `main.py` # 入口函数，可在这调整参数或添加功能
+6. `primitives.py` # 自动生成的算子，仅用于参考
+7. `../log/` # 记录每代种群的表达式，生成的代码
+8. `../tools/` # 自动生成辅助脚本
 
 ## 使用进阶
 
@@ -56,4 +58,5 @@ A: 项目涉及到几个模块`sympy`、`deap`、`LaTeX`，`polars_ta`，需要�
 2. `deap`中，为了按参数类型生成表达式更合理，所以定义了`imax(OPEN, 1)`与`fmax(OPEN, CLOSE)`
 3. `deap`生成后通过`convert_inverse_prim`生成`sympy`进行简化提取公共子表达式
 4. `sympy`有`Max`内部可通过`LatexPrinter`转到`LaTeX`后是`max`，`LaTeX`支持的好处是Notebook中更直观
-5. 建议参考`main.py`中最后一行，通过`safe_eval(stringify_for_sympy(e), globals())`将表达式转换成可执行版
+5. 建议参考`main.py`中最后一行，通过`safe_eval(stringify_for_sympy(e), globals())`将表达式转换成可执行版。
+    - 注意：使用`globals()`的地方都要小心，防止变量名冲突

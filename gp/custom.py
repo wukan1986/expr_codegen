@@ -58,6 +58,10 @@ def add_operators(pset):
     pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='cs_rank')
     pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='cs_scale')
 
+    # TODO 其它的`primitive`，可以从`gp/primitives.py`按需复制过来
+    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_scale')
+    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_zscore')
+
     return pset
 
 
