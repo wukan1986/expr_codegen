@@ -36,9 +36,6 @@ LABEL_y = 'LABEL_OO_1'
 
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
-#
-# # 从脚本获取数据。注意，要与`template.py.j2`文件相对应
-# df_output: pl.DataFrame = pl.DataFrame()
 
 # ======================================
 # 当前种群的fitness目标，可添加多个目标
