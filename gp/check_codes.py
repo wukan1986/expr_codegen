@@ -26,8 +26,15 @@ if True:
 
 # ===============
 if True:
-    # 也可以下断点。推荐此方法
+    # 也可以下断点
     from log.codes_0000 import main
 
     df_output = main(df_input)
+    print(df_output.tail())
+# ===============
+if True:
+    # 也可以下断点
+    m = __import__('log.codes_0000', fromlist=['*'])
+
+    df_output = m.main(df_input)
     print(df_output.tail())
