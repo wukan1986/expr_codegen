@@ -21,6 +21,14 @@ pset.addPrimitive(func3, [...], int)  # 需要int返回值的primitive
 
 其实，当选出一个算子时，表达式树的一个分支长度就已经确定了，再通过pass_int来增加长度无意义
 
+
+pset.addPrimitive(pass_through, [int], int, name='pass_int')
+
+def pass_through(x):
+    # https://github.com/DEAP/deap/issues/579
+    return x
+
+'pass_int': lambda *args_: "{}".format(*args_),
 """
 import random
 import sys

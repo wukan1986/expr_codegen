@@ -29,9 +29,6 @@ def convert_inverse_prim(prim, args):
         'iadd': lambda *args_: "Add({},{})".format(*args_),
         'imax': lambda *args_: "max_({},{})".format(*args_),
         'imin': lambda *args_: "min_({},{})".format(*args_),
-
-        # TODO 如果deap修复了，这就可以屏蔽了
-        'pass_int': lambda *args_: "{}".format(*args_),
     }
     prim_formatter = converter.get(prim.name, prim.format)
 

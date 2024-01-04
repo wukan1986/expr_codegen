@@ -2,7 +2,17 @@
 # TODO: 由于部分算子计算过慢，这里临时屏蔽了
 import random
 
-import numpy as np
+
+class RET_TYPE:
+    # 是什么不重要
+    # 只要addPrimitive中in_types, ret_type 与 PrimitiveSetTyped("MAIN", [], ret_type)中
+    # 这三种type对应即可
+    pass
+
+
+# 改个名，因为从polars_ta中默认提取的annotation是Expr
+# TODO 如果用使用其它库，这里可能要修改
+Expr = RET_TYPE
 
 
 def add_constants(pset):
@@ -14,72 +24,65 @@ def add_constants(pset):
 
 def add_operators(pset):
     """添加算子"""
-    # IndexError: The gp.generate function tried to add a primitive of type '<class 'int'>', but there is none available.
-    # https://github.com/DEAP/deap/issues/579
-    # 会导致层数过多，但暂时没办法
-    # pset.addPrimitive(pass_through, [int], int, name='pass_int')
 
     # 无法给一个算子定义多种类型，只好定义多个不同名算子，之后通过helper.py中的convert_inverse_prim修正
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fadd')
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fsub')
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fmul')
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fdiv')
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fmax')
-    pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fmin')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fadd')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fsub')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fmul')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fdiv')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fmax')
+    pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fmin')
 
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='iadd')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='isub')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imul')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='idiv')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='iadd')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='isub')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='imul')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='idiv')
     # !!! max(x,1)这类表达式是合法的，但生成数量太多价值就低了，所以屏蔽
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imax')
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='imin')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='imax')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='imin')
 
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='log')
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='sign')
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='abs_')
+    pset.addPrimitive(dummy, [Expr], Expr, name='log')
+    pset.addPrimitive(dummy, [Expr], Expr, name='sign')
+    pset.addPrimitive(dummy, [Expr], Expr, name='abs_')
 
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delay')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_delta')
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_max')
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_arg_min')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_max')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_min')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_sum')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_mean')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_delay')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_delta')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_arg_max')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_arg_min')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_max')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_min')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_sum')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_mean')
     # TODO 等待修复
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_decay_linear')
-    # pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_product')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_std_dev')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_rank')
-    # pset.addPrimitive(dummy, [np.ndarray, np.ndarray, int], np.ndarray, name='ts_corr')
-    # pset.addPrimitive(dummy, [np.ndarray, np.ndarray, int], np.ndarray, name='ts_covariance')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_decay_linear')
+    # pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_product')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_std_dev')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_rank')
+    # pset.addPrimitive(dummy, [Expr, Expr, int], Expr, name='ts_corr')
+    # pset.addPrimitive(dummy, [Expr, Expr, int], Expr, name='ts_covariance')
 
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='cs_rank')
-    pset.addPrimitive(dummy, [np.ndarray], np.ndarray, name='cs_scale')
+    pset.addPrimitive(dummy, [Expr], Expr, name='cs_rank')
+    pset.addPrimitive(dummy, [Expr], Expr, name='cs_scale')
 
     # TODO 其它的`primitive`，可以从`gp/primitives.py`按需复制过来
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_scale')
-    pset.addPrimitive(dummy, [np.ndarray, int], np.ndarray, name='ts_zscore')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_scale')
+    pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_zscore')
 
     return pset
 
 
 def add_factors(pset):
-    pset.addTerminal(1, np.ndarray, name='OPEN')
-    pset.addTerminal(1, np.ndarray, name='HIGH')
-    pset.addTerminal(1, np.ndarray, name='LOW')
-    pset.addTerminal(1, np.ndarray, name='CLOSE')
-    # pset.addTerminal(1, np.ndarray, name='VOLUME')
-    # pset.addTerminal(1, np.ndarray, name='AMOUNT')
+    pset.addTerminal(1, Expr, name='OPEN')
+    pset.addTerminal(1, Expr, name='HIGH')
+    pset.addTerminal(1, Expr, name='LOW')
+    pset.addTerminal(1, Expr, name='CLOSE')
+    # pset.addTerminal(1, Expr, name='VOLUME')
+    # pset.addTerminal(1, Expr, name='AMOUNT')
 
     return pset
 
 
-def pass_through(x):
-    # https://github.com/DEAP/deap/issues/579
-    return x
-
-
 def dummy(*args):
+    # 由于生成后的表达计算已经被map和evaluate接管，所以这里并没有用到，可随便定义
+    print('dummy')
     return 1

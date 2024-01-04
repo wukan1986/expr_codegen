@@ -23,8 +23,12 @@ from loguru import logger
 from examples.sympy_define import *  # noqa
 from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.tool import ExprTool
-from gp.custom import add_constants, add_operators, add_factors
+from gp.custom import add_constants, add_operators, add_factors, RET_TYPE
 from gp.helper import stringify_for_sympy, is_invalid
+from gp.deap_patch import generate
+
+# 给deap打补针，解决pass_int层数过多问题，deap修复后这就可以不用了
+gp.generate = generate
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
@@ -161,18 +165,13 @@ def map_exprs(evaluate, invalid_ind):
 
 
 # ======================================
-from gp.deap_patch import generate
-
-# 给deap打补针，解决pass_int层数过多问题
-gp.generate = generate
-# ======================================
-
-pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
+# 这里的ret_type只要与addPrimitive对应即可
+pset = gp.PrimitiveSetTyped("MAIN", [], RET_TYPE)
 pset = add_constants(pset)
 pset = add_operators(pset)
 pset = add_factors(pset)
 
-# 多目标优化
+# 可支持多目标优化
 creator.create("FitnessMulti", base.Fitness, weights=FITNESS_WEIGHTS)
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMulti)
 
