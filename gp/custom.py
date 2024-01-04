@@ -17,7 +17,7 @@ def add_operators(pset):
     # IndexError: The gp.generate function tried to add a primitive of type '<class 'int'>', but there is none available.
     # https://github.com/DEAP/deap/issues/579
     # 会导致层数过多，但暂时没办法
-    pset.addPrimitive(pass_through, [int], int, name='pass_int')
+    # pset.addPrimitive(pass_through, [int], int, name='pass_int')
 
     # 无法给一个算子定义多种类型，只好定义多个不同名算子，之后通过helper.py中的convert_inverse_prim修正
     pset.addPrimitive(dummy, [np.ndarray, np.ndarray], np.ndarray, name='fadd')

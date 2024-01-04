@@ -28,6 +28,7 @@ from gp.helper import stringify_for_sympy, is_invalid
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
+# FITNESS_WEIGHTS = (1.0, 1.0)
 FITNESS_WEIGHTS = (1.0,)
 # TODO 排序和统计时nan和inf都会导致结果异常，所以选一个**反向**的**离群值**当成无效值
 # 前面FITNESS_WEIGHTS要找最大值，所以这里要用非常小的值，fitness函数计算IC，值在-1到1之前
@@ -83,7 +84,7 @@ def evaluate_expr(individual, points=None):
     """评估函数。需要返回元组"""
     ind, col = individual
     #  元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
-    ic, ic = FITNESS_NAN, FITNESS_NAN
+    ic, ir = FITNESS_NAN, FITNESS_NAN
 
     if col not in df_output.columns:
         # 如果没有此表达式，表示之前表达式 不合法或重复 没有参与计算
@@ -160,6 +161,12 @@ def map_exprs(evaluate, invalid_ind):
 
 
 # ======================================
+from gp.deap_patch import generate
+
+# 给deap打补针，解决pass_int层数过多问题
+gp.generate = generate
+# ======================================
+
 pset = gp.PrimitiveSetTyped("MAIN", [], np.ndarray)
 pset = add_constants(pset)
 pset = add_operators(pset)
@@ -173,8 +180,8 @@ toolbox = base.Toolbox()
 toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=5)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-# toolbox.register("compile", gp.compile, pset=pset)
-toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selTournament, tournsize=3)  # 目标优化
+# toolbox.register("select", tools.selNSGA2)  # 多目标优化
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
