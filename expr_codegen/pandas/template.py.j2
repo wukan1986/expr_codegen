@@ -10,9 +10,6 @@ import talib as ta
 from loguru import logger # noqa
 
 
-# TODO: 数据加载或外部传入
-df: pd.DataFrame = df_input
-
 {{ syms1 }}
 
 {{ syms2 }}
@@ -36,12 +33,6 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
     return df
 {% endfor %}
 
-# logger.info("start...")
-
-{% for key, value in groupbys.items() %}
-{{ value-}}
-{% endfor %}
-
 """
 {%-for row in exprs_dst %}
 {{ row-}}
@@ -54,16 +45,23 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 {% endfor %}
 """
 
-# drop intermediate columns
-df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
+def main(df: pd.DataFrame):
+    # logger.info("start...")
+    {% for key, value in groupbys.items() %}
+    {{ value-}}
+    {% endfor %}
 
-# logger.info('done')
+    # drop intermediate columns
+    df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
-# save
-# df.to_parquet('output.parquet', compression='zstd')
+    # logger.info('done')
 
-# print(df.tail(5))
+    # save
+    # df.to_parquet('output.parquet', compression='zstd')
 
-# 向外部传出数据
-df_output = df
+    return df
+
+if __name__ in ("__main__", "builtins"):
+    # TODO: 数据加载或外部传入
+    df_output = main(df_input)

@@ -29,7 +29,6 @@ from gp.deap_patch import *  # noqa
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
-# FITNESS_WEIGHTS = (1.0, 1.0)
 FITNESS_WEIGHTS = (1.0,)
 
 # TODO y表示类别标签、因变量、输出变量，需要与数据文件字段对应
@@ -37,9 +36,9 @@ LABEL_y = 'LABEL_OO_1'
 
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
-
-# 从脚本获取数据。注意，要与`template.py.j2`文件相对应
-df_output: pl.DataFrame = pl.DataFrame()
+#
+# # 从脚本获取数据。注意，要与`template.py.j2`文件相对应
+# df_output: pl.DataFrame = pl.DataFrame()
 
 # ======================================
 # 当前种群的fitness目标，可添加多个目标
@@ -133,10 +132,9 @@ def map_exprs(evaluate, invalid_ind):
     tic = time.perf_counter()
 
     # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
-    global df_output
     # TODO 只处理了两个变量，如果你要设置更多变量，请与 `template.py.j2` 一同修改
-    _globals = {'df_input': df_input, 'df_output': df_output}
-    exec(codes, _globals)
+    _globals = {'df_input': df_input}
+    exec(codes, _globals)  # 这里调用时脚本__name__为"builtins"
     df_output = _globals['df_output']
 
     elapsed_time = time.perf_counter() - tic
@@ -167,7 +165,7 @@ toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=5)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("select", tools.selTournament, tournsize=3)  # 目标优化
-# toolbox.register("select", tools.selNSGA2)  # 多目标优化
+# toolbox.register("select", tools.selNSGA2)  # 多目标优化 FITNESS_WEIGHTS = (1.0, 1.0)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
@@ -215,6 +213,6 @@ if __name__ == "__main__":
     print('=' * 60)
     for i, e in enumerate(hof):
         # 小心globals()中的log等变量与内部函数冲突
-        print(f'{i:03d}', '\t', e.fitness, '\t', e, end='\t<--->\t')
+        print(f'{i:03d}', '\t', e.fitness, '\t', e, '\t<--->\t', end='')
         # 分两行，冲突时可以知道是哪出错
         print(safe_eval(stringify_for_sympy(e), globals()))

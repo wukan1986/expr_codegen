@@ -14,8 +14,6 @@ from loguru import logger  # noqa
 # from polars_ta.prefix.tdx import *  # noqa
 from polars_ta.prefix.wq import *  # noqa
 
-# TODO: 数据加载或外部传入
-df: pl.DataFrame = df_input
 
 _ = (
     "OPEN",
@@ -162,20 +160,6 @@ def func_2_cs__date(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-# logger.info("start...")
-
-
-df = df.sort(by=[_DATE_, _ASSET_])
-df = df.group_by(by=[_ASSET_]).map_groups(func_0_ts__asset)
-df = df.group_by(by=[_DATE_]).map_groups(func_0_cs__date)
-df = df.group_by(by=[_DATE_, "sw_l1"]).map_groups(func_0_gp__date__sw_l1)
-df = func_0_cl(df)
-df = df.group_by(by=[_DATE_]).map_groups(func_1_cs__date)
-df = df.group_by(by=[_ASSET_]).map_groups(func_1_ts__asset)
-df = func_2_cl(df)
-df = df.group_by(by=[_ASSET_]).map_groups(func_2_ts__asset)
-df = df.group_by(by=[_DATE_]).map_groups(func_2_cs__date)
-
 """
 #========================================func_0_ts__asset
 _x_0 = ts_mean(OPEN, 10)
@@ -217,19 +201,36 @@ expr_7 = ts_rank(OPEN + 1, 10)
 expr_9 = max_(OPEN, HIGH, LOW, abs_(CLOSE))
 """
 
-# drop intermediate columns
-df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
-# shrink
-df = df.select(cs.all().shrink_dtype())
-df = df.shrink_to_fit()
+def main(df: pl.DataFrame):
+    # logger.info("start...")
 
-# logger.info('done')
+    df = df.sort(by=[_DATE_, _ASSET_])
+    df = df.group_by(by=[_ASSET_]).map_groups(func_0_ts__asset)
+    df = df.group_by(by=[_DATE_]).map_groups(func_0_cs__date)
+    df = df.group_by(by=[_DATE_, "sw_l1"]).map_groups(func_0_gp__date__sw_l1)
+    df = func_0_cl(df)
+    df = df.group_by(by=[_DATE_]).map_groups(func_1_cs__date)
+    df = df.group_by(by=[_ASSET_]).map_groups(func_1_ts__asset)
+    df = func_2_cl(df)
+    df = df.group_by(by=[_ASSET_]).map_groups(func_2_ts__asset)
+    df = df.group_by(by=[_DATE_]).map_groups(func_2_cs__date)
 
-# save
-# df.write_parquet('output.parquet', compression='zstd')
+    # drop intermediate columns
+    df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
 
-# print(df.tail(5))
+    # shrink
+    df = df.select(cs.all().shrink_dtype())
+    df = df.shrink_to_fit()
 
-# 向外部传出数据
-df_output = df
+    # logger.info('done')
+
+    # save
+    # df.write_parquet('output.parquet', compression='zstd')
+
+    return df
+
+
+if __name__ in ("__main__", "builtins"):
+    # TODO: 数据加载或外部传入
+    df_output = main(df_input)

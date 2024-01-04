@@ -18,7 +18,7 @@ with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
 
 for i, e in enumerate(hof):
     # 小心globals()中的log等变量与内部函数冲突
-    print(f'{i:03d}', '\t', e.fitness, '\t', e, end='\t<--->\t')
+    print(f'{i:03d}', '\t', e.fitness, '\t', e, '\t<--->\t', end='')
     # 分两行，冲突时可以知道是哪出错
     print(safe_eval(stringify_for_sympy(e), globals()))
 

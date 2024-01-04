@@ -14,15 +14,20 @@ import polars as pl
 
 # 导入数据部分
 df_input = pl.read_parquet('data/data.parquet')
-df_output = None
 # ===============
-# 可以直接读源代码执行
-with open('log/codes_0000.py', 'r', encoding='utf-8') as f:
-    codes = f.read()
-    # !!! globals()使用要小心防止变量被修改，特别是要执行两次的情况
-    exec(codes, globals())
+if True:
+    # 可以直接读源代码执行
+    with open('log/codes_0000.py', 'r', encoding='utf-8') as f:
+        codes = f.read()
+        # !!! globals()使用要小心防止变量被修改，特别是要执行两次的情况
+        exec(codes, globals())
 
-print(df_output.tail())
+    print(df_output.tail())
 
 # ===============
-# 如果要对代码下断点，还是得从codes_0000.py等文件直接复制过来
+if True:
+    # 也可以下断点。推荐此方法
+    from log.codes_0000 import main
+
+    df_output = main(df_input)
+    print(df_output.tail())
