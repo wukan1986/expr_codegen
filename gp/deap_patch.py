@@ -85,3 +85,74 @@ def generate(pset, min_, max_, condition, type_=None):
             for arg in reversed(prim.args):
                 stack.append((depth + 1, arg))
     return expr
+
+
+from deap import gp
+
+# 给deap打补针，解决pass_int层数过多问题，deap修复后这就可以不用了
+gp.generate = generate
+# ============================================
+"""
+如果fitness返回支持nan表示无效，就会发现名人堂会插入不少nan值，并且bisect_right也乱了
+所以决定开始遇到nan时就不插入
+
+https://github.com/DEAP/deap/issues/440#issuecomment-561046939
+"""
+from deap.tools.support import HallOfFame
+
+
+def update(self, population):
+    """Update the hall of fame with the *population* by replacing the
+    worst individuals in it by the best individuals present in
+    *population* (if they are better). The size of the hall of fame is
+    kept constant.
+
+    :param population: A list of individual with a fitness attribute to
+                       update the hall of fame with.
+    """
+    for ind in population:
+        # 出现nan就不插入
+        if ind.fitness.values[0] != ind.fitness.values[0]:
+            continue
+        if len(self) == 0 and self.maxsize != 0:
+            # Working on an empty hall of fame is problematic for the
+            # "for else"
+            # 由插入第0个，改成插入当前
+            self.insert(ind)
+            continue
+        if ind.fitness > self[-1].fitness or len(self) < self.maxsize:
+            for hofer in self:
+                # Loop through the hall of fame to check for any
+                # similar individual
+                if self.similar(ind, hofer):
+                    break
+            else:
+                # The individual is unique and strictly better than
+                # the worst
+                if len(self) >= self.maxsize:
+                    self.remove(-1)
+                self.insert(ind)
+
+
+# 打补丁，fitness为nan时不插入
+HallOfFame.update = update
+# ============================================
+"""
+在选择精英时，比如selTournament时，3选1，如[1,2, nan]，会选出nan,所以需要进行定制
+
+https://github.com/DEAP/deap/issues/440
+"""
+from deap.base import Fitness
+
+
+def __gt__(self, other):
+    return self.wvalues > other.wvalues
+
+
+def __ge__(self, other):
+    return self.wvalues >= other.wvalues
+
+
+# 打补丁，方便Fitness之间进行比较
+Fitness.__gt__ = __gt__
+Fitness.__ge__ = __ge__

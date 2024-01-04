@@ -1,7 +1,6 @@
 import copy
 
 import networkx as nx
-import numpy as np
 from deap import gp
 from sympy import preorder_traversal
 
@@ -51,10 +50,10 @@ def stringify_for_sympy(f):
     return string
 
 
-def is_invalid(e, pset):
+def is_invalid(e, pset, ret_type):
     if _invalid_atom_infinite(e):
         return True
-    if _invalid_number_type(e, pset):
+    if _invalid_number_type(e, pset, ret_type):
         return True
 
     return False
@@ -72,7 +71,7 @@ def _invalid_atom_infinite(e):
     return False
 
 
-def _invalid_number_type(e, pset):
+def _invalid_number_type(e, pset, ret_type):
     """检查参数类型"""
     # 可能导致结果为1，然后当成float去别处计算
     for node in preorder_traversal(e):
@@ -86,7 +85,7 @@ def _invalid_number_type(e, pset):
         if prim is None:
             continue
         for i, arg in enumerate(prim.args):
-            if issubclass(arg, np.ndarray):
+            if issubclass(arg, ret_type):  # 此处非常重要
                 if node.args[i].is_Number:
                     return True
             elif issubclass(arg, int):

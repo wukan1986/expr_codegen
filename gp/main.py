@@ -9,7 +9,6 @@ sys.path.append(pwd)
 # ===============
 import operator
 import pickle
-import random
 import time
 from itertools import count
 from typing import Dict, Sequence
@@ -17,7 +16,7 @@ from typing import Dict, Sequence
 import numpy as np
 import polars as pl
 import polars.selectors as cs
-from deap import base, creator, gp, tools
+from deap import base, creator, tools
 from loguru import logger
 
 from examples.sympy_define import *  # noqa
@@ -25,18 +24,13 @@ from expr_codegen.expr import safe_eval, is_meaningless
 from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors, RET_TYPE
 from gp.helper import stringify_for_sympy, is_invalid
-from gp.deap_patch import generate
-
-# 给deap打补针，解决pass_int层数过多问题，deap修复后这就可以不用了
-gp.generate = generate
+# !!! 非常重要。给deap打补丁
+from gp.deap_patch import *  # noqa
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
 # FITNESS_WEIGHTS = (1.0, 1.0)
 FITNESS_WEIGHTS = (1.0,)
-# TODO 排序和统计时nan和inf都会导致结果异常，所以选一个**反向**的**离群值**当成无效值
-# 前面FITNESS_WEIGHTS要找最大值，所以这里要用非常小的值，fitness函数计算IC，值在-1到1之前
-FITNESS_NAN = -99.0
 
 # TODO y表示类别标签、因变量、输出变量，需要与数据文件字段对应
 LABEL_y = 'LABEL_OO_1'
@@ -85,25 +79,18 @@ def fitness_population(df: pl.DataFrame, columns: Sequence[str]) -> None:
 
 
 def evaluate_expr(individual, points=None):
-    """评估函数。需要返回元组"""
+    """评估函数。需要返回元组
+
+    !!! 已经通过对deap打补丁的方式支持了nan
+    """
     ind, col = individual
-    #  元组中不能使用nan，否则名人堂中排序错误，也不建议使用inf和-inf，因为统计时会警告
-    ic, ir = FITNESS_NAN, FITNESS_NAN
 
-    if col not in df_output.columns:
-        # 如果没有此表达式，表示之前表达式 不合法或重复 没有参与计算
-        pass
-    else:
-        # !!! IC内部的值可能是None或nan，都要处理, 全转nan
-        ic = IC.get(col, None) or float('nan')
-        ir = IR.get(col, None) or float('nan')
-
-        # IC绝对值越大越好。使用==判断是否nan
-        ic = abs(ic) if ic == ic else FITNESS_NAN
-        ir = ir if ir == ir else FITNESS_NAN
+    # !!! IC内部的值可能是None或nan，都要处理, 全转nan
+    ic = IC.get(col, False) or float('nan')
+    ir = IR.get(col, False) or float('nan')
 
     # TODO 需返回元组，数量必须与weights对应
-    return ic,  # ir,
+    return ic,  # ir
 
 
 def map_exprs(evaluate, invalid_ind):
@@ -125,7 +112,7 @@ def map_exprs(evaluate, invalid_ind):
     expr_dict = {v: k for k, v in expr_dict.items()}
     expr_dict = {v: k for k, v in expr_dict.items()}
     # 清理非法表达式
-    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset)}
+    expr_dict = {k: v for k, v in expr_dict.items() if not is_invalid(v, pset, RET_TYPE)}
     # 清理无意义表达式
     expr_dict = {k: v for k, v in expr_dict.items() if not is_meaningless(v)}
 
@@ -203,10 +190,10 @@ def main():
     stats_size = tools.Statistics(len)
     mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
     # 名人堂中不能出现nan, 无法比较排序
-    mstats.register("avg", np.mean)
-    mstats.register("std", np.std)
-    mstats.register("min", np.min)
-    mstats.register("max", np.max)
+    mstats.register("avg", np.nanmean)
+    mstats.register("std", np.nanstd)
+    mstats.register("min", np.nanmin)
+    mstats.register("max", np.nanmax)
 
     pop, _log = gp.harm(pop, toolbox,
                         # 交叉率、变异率，代数
