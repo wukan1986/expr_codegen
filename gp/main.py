@@ -1,5 +1,6 @@
 import os
 import sys
+
 from pathlib import Path
 
 # 修改当前目录到上层目录，方便跨不同IDE中使用
@@ -10,6 +11,7 @@ sys.path.append(pwd)
 import operator
 import pickle
 import time
+from datetime import datetime
 from itertools import count
 from typing import Dict, Sequence
 
@@ -36,14 +38,13 @@ LABEL_y = 'LABEL_OO_1'
 
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
-
+# TODO 样本内数据
+df_input = df_input.filter(pl.col('date') < datetime(2021, 1, 1))
 # ======================================
 # 当前种群的fitness目标，可添加多个目标
 IC: Dict[str, float] = {}
 IR: Dict[str, float] = {}
 
-# 每代计数
-GEN_COUNT = count()
 # 日志路径
 LOG_DIR = Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -89,12 +90,12 @@ def evaluate_expr(individual, points=None):
     return ic,  # ir
 
 
-def map_exprs(evaluate, invalid_ind):
+def map_exprs(evaluate, invalid_ind, gen, date_input):
     """原本是一个普通的map或多进程map，个体都是独立计算
     但这里考虑到表达式很相似，可以重复利用公共子表达式，
     所以决定种群一起进行计算，将结果保存，最后其它地方取结果评估即可
     """
-    g = next(GEN_COUNT)
+    g = next(gen)
     # 保存原始表达式，立即保存是防止崩溃后丢失信息, 注意：这里没有存fitness
     with open(LOG_DIR / f'exprs_{g:04d}.pkl', 'wb') as f:
         pickle.dump(invalid_ind, f)
@@ -130,7 +131,7 @@ def map_exprs(evaluate, invalid_ind):
 
     # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
     # TODO 只处理了两个变量，如果你要设置更多变量，请与 `template.py.j2` 一同修改
-    _globals = {'df_input': df_input}
+    _globals = {'df_input': date_input}
     exec(codes, _globals)  # 这里调用时脚本__name__为"builtins"
     df_output = _globals['df_output']
 
@@ -169,7 +170,7 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.register("evaluate", evaluate_expr, points=None)
-toolbox.register('map', map_exprs)
+toolbox.register('map', map_exprs, gen=count(), date_input=df_input)
 
 
 def main():
@@ -200,6 +201,14 @@ def main():
     return pop, _log, hof
 
 
+def print_population(pop):
+    for i, e in enumerate(pop):
+        # 小心globals()中的log等变量与内部函数冲突
+        print(f'{i:03d}', '\t', e.fitness, '\t', e, '\t<--->\t', end='')
+        # 分两行，冲突时可以知道是哪出错
+        print(safe_eval(stringify_for_sympy(e), globals()))
+
+
 if __name__ == "__main__":
     pop, _log, hof = main()
 
@@ -208,8 +217,4 @@ if __name__ == "__main__":
         pickle.dump(hof, f)
 
     print('=' * 60)
-    for i, e in enumerate(hof):
-        # 小心globals()中的log等变量与内部函数冲突
-        print(f'{i:03d}', '\t', e.fitness, '\t', e, '\t<--->\t', end='')
-        # 分两行，冲突时可以知道是哪出错
-        print(safe_eval(stringify_for_sympy(e), globals()))
+    print_population(hof)

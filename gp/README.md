@@ -13,6 +13,7 @@ pip install -r requirements_gp.txt # 安装遗传编程依赖
 
 1. 运行`data/prepare_date.py`准备数据
 2. 运行`gp/main.py`，观察打印输出，结果生成在`log`下
+3. 运行`gp/out_of_sample.py`，得到名人堂的样本外适应度
 
 ## 本项目特点
 
@@ -29,14 +30,16 @@ pip install -r requirements_gp.txt # 安装遗传编程依赖
 
 1. 鼓励`Rust`高手能向`Polars`贡献常用函数代码，提高效率、方便投研
 2. 鼓励大家向`polars_ta`贡献代码
+3. 建议使用大内存，如`>=64G`
 
 ## 目录
 
-1. `check_codes.py` # 当发现生成的代码有误或太慢时，可复制部分到此文件进行调试
+1. `check_codes.py` # 当发现生成的代码有误或太慢时，可在此调试
 2. `check_exprs.py` # 当发现生成的表达式有误时，可在此对表达式进行调试。**可显示LATEX，可绘制表达式树**
 3. `custom.py` # 导入算子、因子、和常数
 4. `helper.py` # 一些辅助函数
 5. `main.py` # 入口函数，可在这调整参数或添加功能
+6. `out_of_sample.py` # 计算样本外适应度
 6. `primitives.py` # 自动生成的算子，仅用于参考
 7. `../log/` # 记录每代种群的表达式，生成的代码
 8. `../tools/` # 自动生成辅助脚本

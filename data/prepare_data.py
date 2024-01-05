@@ -10,7 +10,7 @@ _N = 250 * 10
 _K = 500
 
 asset = [f's_{i}' for i in range(_K)]
-date = pd.date_range('2000-01-1', periods=_N)
+date = pd.date_range('2015-1-1', periods=_N)
 
 df = pd.DataFrame({
     'OPEN': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
