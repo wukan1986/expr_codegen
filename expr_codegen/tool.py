@@ -179,7 +179,7 @@ class ExprTool:
 
         if regroup:
             # 因为遗传算法中的表达式是单个输入，所以没有必要优化
-            exprs_ldl.optimize(back_opt=True, chain_opt=True)
+            exprs_ldl.optimize(back_opt=False, chain_opt=True)
 
         if style == 'polars':
             from expr_codegen.polars.code import codegen

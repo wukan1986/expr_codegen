@@ -46,9 +46,9 @@ https://exprcodegen.streamlit.app
 │      prepare_date.py # 准备数据
 ├─examples
 │      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
-│      demo_cn.py # 中文注释示例。主要修改此文件。建议修改前先备份
+│      demo_cn.py # 中文注释示例。演示如何将表达式转换成代码
 │      demo_exec_pd.py # 可通过`cudf.pandas`运行的示例
-│      demo_exec_pl.py # 演示表达式不生成文件直接生成结果画图
+│      demo_exec_pl.py # 演示调用转换后代码并绘图
 │      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
@@ -142,7 +142,7 @@ exprs_src = {
 }
 ```
 
-转译后的代码片段，详细代码请参考[Polars版](examples/output_polars.py)
+转译后的代码片段，详细代码请参考[Polars版](examples/demo_exec_codes.py)
 
 ```python
 def func_2_cs__date(df: pl.DataFrame):

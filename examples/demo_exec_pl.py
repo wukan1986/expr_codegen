@@ -1,3 +1,4 @@
+# %%
 import os
 import sys
 from pathlib import Path
@@ -8,53 +9,27 @@ os.chdir(pwd)
 sys.path.append(pwd)
 
 import polars as pl
-from matplotlib import pyplot as plt
+from loguru import logger  # noqa
 
-from examples.sympy_define import *  # noqa
-from expr_codegen.expr import string_to_exprs
-from expr_codegen.tool import ExprTool
-
-# ======================================
-# 数据准备，请先运行`data`目录下的`prepare_data.py`
+# %%
 df_input = pl.read_parquet('data/data.parquet')
-df_output = None
+# print(df.tail())
 
+from demo_exec_codes import main
 
-def main():
-    # 表达式设置
-    exprs_src = """
-    MA_10=ts_mean(CLOSE, 10)
-    MA_40=ts_mean(ts_mean(CLOSE, 5), 40)
-    MA_60=ts_mean(MA_10, 40)
-    """
-    exprs_src = string_to_exprs(exprs_src, globals())
+df = main(df_input)
+print(df.tail())
 
-    # 生成代码
-    tool = ExprTool()
-    codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2',
-                        regroup=True,
-                        date='date', asset='asset')
+# %%
+columns = ['CLOSE', '移动平均_10', '移动平均_20', 'MAMA_20']
+df1 = df.filter(pl.col('asset') == 's_100').select('date', 'asset', *columns)
+df2 = df.filter(pl.col('asset') == 's_200').select('date', 'asset', *columns)
+# %%
+# 此绘图需要安装hvplot
+# 需要在notebook环境中使用
+plot1 = df1.plot(x='date', y=columns, label='s_100')
+plot2 = df2.plot(x='date', y=columns, label='s_200')
 
-    # 打印代码
-    print(codes)
-
-    # 执行代码
-    exec(codes, globals())
-
-    # 写在def中时，exec中的df就取不到了，达到了保护数据的目的
-    # UnboundLocalError: cannot access local variable 'df' where it is not associated with a value
-    # print(df.columns)
-    print(df_input.columns)
-    print(df_output.columns)
-
-    df = df_output.to_pandas()
-    df = df.set_index(['asset', 'date'])
-
-    for s in ['s_100', 's_200']:
-        stock = df.loc[s]
-        stock[['CLOSE', 'MA_10', 'MA_40']].plot()
-    plt.show()
-
-
-if __name__ == "__main__":
-    main()
+# hvplot叠加特方便，但缺点是不够灵活
+(plot1 + plot2).cols(1)
+# %%
