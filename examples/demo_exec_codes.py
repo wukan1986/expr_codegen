@@ -9,10 +9,16 @@ import polars as pl  # noqa
 import polars.selectors as cs  # noqa
 from loguru import logger  # noqa
 
-# from polars_ta.prefix.ta import *  # noqa
-# from polars_ta.prefix.talib import *  # noqa
-# from polars_ta.prefix.tdx import *  # noqa
+# ===================================
+# 导入优先级，例如：ts_RSI在ta与talib中都出现了，优先使用ta
+# 运行时，后导入覆盖前导入，但IDE智能提示是显示先导入的
+_ = pl  # 只要之前出现了语句，之后的import位置不参与调整
+from polars_ta.prefix.talib import *  # noqa
+from polars_ta.prefix.tdx import *  # noqa
+from polars_ta.prefix.ta import *  # noqa
 from polars_ta.prefix.wq import *  # noqa
+
+# ===================================
 
 
 _ = (
