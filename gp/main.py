@@ -15,19 +15,22 @@ from datetime import datetime
 from itertools import count
 from typing import Dict, Sequence
 
-import numpy as np
 import polars as pl
 import polars.selectors as cs
 from deap import base, creator, tools
 from loguru import logger
 
-from examples.sympy_define import *  # noqa
-from expr_codegen.expr import safe_eval, is_meaningless
+from expr_codegen.expr import safe_eval, is_meaningless, dict_to_exprs, function_to_Function
 from expr_codegen.tool import ExprTool
 from gp.custom import add_constants, add_operators, add_factors, RET_TYPE
 from gp.helper import stringify_for_sympy, is_invalid
 # !!! 非常重要。给deap打补丁
 from gp.deap_patch import *  # noqa
+
+# ======================================
+
+# 引入OPEN等
+from examples.sympy_define import *  # noqa
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
@@ -103,7 +106,7 @@ def map_exprs(evaluate, invalid_ind, gen, date_input):
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式。约定以GP_开头，表示遗传编程
     expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
-    expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
+    expr_dict = dict_to_exprs(expr_dict, globals().copy())
 
     # 清理重复表达式，通过字典特性删除
     expr_dict = {v: k for k, v in expr_dict.items()}
@@ -202,11 +205,14 @@ def main():
 
 
 def print_population(pop):
+    # !!!这句非常重要
+    globals_ = globals().copy()
+    globals_.update(function_to_Function(globals_))
     for i, e in enumerate(pop):
         # 小心globals()中的log等变量与内部函数冲突
         print(f'{i:03d}', '\t', e.fitness, '\t', e, '\t<--->\t', end='')
         # 分两行，冲突时可以知道是哪出错
-        print(safe_eval(stringify_for_sympy(e), globals()))
+        print(safe_eval(stringify_for_sympy(e), globals_))
 
 
 if __name__ == "__main__":

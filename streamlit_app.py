@@ -37,7 +37,7 @@ def _batched(iterable, n):
 def get_symbols_functions(module):
     """获取Symbol与Function"""
     symbols = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, Symbol))]
-    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass))]
+    functions = [n for n, _ in inspect.getmembers(module, lambda x: isinstance(x, FunctionClass) or inspect.isfunction(x))]
     # 去一个特殊值
     functions = [_ for _ in functions if _ != 'Function']
     return symbols, functions
@@ -131,7 +131,7 @@ if st.button('生成代码'):
         sympy.var(factors_text_area)
 
         # eval处理，转成字典
-        exprs_src = string_to_exprs(exprs_src, globals())
+        exprs_src = string_to_exprs(exprs_src, globals().copy())
 
         if is_pre_opt:
             logger.info('事前 表达式 替换')

@@ -1,3 +1,4 @@
+import inspect
 import re
 from functools import reduce
 
@@ -14,8 +15,36 @@ CL_TUP = (CL,)  # 整列元组
 CL_SET = {CL_TUP}  # 整列集合
 
 
-def string_to_exprs(exprs_src, dict):
-    """将字符串传字典，需要传入globals()
+def keys_to_Symbol(keys):
+    """自变量注册。有了它可以将中间变量注册，方便实现多步计算"""
+    syms = symbols(','.join(keys.keys()), cls=Symbol, seq=True)
+    syms = {s.name: s for s in syms}
+    return syms
+
+
+def function_to_Function(globals_):
+    """函数自注册
+    !!! 非常重要，有几百个函数，如果每个都要写symbols()注册过于麻烦，这里按要求将导入的函数自动注册
+    """
+    funcs = {k: v for k, v in globals_.items() if inspect.isfunction(v)}
+    funcs = {k: v for k, v in funcs.items() if v.__module__ not in ('inspect', 'sympy.core.symbol')}
+    syms = symbols(','.join(funcs.keys()), cls=Function, seq=True)
+    syms = {s.name: s for s in syms}
+    return syms
+
+
+def dict_to_exprs(exprs_src, globals_):
+    # 注册中间符号
+    globals_.update(keys_to_Symbol(exprs_src))
+    # !!! 函数自动注册
+    globals_.update(function_to_Function(globals_))
+
+    exprs_src = {k: safe_eval(v, globals_) for k, v in exprs_src.items()}
+    return exprs_src
+
+
+def string_to_exprs(exprs_src, globals_):
+    """将字符串传字典，需要传入globals().copy()
 
     # 请在此添加表达式，`=`右边为表达式，`=`左边为输出因子名。
     alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
@@ -23,21 +52,14 @@ def string_to_exprs(exprs_src, dict):
     alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
     """
     # 提取有=号的行
+    # ==，>=,<=, !=需要能处理
     exprs_src = [expr.split('=') for expr in exprs_src.splitlines() if '=' in expr]
-    # 过滤表达式左变有#注释的，同时去了空格
-    exprs_src = {expr[0].strip(): expr[1].strip() for expr in exprs_src if '#' not in expr[0]}
+    exprs_src = {expr[0].strip(): '='.join(expr[1:]).strip() for expr in exprs_src if '#' not in expr[0]}
 
-    # 注册符号
-    syms = symbols(','.join(exprs_src.keys()), cls=Symbol, seq=True)
-    syms = {s.name: s for s in syms}
-    # 更新到eval所需要的变量中
-    dict.update(syms)
-
-    exprs_src = {k: safe_eval(v, dict) for k, v in exprs_src.items()}
-    return exprs_src
+    return dict_to_exprs(exprs_src, globals_)
 
 
-def safe_eval(string, dict):
+def safe_eval(string, globals_):
     # print(string)
     code = compile(string, '<user input>', 'eval')
     reason = None
@@ -52,7 +74,7 @@ def safe_eval(string, dict):
         if reason:
             raise NameError(f'{name} not allowed : {reason}')
 
-    return eval(code, dict)
+    return eval(code, globals_)
 
 
 def append_node(node, output_exprs):

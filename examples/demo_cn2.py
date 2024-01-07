@@ -14,6 +14,7 @@ sys.path.append(pwd)
 # ===============
 import inspect
 
+from examples.sympy_define import *  # noqa
 from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
 
@@ -23,38 +24,26 @@ from polars_ta.prefix.tdx import *  # noqa
 from polars_ta.prefix.ta import *  # noqa
 from polars_ta.prefix.wq import *  # noqa
 from polars_ta.prefix.cdl import *  # noqa
-# 导入全
-from examples.sympy_define import *  # noqa
 
 # TODO: 因子。请根据需要补充
 sw_l1, = symbols('sw_l1, ', cls=Symbol)
 
 
+def cs_label(cond, x):
+    """表达式太长，可自己封装一下。生成源代码后，需要将此部分复制过去
+
+    注意：名字需要考虑是否设置前缀`ts_`、`cs_`
+    内部代码必须与前缀统一，否则生成的代码混乱。
+    如cs_label与内部的cs_bucket、cs_winsorize_quantile是统一的
+    """
+    return if_else(cond, None, cs_bucket(cs_winsorize_quantile(x, 0.01, 0.99), 20))
+
+
 def _expr_code():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
-    RETURN_OPEN_001 = ts_returns(OPEN, 1)
-    RETURN_OPEN_003 = ts_returns(OPEN, 3)
-    RETURN_OPEN_005 = ts_returns(OPEN, 5)
-    RETURN_OPEN_010 = ts_returns(OPEN, 10)
-    RETURN_OPEN_020 = ts_returns(OPEN, 20)
-
-    RETURN_SHIFT_001 = ts_delay(RETURN_OPEN_001, -1 - 1)
-    RETURN_SHIFT_003 = ts_delay(RETURN_OPEN_003, -3 - 1)
-    RETURN_SHIFT_005 = ts_delay(RETURN_OPEN_005, -5 - 1)
-    RETURN_SHIFT_010 = ts_delay(RETURN_OPEN_010, -10 - 1)
-    RETURN_SHIFT_020 = ts_delay(RETURN_OPEN_020, -20 - 1)
-
-    LABEL_001 = cs_rank(RETURN_SHIFT_001)
-    LABEL_003 = cs_rank(RETURN_SHIFT_003)
-    LABEL_005 = cs_rank(RETURN_SHIFT_005)
-    LABEL_010 = cs_rank(RETURN_SHIFT_010)
-    LABEL_020 = cs_rank(RETURN_SHIFT_020)
-
-    隔夜收益率 = OPEN / ts_delay(CLOSE, 1)  # 支持中文
-
-    移动平均_10 = ts_mean(CLOSE, 10)
-    移动平均_20 = ts_mean(CLOSE, 20)
-    MAMA_20 = ts_mean(移动平均_10, 20)
+    _NEXT_DAY = ts_delay(four_price_doji(OPEN, HIGH, LOW, CLOSE), -1)
+    LABEL_005 = cs_label(_NEXT_DAY, ts_delay(CLOSE, -5) / ts_delay(OPEN, -1))
+    LABEL_010 = cs_label(_NEXT_DAY, ts_delay(CLOSE, -10) / ts_delay(OPEN, -1))
 
 
 # 读取源代码，转成字符串

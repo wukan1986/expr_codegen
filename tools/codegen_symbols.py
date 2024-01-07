@@ -1,3 +1,6 @@
+"""
+这段代码要废弃，因为任意函数导入功能已经实现
+"""
 import inspect
 
 import pandas as pd

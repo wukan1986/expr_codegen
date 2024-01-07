@@ -6,13 +6,15 @@
 
 """
 from sympy import Add, Mul, Pow, Eq  # noqa
-from sympy import Symbol  # noqa
+from sympy import Symbol, Function, symbols  # noqa
 
-# 从polars_ta中导入所有算子
-from expr_codegen.symbols.ta import *  # noqa
-from expr_codegen.symbols.talib import *  # noqa
-from expr_codegen.symbols.tdx import *  # noqa
-from expr_codegen.symbols.wq import *  # noqa
+# 以下导入了函数，在
+_ = 0  # 只要之前出现了语句，之后的import位置不参与调整
+from polars_ta.prefix.talib import *  # noqa
+from polars_ta.prefix.tdx import *  # noqa
+from polars_ta.prefix.ta import *  # noqa
+from polars_ta.prefix.wq import *  # noqa
+from polars_ta.prefix.cdl import *  # noqa
 
 # TODO: 通用算子。时序、横截面和整体都能使用的算子。请根据需要补充
 
