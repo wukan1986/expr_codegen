@@ -15,7 +15,7 @@ from loguru import logger  # noqa
 df_input = pl.read_parquet('data/data.parquet')
 # print(df.tail())
 
-from demo_exec_codes import main
+from codes.demo_exec import main
 
 df = main(df_input)
 print(df.tail())

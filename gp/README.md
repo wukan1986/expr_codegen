@@ -13,18 +13,12 @@ pip install -r requirements_gp.txt # 安装遗传编程依赖
 
 1. 运行`data/prepare_date.py`准备数据
 2. 运行`gp/main.py`，观察打印输出，结果生成在`log`下
-3. 运行`gp/out_of_sample.py`，得到名人堂的样本外适应度
+3. 运行`gp/out_of_sample.py`，得到名人堂的样本外适应度，默认会生成`codes_9999.py`，可导入到其它项目中直接使用
 
 ## 本项目特点
 
-1. 种群中有大量相似表达式
-2. `expr_codegen`中的`cse`公共子表达式消除可以减少大量重复计算
-
-所以
-
-1. 同一代的种群一起转换代码然后计算比每个表达式单独计算减少大量重复计算
-2. 批量计算`Polars`强于单线程`Pandas`
-3. 原`deap`架构支持启用多进程，而这里转成一份代码后限制成单进程，故非常依赖于`Polars`的并发效率
+1. 种群中有大量相似表达式，而`expr_codegen`中的`cse`公共子表达式消除可以减少大量重复计算
+2. `polars`支持并发，可同一种群所有个体一起计算
 
 所以
 
@@ -40,9 +34,9 @@ pip install -r requirements_gp.txt # 安装遗传编程依赖
 4. `helper.py` # 一些辅助函数
 5. `main.py` # 入口函数，可在这调整参数或添加功能
 6. `out_of_sample.py` # 计算样本外适应度
-6. `primitives.py` # 自动生成的算子，仅用于参考
-7. `../log/` # 记录每代种群的表达式，生成的代码
-8. `../tools/` # 自动生成辅助脚本
+7. `primitives.py` # 自动生成的算子，仅用于参考
+8. `../log/` # 记录每代种群的表达式，生成的代码
+9. `../tools/` # 自动生成辅助脚本
 
 ## 使用进阶
 
@@ -61,5 +55,6 @@ A: 项目涉及到几个模块`sympy`、`deap`、`LaTeX`，`polars_ta`，需要�
 2. `deap`中，为了按参数类型生成表达式更合理，所以定义了`imax(OPEN, 1)`与`fmax(OPEN, CLOSE)`
 3. `deap`生成后通过`convert_inverse_prim`生成`sympy`进行简化提取公共子表达式
 4. `sympy`有`Max`内部可通过`LatexPrinter`转到`LaTeX`后是`max`，`LaTeX`支持的好处是Notebook中更直观
-5. 建议参考`main.py`中最后一行，通过`safe_eval(stringify_for_sympy(e), globals())`将表达式转换成可执行版。
+5. 建议参考`main.py`中最后一行，通过`safe_eval(stringify_for_sympy(e), globals().copy())`将表达式转换成可执行版。
     - 注意：使用`globals()`的地方都要小心，防止变量名冲突
+6. `log`下生成的表达式有对应的源代码，可以直接`import`

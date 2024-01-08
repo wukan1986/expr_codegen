@@ -154,28 +154,22 @@ exprs_src = {
 }
 ```
 
-转译后的代码片段，详细代码请参考[Polars版](examples/demo_exec_codes.py)
+转译后的代码片段，详细代码请参考[Polars版](codes)
 
 ```python
-def func_2_cs__date(df: pl.DataFrame):
+def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
+    df = df.sort(by=[_DATE_])
+    # ========================================
     df = df.with_columns(
-        # expr_4 = cs_rank(x_7)
-        expr_4=(expr_rank_pct(pl.col("x_7"))),
+        _x_0=1 / ts_delay(OPEN, -1),
+        LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
+    )
+    # ========================================
+    df = df.with_columns(
+        LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
+        LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
     )
     return df
-
-
-def func_3_ts__asset__date(df: pl.DataFrame):
-    df = df.with_columns(
-        # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-        expr_5=(-pl.rolling_corr(pl.col("OPEN"), pl.col("CLOSE"), window_size=10)),
-    )
-    return df
-
-
-df = df.sort(by=["asset", "date"]).groupby(by=["asset"], maintain_order=True).apply(func_0_ts__asset__date)
-df = df.sort(by=["date"]).groupby(by=["date"], maintain_order=False).apply(func_0_cs__date)
-df = func_0_cl(df)
 ```
 
 转译后的代码片段，详细代码请参考[Pandas版](examples/output_pandas.py)

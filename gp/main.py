@@ -121,22 +121,26 @@ def map_exprs(evaluate, invalid_ind, gen, date_input):
     tool = ExprTool()
     # 表达式转脚本
     codes, G = tool.all(expr_dict, style='polars', template_file='template.py.j2',
-                        replace=False, regroup=False, format=False,
+                        replace=False, regroup=True, format=True,
                         date='date', asset='asset')
 
     # 备份生成的代码
-    with open(LOG_DIR / f'codes_{g:04d}.py', 'w', encoding='utf-8') as f:
+    path = LOG_DIR / f'codes_{g:04d}.py'
+    import_path = f'log.codes_{g:04d}'
+    with open(path, 'w', encoding='utf-8') as f:
         f.write(codes)
 
     cnt = len(expr_dict)
     logger.info("代码执行。共 {} 条 表达式", cnt)
     tic = time.perf_counter()
 
-    # 传globals()会导致sympy同名变量被修改，在第二代时再执行会报错，所以改成只转部分变量
-    # TODO 只处理了两个变量，如果你要设置更多变量，请与 `template.py.j2` 一同修改
-    _globals = {'df_input': date_input}
-    exec(codes, _globals)  # 这里调用时脚本__name__为"builtins"
-    df_output = _globals['df_output']
+    # _globals = {'df_input': date_input}
+    # exec(codes, _globals)  # 这里调用时脚本__name__为"builtins"
+    # df_output = _globals['df_output']
+
+    # exec和import都可以，import好处是内部代码可调试
+    _lib = __import__(import_path, fromlist=['*'])
+    df_output = _lib.main(df_input)
 
     elapsed_time = time.perf_counter() - tic
     logger.info("执行完成。共用时 {:.3f} 秒，平均 {:.3f} 秒/条，或 {:.3f} 条/秒", elapsed_time, elapsed_time / cnt, cnt / elapsed_time)
