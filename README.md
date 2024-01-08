@@ -1,21 +1,21 @@
 # expr_codegen 符号表达式代码生成器
 
-一个将表达式转成其它代码的工具
+表达式转代码工具
 
 ## 项目背景
 
-`polars`语法不同于`pandas`,也不同于常见的表达式，导致学习难度大，转译还容易出错。所以创建此项目为解决以下问题：
+在本人新推出[polars_ta](https://github.com/wukan1986/polars_ta)这个库后，再回头反思`expr_codegen`是什么。
 
-1. 提取公共子表达式，减少代码量和重复计算
-2. 对表达式进行化简，便于人理解
-3. 时序与横截面表达式自动进行分离，解决人难于处理多层嵌套表达式问题
+> `expr_cdegen`本质是`DSL`，领域特定语⾔(Domain Specific Language)。但它没有定义新的语法
 
-第一阶段开发完成后，发现此项目其实也可以用于生成其它库的代码或语言。所以又重新更名和调整代码。目前已经支持
+它解决了两个问题:
 
-1. polars
-2. pandas / cudf.pandas
+1. `polars_ta`已经能很方便的写出特征计算表达式，但遇到`混用时序与截面`的表达式，利用`expr_codegen`能自动分组大大节省工作
+2. `expr_codegen`利用了`Common Subexpression Elimination`公共子表达式消除，大量减少重复计算，提高效率
 
-还有很多算子还没实现完全，欢迎贡献代码
+就算在量化领域，初级研究员局限于时序指标，仅用`polars_ta`即可，中高级研究员使用截面指标，推荐用`expr_codegen`
+
+虽然现在此项目与`polars_ta`依赖非常紧密，但也是支持翻译成其它库,如`pandas / cudf.pandas`，只是目前缺乏一个比较简易的库
 
 ## 在线演示
 
@@ -30,12 +30,26 @@ https://exprcodegen.streamlit.app
 1. 通过`git clone --depth=1 https://github.com/wukan1986/expr_codegen.git` 或 `手工下载zip` 到本地
 2. 进入到目录中，通过`pip install -r requirements.txt`安装依赖
 3. 使用IDE(例如PyCharm或VSCode)，打开项目，按需定制
-4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中，修改数据读取和保存等部分即可
+4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中直接`import`使用即可。一般生成的文件不需要再修改。
 
-## 遗传算法依赖库安装
+由于它生成了一个很好的示例，所以在生成文件中进行二次迭代也是一个比较合适的用法，如：
 
-`expr_codegen`项目本身所用的库其实很少，因为生成的代码并不需要执行。但为了演示遗传算法项目就不得不执行了。
-为了简化代码，还推出了一个[polars_ta](https://github.com/wukan1986/polars_ta)算子库，欢迎使用
+```python
+ df = df.with_columns([
+    # 从wq中导入指标
+    *[ts_returns(CLOSE, i).alias(f'ROCP_{i:03d}') for i in (1, 3, 5, 10, 20, 60, 120)],
+
+    # 从tdx中导入指标
+    *[ts_RSI(CLOSE, i).alias(f'RSI_{i:03d}') for i in (6, 12, 24)],
+])
+```
+
+## 遗传编程依赖库安装
+
+`expr_codegen`项目本身所用的库其实很少，只依赖于`daap`和`polars_ta`,可通过`pip install -r requirements_gp.txt`安装
+
+注意：2024年1月初，对结构进行了一次升级，以前需要对每个可用函数创建对应的symbol，工作量大，现在实现了自注册(只利用了函数名，函数签名可不同)。
+由于目前只有`polars_ta`库的函数名比较全面，所以直接复用，导致依赖性变强。
 
 ## 目录结构
 
@@ -47,9 +61,8 @@ https://exprcodegen.streamlit.app
 ├─examples
 │      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
 │      demo_cn.py # 中文注释示例。演示如何将表达式转换成代码
-│      demo_exec_pd.py # 可通过`cudf.pandas`运行的示例
 │      demo_exec_pl.py # 演示调用转换后代码并绘图
-│      output_polars.py # 结果输出。之后需修改数据加载和保存等部分
+│      output.py # 结果输出。可不修改代码，直接被其它项目导入
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
 ├─expr_codegen
@@ -58,7 +71,7 @@ https://exprcodegen.streamlit.app
 │   ├─polars
 │   │  │  code.py # 针对polars语法的代码生成功能
 │   │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
-│   │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时需修改此文件
+│   │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时可能需修改此文件
 ├─gp
 │   遗传算法相关代码
 ├─tools
@@ -108,10 +121,9 @@ https://exprcodegen.streamlit.app
 
 ## 二次开发
 
-1. 备份后编辑`demo_cn.py`,先修改`exprs_src`的定义，添加多个公式，并设置好相应的输出列名
-2. 观察`exprs_src`中是否有还未定义的函数，须在前面定义，否则`python`直接报`NameError`
-3. 然后`printer.py`添加对应函数的打印代码。
-    - 注意：需要留意是否要加`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
+1. 备份后编辑`demo_cn.py`, `import`需要引入的函数
+2. 然后`printer.py`有可能需要添加对应函数的打印代码
+    - 注意：需要留意是否要加括号`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
 
 ## 贡献代码
 
@@ -135,7 +147,7 @@ https://exprcodegen.streamlit.app
 ```python
 exprs_src = {
     "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),
+    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs_(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),
     "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
     "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
     "expr_5": -ts_corr(OPEN, CLOSE, 10),

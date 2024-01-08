@@ -5,3 +5,4 @@ streamlit
 streamlit-ace
 sympy
 networkx
+polars_ta

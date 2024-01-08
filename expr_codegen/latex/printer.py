@@ -88,6 +88,9 @@ class ExprLatexPrinter(LatexPrinter):
     def _print_abs_(self, expr, exp=None):
         return self._print_Abs(expr, exp)
 
+    def _print_log_(self, expr, exp=None):
+        return self._print_log(expr, exp)
+
     def _print_max_(self, expr, exp=None):
         # return self._print_Max(expr, exp)
         args = sorted(expr.args, key=default_sort_key)

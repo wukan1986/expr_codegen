@@ -8,7 +8,7 @@
 from sympy import Add, Mul, Pow, Eq  # noqa
 from sympy import Symbol, Function, symbols  # noqa
 
-# 以下导入了函数，在
+# 由于实现了函数名自注册，现在只要import即可，如果你要使用其它库也可以修改此处
 _ = 0  # 只要之前出现了语句，之后的import位置不参与调整
 from polars_ta.prefix.talib import *  # noqa
 from polars_ta.prefix.tdx import *  # noqa

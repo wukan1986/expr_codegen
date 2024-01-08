@@ -17,16 +17,12 @@ import inspect
 from expr_codegen.expr import string_to_exprs
 from expr_codegen.tool import ExprTool
 
-_ = 0  # 只要之前出现了语句，之后的import位置不参与调整
-from polars_ta.prefix.talib import *  # noqa
-from polars_ta.prefix.tdx import *  # noqa
-from polars_ta.prefix.ta import *  # noqa
-from polars_ta.prefix.wq import *  # noqa
-from polars_ta.prefix.cdl import *  # noqa
-# 导入全
+# 导入OPEN等特征
 from examples.sympy_define import *  # noqa
 
-# TODO: 因子。请根据需要补充
+# TODO 可以再导入补充其它算子
+
+# TODO 因子。请根据需要补充
 sw_l1, = symbols('sw_l1, ', cls=Symbol)
 
 
@@ -73,6 +69,6 @@ codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2',
 print(codes)
 #
 # 保存代码到指定文件
-output_file = 'examples/output_polars.py'
+output_file = 'examples/output.py'
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write(codes)

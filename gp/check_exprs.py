@@ -19,8 +19,10 @@ with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
 print_population(pop)
 
 # %%
+globals_ = globals().copy()
+globals_.update(function_to_Function(globals_))
 expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(pop)}
-expr_dict = {k: safe_eval(v, globals()) for k, v in expr_dict.items()}
+expr_dict = {k: safe_eval(v, globals_) for k, v in expr_dict.items()}
 
 for i, (k, v) in enumerate(expr_dict.items()):
     print(f'{i:03d}', k, v)

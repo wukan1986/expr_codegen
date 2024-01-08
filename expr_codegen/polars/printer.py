@@ -55,26 +55,8 @@ class PolarsStrPrinter(StrPrinter):
         PREC = precedence(expr)
         return "%s==%s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
 
-    def _print_log(self, expr):
-        if expr.args[0].is_Number:
-            return "np.log(%s)" % expr.args[0]
-        else:
-            return "log(%s)" % self._print(expr.args[0])
-
-    def _print_abs_(self, expr):
-        if expr.args[0].is_Number:
-            return "np.abs(%s)" % expr.args[0]
-        else:
-            return "abs_(%s)" % self._print(expr.args[0])
-
-    def _print_sign(self, expr):
-        if expr.args[0].is_Number:
-            return "np.sign(%s)" % expr.args[0]
-        else:
-            return "sign(%s)" % self._print(expr.args[0])
-
     def _print_gp_rank(self, expr):
         return "cs_rank(%s)" % self._print(expr.args[1])
 
     def _print_gp_demean(self, expr):
-        return "neutralize_demean(%s)" % self._print(expr.args[1])
+        return "cs_neutralize_demean(%s)" % self._print(expr.args[1])
