@@ -23,7 +23,7 @@ df_input = pl.read_parquet('data/data.parquet')
 df_input = df_input.filter(pl.col('date') >= datetime(2021, 1, 1))
 
 # 重新计算并回填
-fitnesses = map_exprs(evaluate_expr, pop, gen=count(9999), date_input=df_input)
+fitnesses = map_exprs(print, pop, gen=count(9999), date_input=df_input, label=LABEL_y)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 

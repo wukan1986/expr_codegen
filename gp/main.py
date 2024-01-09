@@ -1,10 +1,32 @@
+"""
+1. 准备数据
+    date,asset,features,..., returns,...,labels
+
+features建议提前做好预处理。因为在GP中计算效率低下，特别是行业中性化等操作强烈建议在提前做。因为
+1. `ts_`。按5000次股票，要计算5000次
+2. `cs_`。按1年250天算，要计算250次
+3. `gp_`计算次数是`cs_`计算的n倍。按30个行业，1年250天，要计算30*250=7500次
+
+ROCP=ts_return，不移动位置，用来做特征。前移shift(-x)就只能做标签了
+
+returns是shift前移的简单收益率，用于事后求分组收益
+1. 对数收益率方便进行时序上的累加
+2. 简单收益率方便横截面上进行等权
+log_return = ln(1+simple_return)
+
+labels是因变量
+1. 可能等于returns
+2. 可能是超额收益率
+3. 可能是0/1等分类标签
+
+"""
 import os
 import sys
-
 from pathlib import Path
 
 # 修改当前目录到上层目录，方便跨不同IDE中使用
 pwd = str(Path(__file__).parents[1])
+print('pwd:', pwd)
 os.chdir(pwd)
 sys.path.append(pwd)
 # ===============
@@ -13,7 +35,7 @@ import pickle
 import time
 from datetime import datetime
 from itertools import count
-from typing import Dict, Sequence
+from typing import Sequence, Dict
 
 import polars as pl
 import polars.selectors as cs
@@ -44,10 +66,6 @@ df_input = pl.read_parquet('data/data.parquet')
 # TODO 样本内数据
 df_input = df_input.filter(pl.col('date') < datetime(2021, 1, 1))
 # ======================================
-# 当前种群的fitness目标，可添加多个目标
-IC: Dict[str, float] = {}
-IR: Dict[str, float] = {}
-
 # 日志路径
 LOG_DIR = Path('log')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -60,43 +78,30 @@ def fitness_individual(a: str, b: str) -> pl.Expr:
     return pl.corr(a, b, method='spearman', ddof=0, propagate_nans=False)
 
 
-def fitness_population(df: pl.DataFrame, columns: Sequence[str]) -> None:
+def fitness_population(df: pl.DataFrame, columns: Sequence[str], label: str):
     """种群fitness函数"""
     df = df.group_by(by=['date']).agg(
-        [fitness_individual(X, LABEL_y) for X in columns]
+        [fitness_individual(X, label) for X in columns]
     )
 
     _expr = cs.numeric().fill_nan(None).drop_nulls()
     ic = df.select(_expr.mean())
     ir = df.select(_expr.mean() / _expr.std(ddof=0))
 
-    # TODO 可添加多套适应度函数
-    global IC
-    global IR
-
-    IC = ic.to_dicts()[0]
-    IR = ir.to_dicts()[0]
+    # 无效值用的None
+    ic = ic.to_dicts()[0]
+    ir = ir.to_dicts()[0]
+    return ic, ir
 
 
-def evaluate_expr(individual, points=None):
-    """评估函数。需要返回元组
-
-    !!! 已经通过对deap打补丁的方式支持了nan
-    """
-    ind, col = individual
-
-    # !!! IC内部的值可能是None或nan，都要处理, 全转nan
-    ic = IC.get(col, False) or float('nan')
-    ir = IR.get(col, False) or float('nan')
-
-    # TODO 需返回元组，数量必须与weights对应
-    return ic,  # ir
+def get_fitness(name: str, kv: Dict[str, float]) -> float:
+    return kv.get(name, False) or float('nan')
 
 
-def map_exprs(evaluate, invalid_ind, gen, date_input):
+def map_exprs(evaluate, invalid_ind, gen, date_input, label):
     """原本是一个普通的map或多进程map，个体都是独立计算
     但这里考虑到表达式很相似，可以重复利用公共子表达式，
-    所以决定种群一起进行计算，将结果保存，最后其它地方取结果评估即可
+    所以决定种群一起进行计算，返回结果评估即可
     """
     g = next(gen)
     # 保存原始表达式，立即保存是防止崩溃后丢失信息, 注意：这里没有存fitness
@@ -106,6 +111,7 @@ def map_exprs(evaluate, invalid_ind, gen, date_input):
     logger.info("表达式转码...")
     # DEAP表达式转sympy表达式。约定以GP_开头，表示遗传编程
     expr_dict = {f'GP_{i:04d}': stringify_for_sympy(expr) for i, expr in enumerate(invalid_ind)}
+    expr_keys = list(expr_dict.keys())
     expr_dict = dict_to_exprs(expr_dict, globals().copy())
 
     # 清理重复表达式，通过字典特性删除
@@ -140,18 +146,19 @@ def map_exprs(evaluate, invalid_ind, gen, date_input):
 
     # exec和import都可以，import好处是内部代码可调试
     _lib = __import__(import_path, fromlist=['*'])
-    df_output = _lib.main(df_input)
+    df_output = _lib.main(date_input)
 
     elapsed_time = time.perf_counter() - tic
     logger.info("执行完成。共用时 {:.3f} 秒，平均 {:.3f} 秒/条，或 {:.3f} 条/秒", elapsed_time, elapsed_time / cnt, cnt / elapsed_time)
 
     # 计算种群适应度
-    fitness_population(df_output, list(expr_dict.keys()))
+    ic, ir = fitness_population(df_output, list(expr_dict.keys()), label=label)
 
-    # 封装，加传数据存储的字段名
-    invalid_ind2 = [(expr, f'GP_{i:04d}') for i, expr in enumerate(invalid_ind)]
-    # 调用评估函数
-    return map(evaluate, invalid_ind2)
+    # 取评估函数值，多目标
+    # return [(abs(get_fitness(key, ic)), get_fitness(key, ir)) for key in expr_keys]
+
+    # 取评估函数值，单目标
+    return [(abs(get_fitness(key, ic)),) for key in expr_keys]
 
 
 # ======================================
@@ -176,8 +183,8 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-toolbox.register("evaluate", evaluate_expr, points=None)
-toolbox.register('map', map_exprs, gen=count(), date_input=df_input)
+toolbox.register("evaluate", print)  # 不单独做评估了，在map中一并做了
+toolbox.register('map', map_exprs, gen=count(), date_input=df_input, label=LABEL_y)
 
 
 def main():
@@ -192,20 +199,20 @@ def main():
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
     mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-    # 名人堂中不能出现nan, 无法比较排序
+    # 打补丁后，名人堂可以用nan了
     mstats.register("avg", np.nanmean)
     mstats.register("std", np.nanstd)
     mstats.register("min", np.nanmin)
     mstats.register("max", np.nanmax)
 
-    pop, _log = gp.harm(pop, toolbox,
-                        # 交叉率、变异率，代数
-                        cxpb=0.5, mutpb=0.1, ngen=2,
-                        # 名人堂参数
-                        alpha=0.05, beta=10, gamma=0.25, rho=0.9,
-                        stats=mstats, halloffame=hof, verbose=True)
+    pop, logbook = gp.harm(pop, toolbox,
+                           # 交叉率、变异率，代数
+                           cxpb=0.5, mutpb=0.1, ngen=2,
+                           # 名人堂参数
+                           alpha=0.05, beta=10, gamma=0.25, rho=0.9,
+                           stats=mstats, halloffame=hof, verbose=True)
 
-    return pop, _log, hof
+    return pop, logbook, hof
 
 
 def print_population(pop):
@@ -220,11 +227,14 @@ def print_population(pop):
 
 
 if __name__ == "__main__":
-    pop, _log, hof = main()
+    pop, logbook, hof = main()
 
     # 保存名人堂
     with open(LOG_DIR / f'hall_of_fame.pkl', 'wb') as f:
         pickle.dump(hof, f)
+
+    print('=' * 60)
+    print(logbook)
 
     print('=' * 60)
     print_population(hof)
