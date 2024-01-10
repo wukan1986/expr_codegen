@@ -229,7 +229,8 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
     # 新添
     writer = SummaryWriter()
-    writer.add_scalars('gp', record, 0)
+    for k, v in record.items():
+        writer.add_scalar(k, v, 0)
 
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
     if verbose:
@@ -255,7 +256,9 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
         # Update the statistics with the new population
         record = stats.compile(population) if stats is not None else {}
-        writer.add_scalars('gp', record, gen)  # 新添
+        for k, v in record.items():
+            writer.add_scalar(k, v, gen)
+
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
         if verbose:
             print(logbook.stream)
@@ -267,5 +270,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
             if std < 0.00001:
                 print(f'early_stopping_rounds={early_stopping_rounds}', '\t', std)
                 break
+    # 关闭
+    writer.close()
 
     return population, logbook

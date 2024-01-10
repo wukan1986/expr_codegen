@@ -19,11 +19,11 @@ with open(LOG_DIR / f'hall_of_fame.pkl', 'rb') as f:
 print_population(pop)
 
 df_input = pl.read_parquet('data/data.parquet')
-# TODO 样本外数据
-df_input = df_input.filter(pl.col('date') >= datetime(2021, 1, 1))
-
+df_train = df_input.filter(pl.col('date') < datetime(2021, 1, 1))
+df_vaild = df_input.filter(pl.col('date') >= datetime(2021, 1, 1))
+del df_input  # 释放内存
 # 重新计算并回填
-fitnesses = map_exprs(print, pop, gen=count(9999), date_input=df_input, label=LABEL_y)
+fitnesses = map_exprs(print, pop, gen=count(9999), label=LABEL_y, input_train=None, input_vaild=df_vaild)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 

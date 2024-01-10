@@ -56,15 +56,16 @@ from examples.sympy_define import *  # noqa
 
 # ======================================
 # TODO 必须元组，1表示找最大值,-1表示找最小值
-FITNESS_WEIGHTS = (1.0,)
+FITNESS_WEIGHTS = (1.0, 1.0)
 
 # TODO y表示类别标签、因变量、输出变量，需要与数据文件字段对应
 LABEL_y = 'LABEL_OO_1'
 
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
-# TODO 样本内数据
-df_input = df_input.filter(pl.col('date') < datetime(2021, 1, 1))
+df_train = df_input.filter(pl.col('date') < datetime(2021, 1, 1))
+df_vaild = df_input.filter(pl.col('date') >= datetime(2021, 1, 1))
+del df_input  # 释放内存
 # ======================================
 # 日志路径
 LOG_DIR = Path('log')
@@ -80,6 +81,9 @@ def fitness_individual(a: str, b: str) -> pl.Expr:
 
 def fitness_population(df: pl.DataFrame, columns: Sequence[str], label: str):
     """种群fitness函数"""
+    if df is None:
+        return {}, {}
+
     df = df.group_by(by=['date']).agg(
         [fitness_individual(X, label) for X in columns]
     )
@@ -98,7 +102,7 @@ def get_fitness(name: str, kv: Dict[str, float]) -> float:
     return kv.get(name, False) or float('nan')
 
 
-def map_exprs(evaluate, invalid_ind, gen, date_input, label):
+def map_exprs(evaluate, invalid_ind, gen, label, input_train=None, input_vaild=None):
     """原本是一个普通的map或多进程map，个体都是独立计算
     但这里考虑到表达式很相似，可以重复利用公共子表达式，
     所以决定种群一起进行计算，返回结果评估即可
@@ -140,25 +144,26 @@ def map_exprs(evaluate, invalid_ind, gen, date_input, label):
     logger.info("代码执行。共 {} 条 表达式", cnt)
     tic = time.perf_counter()
 
-    # _globals = {'df_input': date_input}
-    # exec(codes, _globals)  # 这里调用时脚本__name__为"builtins"
-    # df_output = _globals['df_output']
-
     # exec和import都可以，import好处是内部代码可调试
     _lib = __import__(import_path, fromlist=['*'])
-    df_output = _lib.main(date_input)
+
+    # 因子计算
+    output_train = None if input_train is None else _lib.main(input_train)
+    output_vaild = None if input_vaild is None else _lib.main(input_vaild)
 
     elapsed_time = time.perf_counter() - tic
-    logger.info("执行完成。共用时 {:.3f} 秒，平均 {:.3f} 秒/条，或 {:.3f} 条/秒", elapsed_time, elapsed_time / cnt, cnt / elapsed_time)
+    logger.info("因子计算完成。共用时 {:.3f} 秒，平均 {:.3f} 秒/条，或 {:.3f} 条/秒", elapsed_time, elapsed_time / cnt, cnt / elapsed_time)
 
     # 计算种群适应度
-    ic, ir = fitness_population(df_output, list(expr_dict.keys()), label=label)
+    ic_train, ir_train = fitness_population(output_train, list(expr_dict.keys()), label=label)
+    ic_vaild, ir_vaild = fitness_population(output_vaild, list(expr_dict.keys()), label=label)
+    logger.info("适应度计算完成")
 
-    # 取评估函数值，多目标
-    # return [(abs(get_fitness(key, ic)), get_fitness(key, ir)) for key in expr_keys]
-
-    # 取评估函数值，单目标
-    return [(abs(get_fitness(key, ic)),) for key in expr_keys]
+    # 取评估函数值，多目标。
+    return [(
+        abs(get_fitness(key, ic_train)),
+        abs(get_fitness(key, ic_vaild),  # 这只是为了同时显示样本外值
+            )) for key in expr_keys]
 
 
 # ======================================
@@ -184,7 +189,7 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 toolbox.register("evaluate", print)  # 不单独做评估了，在map中一并做了
-toolbox.register('map', map_exprs, gen=count(), date_input=df_input, label=LABEL_y)
+toolbox.register('map', map_exprs, gen=count(), label=LABEL_y, input_train=df_train, input_vaild=df_vaild)
 
 
 def main():
@@ -199,6 +204,7 @@ def main():
     # 只统计一个指标更清晰
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     # 打补丁后，名人堂可以用nan了
+    # 多目标，tuple多层也一起计算了，返回一个值
     stats.register("avg", np.nanmean)
     stats.register("std", np.nanstd)
     stats.register("min", np.nanmin)
