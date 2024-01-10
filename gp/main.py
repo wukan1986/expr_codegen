@@ -160,10 +160,22 @@ def map_exprs(evaluate, invalid_ind, gen, label, input_train=None, input_vaild=N
     logger.info("适应度计算完成")
 
     # 取评估函数值，多目标。
-    return [(
+    results1 = [(
         abs(get_fitness(key, ic_train)),
         abs(get_fitness(key, ic_vaild),  # 这只是为了同时显示样本外值
             )) for key in expr_keys]
+
+    # TODO 样本内外过滤条件
+    results2 = []
+    for s0, s1 in results1:
+        if s0 == s0:  # 非空
+            if s0 > 0.001:  # 样本内打分要大
+                if s0 * 0.8 < s1:  # 样本外打分大于样本内打分的80%
+                    results2.append((s0, s1))
+                    continue
+        results2.append((np.nan, np.nan))
+
+    return results2
 
 
 # ======================================
@@ -204,11 +216,10 @@ def main():
     # 只统计一个指标更清晰
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     # 打补丁后，名人堂可以用nan了
-    # 多目标，tuple多层也一起计算了，返回一个值
-    stats.register("avg", np.nanmean)
-    stats.register("std", np.nanstd)
-    stats.register("min", np.nanmin)
-    stats.register("max", np.nanmax)
+    stats.register("avg", np.nanmean, axis=0)
+    stats.register("std", np.nanstd, axis=0)
+    stats.register("min", np.nanmin, axis=0)
+    stats.register("max", np.nanmax, axis=0)
 
     # 使用修改版的eaMuPlusLambda
     population, logbook = eaMuPlusLambda(pop, toolbox,

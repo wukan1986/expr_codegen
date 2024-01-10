@@ -230,7 +230,8 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     # 新添
     writer = SummaryWriter()
     for k, v in record.items():
-        writer.add_scalar(k, v, 0)
+        for i, n in enumerate(('train', 'vaild')):
+            writer.add_scalar(f'{k}/{n}', v[i], ngen)
 
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
     if verbose:
@@ -257,7 +258,8 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         # Update the statistics with the new population
         record = stats.compile(population) if stats is not None else {}
         for k, v in record.items():
-            writer.add_scalar(k, v, gen)
+            for i, n in enumerate(('train', 'vaild')):
+                writer.add_scalar(f'{k}/{n}', v[i], gen)
 
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
         if verbose:
