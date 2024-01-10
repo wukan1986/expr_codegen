@@ -158,13 +158,15 @@ Fitness.__gt__ = __gt__
 Fitness.__ge__ = __ge__
 
 # ===============================================
+import numpy as np
 from deap import tools
 from deap.algorithms import varOr, varAnd  # noqa
 from tensorboardX import SummaryWriter
 
 
 def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
-                   stats=None, halloffame=None, verbose=__debug__):
+                   stats=None, halloffame=None, verbose=__debug__,
+                   early_stopping_rounds=10):
     r"""This is the :math:`(\mu + \lambda)` evolutionary algorithm.
 
     :param population: A list of individuals.
@@ -257,5 +259,13 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
         if verbose:
             print(logbook.stream)
+
+        # TODO 不知写的早停算法是否合适，用户可自行修改
+        avg = logbook.select('avg')
+        if len(avg) > early_stopping_rounds:
+            std = np.std(avg[-early_stopping_rounds:])
+            if std < 0.00001:
+                print(f'early_stopping_rounds={early_stopping_rounds}', '\t', std)
+                break
 
     return population, logbook

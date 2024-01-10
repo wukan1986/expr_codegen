@@ -212,7 +212,9 @@ def main():
                                          cxpb=0.5, mutpb=0.1, ngen=2,
                                          # 名人堂参数
                                          # alpha=0.05, beta=10, gamma=0.25, rho=0.9,
-                                         stats=stats, halloffame=hof, verbose=True)
+                                         stats=stats, halloffame=hof, verbose=True,
+                                         # 早停
+                                         early_stopping_rounds=2)
 
     return population, logbook, hof
 
