@@ -39,7 +39,7 @@ from typing import Sequence, Dict
 
 import polars as pl
 import polars.selectors as cs
-from deap import base, creator, tools
+from deap import base, creator
 from loguru import logger
 
 from expr_codegen.expr import safe_eval, is_meaningless, dict_to_exprs, function_to_Function
@@ -196,23 +196,25 @@ def main():
     # TODO: 名人堂，表示最终选优多少个体
     hof = tools.HallOfFame(50)
 
-    stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-    stats_size = tools.Statistics(len)
-    mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+    # 只统计一个指标更清晰
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
     # 打补丁后，名人堂可以用nan了
-    mstats.register("avg", np.nanmean)
-    mstats.register("std", np.nanstd)
-    mstats.register("min", np.nanmin)
-    mstats.register("max", np.nanmax)
+    stats.register("avg", np.nanmean)
+    stats.register("std", np.nanstd)
+    stats.register("min", np.nanmin)
+    stats.register("max", np.nanmax)
 
-    pop, logbook = gp.harm(pop, toolbox,
-                           # 交叉率、变异率，代数
-                           cxpb=0.5, mutpb=0.1, ngen=2,
-                           # 名人堂参数
-                           alpha=0.05, beta=10, gamma=0.25, rho=0.9,
-                           stats=mstats, halloffame=hof, verbose=True)
+    # 使用修改版的eaMuPlusLambda
+    population, logbook = eaMuPlusLambda(pop, toolbox,
+                                         # 选多少个做为下一代，每次生成多少新个体
+                                         mu=150, lambda_=100,
+                                         # 交叉率、变异率，代数
+                                         cxpb=0.5, mutpb=0.1, ngen=2,
+                                         # 名人堂参数
+                                         # alpha=0.05, beta=10, gamma=0.25, rho=0.9,
+                                         stats=stats, halloffame=hof, verbose=True)
 
-    return pop, logbook, hof
+    return population, logbook, hof
 
 
 def print_population(pop):
@@ -227,7 +229,8 @@ def print_population(pop):
 
 
 if __name__ == "__main__":
-    pop, logbook, hof = main()
+    print('另行执行`tensorboard --logdir=runs`，然后在浏览器中访问`http://localhost:6006/`，可跟踪运行情况')
+    population, logbook, hof = main()
 
     # 保存名人堂
     with open(LOG_DIR / f'hall_of_fame.pkl', 'wb') as f:
