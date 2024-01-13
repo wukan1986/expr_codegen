@@ -9,7 +9,7 @@ import polars as pl
 _N = 250 * 10
 _K = 500
 
-asset = [f's_{i}' for i in range(_K)]
+asset = [f's_{i:04d}' for i in range(_K)]
 date = pd.date_range('2015-1-1', periods=_N)
 
 df = pd.DataFrame({
@@ -22,6 +22,11 @@ df = pd.DataFrame({
 # 向脚本输入数据
 df = pl.from_pandas(df)
 
+"""
+RETURN_OO_1 = ts_delay(OPEN, -2)/ts_delay(OPEN, -1) - 1
+RETURN_OO_2 = ts_delay(OPEN, -3)/ts_delay(OPEN, -1) - 1
+RETURN_CC_1 = ts_delay(CLOSE, -1)/CLOSE-1
+"""
 from codes.prepare_data import main
 
 df = main(df)

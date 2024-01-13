@@ -32,15 +32,15 @@ _ = (
 
 _ = (
     "_x_0",
-    "LABEL_CC_1",
-    "LABEL_OO_1",
-    "LABEL_OO_2",
+    "RETURN_CC_1",
+    "RETURN_OO_1",
+    "RETURN_OO_2",
 )
 (
     _x_0,
-    LABEL_CC_1,
-    LABEL_OO_1,
-    LABEL_OO_2,
+    RETURN_CC_1,
+    RETURN_OO_1,
+    RETURN_OO_2,
 ) = (pl.col(i) for i in _)
 
 _DATE_ = "date"
@@ -52,12 +52,12 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     # ========================================
     df = df.with_columns(
         _x_0=1 / ts_delay(OPEN, -1),
-        LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
+        RETURN_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
     )
     # ========================================
     df = df.with_columns(
-        LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
-        LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
+        RETURN_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
+        RETURN_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
     )
     return df
 
@@ -65,16 +65,16 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
 """
 #========================================func_0_ts__asset
 _x_0 = 1/ts_delay(OPEN, -1)
-LABEL_CC_1 = (-CLOSE + ts_delay(CLOSE, -1))/CLOSE
+RETURN_CC_1 = (-CLOSE + ts_delay(CLOSE, -1))/CLOSE
 #========================================func_0_ts__asset
-LABEL_OO_1 = _x_0*ts_delay(OPEN, -2) - 1
-LABEL_OO_2 = _x_0*ts_delay(OPEN, -3) - 1
+RETURN_OO_1 = _x_0*ts_delay(OPEN, -2) - 1
+RETURN_OO_2 = _x_0*ts_delay(OPEN, -3) - 1
 """
 
 """
-LABEL_OO_1 = ts_delay(OPEN, -2)/ts_delay(OPEN, -1) - 1
-LABEL_OO_2 = ts_delay(OPEN, -3)/ts_delay(OPEN, -1) - 1
-LABEL_CC_1 = -1 + ts_delay(CLOSE, -1)/CLOSE
+RETURN_OO_1 = ts_delay(OPEN, -2)/ts_delay(OPEN, -1) - 1
+RETURN_OO_2 = ts_delay(OPEN, -3)/ts_delay(OPEN, -1) - 1
+RETURN_CC_1 = -1 + ts_delay(CLOSE, -1)/CLOSE
 """
 
 
