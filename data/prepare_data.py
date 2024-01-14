@@ -23,9 +23,10 @@ df = pd.DataFrame({
 df = pl.from_pandas(df)
 
 """
-RETURN_OO_1 = ts_delay(OPEN, -2)/ts_delay(OPEN, -1) - 1
-RETURN_OO_2 = ts_delay(OPEN, -3)/ts_delay(OPEN, -1) - 1
-RETURN_CC_1 = ts_delay(CLOSE, -1)/CLOSE-1
+RETURN_OO_1 = ts_delay(OPEN, -2) / ts_delay(OPEN, -1) - 1
+RETURN_OO_2 = ts_delay(OPEN, -3) / ts_delay(OPEN, -1) - 1
+RETURN_OO_5 = ts_delay(OPEN, -6) / ts_delay(OPEN, -1) - 1
+RETURN_CC_1 = ts_delay(CLOSE, -1) / CLOSE - 1
 """
 from codes.prepare_data import main
 

@@ -6,7 +6,7 @@ import seaborn as sns
 from polars_ta.wq import cs_bucket
 
 
-def calc_returns_by_quantile(df: pl.DataFrame, x: str, yy: Sequence[str], q: int = 10, by: str = 'date') -> pl.DataFrame:
+def calc_returns_by_quantile(df: pl.DataFrame, x: str, yy: Sequence[str], q: int = 10, date: str = 'date') -> pl.DataFrame:
     """收益率按因子分组
 
     Examples
@@ -16,12 +16,12 @@ def calc_returns_by_quantile(df: pl.DataFrame, x: str, yy: Sequence[str], q: int
 
     def _func_cs(df: pl.DataFrame):
         return df.select([
-            by,
+            date,
             cs_bucket(pl.col(x), q),
             *yy,
         ])
 
-    return df.group_by(by=by).map_groups(_func_cs)
+    return df.group_by(by=date).map_groups(_func_cs)
 
 
 def plot_quantile_returns_bar(df: pl.DataFrame, x: str, yy: Sequence[str], ax=None):
@@ -35,6 +35,7 @@ def plot_quantile_returns_bar(df: pl.DataFrame, x: str, yy: Sequence[str], ax=No
     df = df.to_pandas().set_index(x)
     ax = df.plot.bar(ax=ax)
     ax.set_title(f'{x},Mean Return By Factor Quantile')
+    ax.set_xlabel('')
 
 
 def plot_quantile_returns_violin(df: pl.DataFrame, x: str, yy: Sequence[str], ax=None):
@@ -55,13 +56,13 @@ def plot_quantile_returns_violin(df: pl.DataFrame, x: str, yy: Sequence[str], ax
     df = df.stack().reset_index()
     df.columns = ['x', 'hue', 'y']
     df = df.sort_values(by=['x', 'hue'])
-    # plt.figure()
     ax = sns.violinplot(data=df, x='x', y='y', hue='hue', ax=ax)
     ax.set_title(f'{x}, Return By Factor Quantile')
+    ax.set_xlabel('')
 
 
-def create_returns_sheet(df: pl.DataFrame, x: str, yy: Sequence[str], q: int = 10, by: str = 'date'):
-    df = calc_returns_by_quantile(df, x, yy, q=q, by=by)
+def create_returns_sheet(df: pl.DataFrame, x: str, yy: Sequence[str], q: int = 10, date: str = 'date'):
+    df = calc_returns_by_quantile(df, x, yy, q=q, date=date)
 
     fig, axes = plt.subplots(2, 1, figsize=(12, 9))
 

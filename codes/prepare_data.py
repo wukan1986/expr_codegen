@@ -35,12 +35,14 @@ _ = (
     "RETURN_CC_1",
     "RETURN_OO_1",
     "RETURN_OO_2",
+    "RETURN_OO_5",
 )
 (
     _x_0,
     RETURN_CC_1,
     RETURN_OO_1,
     RETURN_OO_2,
+    RETURN_OO_5,
 ) = (pl.col(i) for i in _)
 
 _DATE_ = "date"
@@ -58,6 +60,7 @@ def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(
         RETURN_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
         RETURN_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
+        RETURN_OO_5=_x_0 * ts_delay(OPEN, -6) - 1,
     )
     return df
 
@@ -69,11 +72,13 @@ RETURN_CC_1 = (-CLOSE + ts_delay(CLOSE, -1))/CLOSE
 #========================================func_0_ts__asset
 RETURN_OO_1 = _x_0*ts_delay(OPEN, -2) - 1
 RETURN_OO_2 = _x_0*ts_delay(OPEN, -3) - 1
+RETURN_OO_5 = _x_0*ts_delay(OPEN, -6) - 1
 """
 
 """
 RETURN_OO_1 = ts_delay(OPEN, -2)/ts_delay(OPEN, -1) - 1
 RETURN_OO_2 = ts_delay(OPEN, -3)/ts_delay(OPEN, -1) - 1
+RETURN_OO_5 = ts_delay(OPEN, -6)/ts_delay(OPEN, -1) - 1
 RETURN_CC_1 = -1 + ts_delay(CLOSE, -1)/CLOSE
 """
 
