@@ -1,0 +1,6 @@
+pandas
+polars
+polars_ta
+matplotlib
+seaborn
+statsmodels

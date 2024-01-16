@@ -12,7 +12,8 @@ sys.path.append(pwd)
 # 从main中导入，可以大大减少代码
 import matplotlib.pyplot as plt
 
-from analysis.reports import create_simple_sheet
+from analysis.reports import create_2x2_sheet
+from analysis.reports import create_2x3_sheet
 from gp.main import *
 
 # TODO 可替换成任意一代的种群文件
@@ -26,14 +27,16 @@ from log.codes_9999 import main
 
 df_output = main(df_input)
 # %%
+period = 5
+split_x = '2020-01-01'
+
 x = 'GP_0000'  # 考察因子
 y1 = 'RETURN_OO_1'  # 计算净值用的1日收益率
 # %%
 y = 'RETURN_OO_5'  # 计算因子IC用的5日收益率
-create_simple_sheet(df_output, x, y, y1, q=10, period=5, date='date', asset='asset')
+create_2x2_sheet(df_output, x, y, y1, period=period, split_x=split_x)
 # %%
-y = 'RETURN_OO_2'  # 计算因子IC用的2日收益率
-create_simple_sheet(df_output, x, y, y1, q=10, period=5, date='date', asset='asset')
+create_2x3_sheet(df_output, x, y, y1, period=period, split_x=split_x)
 
 plt.show()
 

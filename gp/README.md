@@ -5,8 +5,7 @@
 ## 安装
 
 ```commandline
-pip install -r requirements.txt # 安装依赖
-pip install -r requirements_gp.txt # 安装遗传编程依赖
+pip install -r requirements.txt # 安装遗传编程依赖
 ```
 
 # 快速运行最简示例

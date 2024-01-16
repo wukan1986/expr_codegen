@@ -55,7 +55,6 @@ https://exprcodegen.streamlit.app
 
 ```commandline
 │  requirements.txt # 通过`pip install -r requirements.txt`安装依赖
-│  requirements_gp.txt # 通过`pip install -r requirements_gp.txt`安装遗传编程依赖
 ├─data
 │      prepare_date.py # 准备数据
 ├─examples
