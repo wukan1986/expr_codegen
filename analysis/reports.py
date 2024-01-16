@@ -13,7 +13,7 @@ def ipynb_to_html(template: str, output: str = None,
                   no_input: bool = False, no_prompt: bool = False, execute: bool = True,
                   timeout: int = 120,
                   open_browser: bool = True,
-                  **kwargs) -> None:
+                  **kwargs) -> int:
     """将`ipynb`导出成`HTML`格式
 
     Parameters
@@ -150,7 +150,7 @@ def create_2x3_sheet(df: pl.DataFrame,
     -------
 
     """
-    fig, axes = plt.subplots(2, 3, figsize=(12, 9))
+    fig, axes = plt.subplots(2, 3, figsize=(18, 9))
 
     # 画IC信息
     df1 = calc_ic(df, x, [y], date=date)
