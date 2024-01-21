@@ -22,9 +22,8 @@ def add_constants(pset):
     return pset
 
 
-def add_operators(pset):
-    """添加算子"""
-
+def add_operators_base(pset):
+    """基础算子"""
     # 无法给一个算子定义多种类型，只好定义多个不同名算子，之后通过helper.py中的convert_inverse_prim修正
     pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fadd')
     pset.addPrimitive(dummy, [Expr, Expr], Expr, name='fsub')
@@ -44,6 +43,13 @@ def add_operators(pset):
     pset.addPrimitive(dummy, [Expr], Expr, name='log')
     pset.addPrimitive(dummy, [Expr], Expr, name='sign')
     pset.addPrimitive(dummy, [Expr], Expr, name='abs_')
+
+    return pset
+
+
+def add_operators(pset):
+    """添加算子"""
+    pset = add_operators_base(pset)
 
     pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_delay')
     pset.addPrimitive(dummy, [Expr, int], Expr, name='ts_delta')

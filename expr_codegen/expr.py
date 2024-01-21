@@ -453,23 +453,22 @@ def is_meaningless(e):
 def _meaningless__ts_xxx_1(e):
     """ts_xxx部分函数如果参数为1，可直接丢弃"""
     for node in preorder_traversal(e):
-        node_name = get_node_name(node)
-        if node_name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
-                         'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
-                         'ts_product', 'ts_std_dev', 'ts_rank'):
-            if node.args[1] <= 1:
-                return True
-        if node_name in ('ts_corr', 'ts_covariance',):
-            if node.args[2] <= 1:
-                return True
+        if len(node.args) >= 2:
+            if node.args[-1] == 1:
+                node_name = get_node_name(node)
+                if node_name in ('ts_delay', 'ts_delta', 'max_', 'min_'):
+                    return False
+                else:
+                    # 其它算子，参数1都认为无意义
+                    return True
+
     return False
 
 
 def _meaningless__xx_xx(e):
     """部分函数如果两参数完全一样，可直接丢弃"""
     for node in preorder_traversal(e):
-        node_name = get_node_name(node)
-        if node_name in ('Max', 'Min', 'ts_corr', 'ts_covariance'):
+        if len(node.args) >= 2:
             if node.args[0] == node.args[1]:
                 return True
     return False

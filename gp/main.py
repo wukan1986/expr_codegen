@@ -59,7 +59,7 @@ from examples.sympy_define import *  # noqa
 FITNESS_WEIGHTS = (1.0, 1.0)
 
 # TODO y表示类别标签、因变量、输出变量，需要与数据文件字段对应
-LABEL_y = 'LABEL_OO_1'
+LABEL_y = 'RETURN_OO_1'
 
 # TODO: 数据准备，脚本将取df_input，可运行`data/prepare_date.py`生成
 df_input = pl.read_parquet('data/data.parquet')
