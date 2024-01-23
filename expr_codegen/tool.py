@@ -1,3 +1,6 @@
+import inspect
+from typing import Sequence
+
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
@@ -137,7 +140,8 @@ class ExprTool:
 
     def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2',
             replace: bool = True, regroup: bool = False, format: bool = True,
-            date='date', asset='asset'):
+            date='date', asset='asset',
+            extra_codes: Sequence[object] = ()):
         """功能集成版，将几个功能写到一起方便使用
 
         Parameters
@@ -158,6 +162,8 @@ class ExprTool:
             日期字段名
         asset:str
             资产字段名
+        extra_codes: Sequence[object]
+            需要复制到模板中的额外代码
 
         Returns
         -------
@@ -186,8 +192,11 @@ class ExprTool:
         else:
             from expr_codegen.pandas.code import codegen
 
+        extra_codes = [inspect.getsource(c) for c in extra_codes]
+
         codes = codegen(exprs_ldl, exprs_src, syms_dst,
-                        filename=template_file, date=date, asset=asset)
+                        filename=template_file, date=date, asset=asset,
+                        extra_codes=extra_codes)
 
         if format:
             # 格式化。在遗传算法中没有必要

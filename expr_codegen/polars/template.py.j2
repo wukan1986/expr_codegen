@@ -28,6 +28,10 @@ from polars_ta.prefix.cdl import *  # noqa
 _DATE_ = '{{ date }}'
 _ASSET_ = '{{ asset }}'
 
+{%-for row in extra_codes %}
+{{ row-}}
+{% endfor %}
+
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pl.DataFrame) -> pl.DataFrame:
 {{ value }}

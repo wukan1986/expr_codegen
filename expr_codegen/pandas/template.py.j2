@@ -17,6 +17,9 @@ from loguru import logger # noqa
 _DATE_ = '{{ date }}'
 _ASSET_ = '{{ asset }}'
 
+{%-for row in extra_codes %}
+{{ row-}}
+{% endfor %}
 
 def signed_power(x, y):
     return x.sign() * (x.abs() ** y)

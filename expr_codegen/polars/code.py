@@ -1,4 +1,5 @@
 import os
+from typing import Sequence
 
 import jinja2
 from jinja2 import FileSystemLoader
@@ -35,7 +36,8 @@ def symbols_to_code(syms):
 
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename='template.py.j2',
-            date='date', asset='asset'):
+            date='date', asset='asset',
+            extra_codes: Sequence[str] = ()):
     """基于模板的代码生成"""
     # 打印Polars风格代码
     p = PolarsStrPrinter()
@@ -93,4 +95,5 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
                            syms1=syms1, syms2=syms2,
-                           date=date, asset=asset)
+                           date=date, asset=asset,
+                           extra_codes=extra_codes)
