@@ -2,7 +2,7 @@ import os
 from typing import Sequence
 
 import jinja2
-from jinja2 import FileSystemLoader
+from jinja2 import FileSystemLoader, TemplateNotFound
 
 from expr_codegen.expr import TS, CS, GP
 from expr_codegen.model import ListDictList
@@ -80,8 +80,13 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     syms1 = symbols_to_code(syms_dst)
     syms2 = symbols_to_code(syms_out)
 
-    env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
-    template = env.get_template(filename)
+    try:
+        env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
+        template = env.get_template(filename)
+    except TemplateNotFound:
+        env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(filename)))
+        template = env.get_template(os.path.basename(filename))
+        
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
                            syms1=syms1, syms2=syms2,
