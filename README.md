@@ -23,33 +23,11 @@ https://exprcodegen.streamlit.app
 
 初级用户可以直接访问此链接进行表达式转译，不需要另外安装软件。(此工具免费部署在国外，打开可能有些慢)
 
+更完整示例访问[alpha_examples](https://github.com/wukan1986/alpha_examples)
+
 ## 使用方法
 
-由于每位用户的使用场景都各有不同，所以不提供安装包，更多是教会大家如何进行二次开发。
-
-1. 通过`git clone --depth=1 https://github.com/wukan1986/expr_codegen.git` 或 `手工下载zip` 到本地
-2. 进入到目录中，通过`pip install -r requirements.txt`安装依赖
-3. 使用IDE(例如PyCharm或VSCode)，打开项目，按需定制
-4. 运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中直接`import`使用即可。一般生成的文件不需要再修改。
-
-由于它生成了一个很好的示例，所以在生成文件中进行二次迭代也是一个比较合适的用法，如：
-
-```python
- df = df.with_columns([
-    # 从wq中导入指标
-    *[ts_returns(CLOSE, i).alias(f'ROCP_{i:03d}') for i in (1, 3, 5, 10, 20, 60, 120)],
-
-    # 从tdx中导入指标
-    *[ts_RSI(CLOSE, i).alias(f'RSI_{i:03d}') for i in (6, 12, 24)],
-])
-```
-
-## 遗传编程依赖库安装
-
-`expr_codegen`项目本身所用的库其实很少，只依赖于`daap`和`polars_ta`,可通过`pip install -r requirements_gp.txt`安装
-
-注意：2024年1月初，对结构进行了一次升级，以前需要对每个可用函数创建对应的symbol，工作量大，现在实现了自注册(只利用了函数名，函数签名可不同)。
-由于目前只有`polars_ta`库的函数名比较全面，所以直接复用，导致依赖性变强。
+运行`demo_cn.py`生成`output.py`，将此文件复制到其它项目中直接`import`使用即可。一般生成的文件不需要再修改。
 
 ## 目录结构
 
@@ -71,11 +49,6 @@ https://exprcodegen.streamlit.app
 │   │  │  code.py # 针对polars语法的代码生成功能
 │   │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
 │   │  │  printer.py # 继承于`Sympy`中的`StrPrinter`，添加新函数时可能需修改此文件
-├─gp
-│   遗传算法相关代码
-├─tools
-│   │  codegen_primitive.py # 自动生成遗传算法算子
-│   │  codegen_symbols.py # 自动生成表达式的`symbols`
 ```
 
 ## 工作原理
@@ -193,14 +166,6 @@ df = df.groupby(by=["date"], group_keys=False).apply(func_0_cs__date)
 df = func_0_cl(df)
 ```
 
-## 生成代码不写文件直接执行
-
-参考示例中的`demo_exec.py`, 它将表达式转成代码，直接通过`exec`执行，可以在之后的代码中直接使用结果
-
 ## 本地部署交互网页
 
 只需运行`streamlit run streamlit_app.py`
-
-## 遗传算法
-
-请参考`gp`目录

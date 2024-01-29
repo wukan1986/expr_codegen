@@ -1,4 +1,0 @@
-deap
-polars_ta
-tensorboard
-tensorboardX

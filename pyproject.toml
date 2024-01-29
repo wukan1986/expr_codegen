@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expr_codegen"
+authors = [
+    { name = "wukan", email = "wu-kan@163.com" },
+]
+description = "symbol expression to polars expression tool"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["polars", "expression", "talib"]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python"
+]
+dependencies = [
+    'black',
+    'Jinja2',
+    'networkx',
+    'loguru',
+    'sympy',
+    # 'polars_ta',
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+streamlit = [
+    'streamlit',
+    'streamlit-ace',
+]
+
+[tool.setuptools]
+packages = [
+    "expr_codegen",
+    "expr_codegen.latex",
+    "expr_codegen.pandas",
+    "expr_codegen.polars",
+]
+
+[tool.setuptools.package-data]
+"expr_codegen.pandas" = ["*.j2"]
+"expr_codegen.polars" = ["*.j2"]
+
+[tool.setuptools.dynamic]
+version = { attr = "expr_codegen._version.__version__" }

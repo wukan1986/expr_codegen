@@ -86,7 +86,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     except TemplateNotFound:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(filename)))
         template = env.get_template(os.path.basename(filename))
-        
+
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
                            syms1=syms1, syms2=syms2,
