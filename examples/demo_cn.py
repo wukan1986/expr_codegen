@@ -1,7 +1,5 @@
 """
-如果你不习惯在streamlit生成的编辑器中编写公式，也可以在IDE中使用，带智能提示
-
-编辑完后再将公式复制到 https://exprcodegen.streamlit.app/ 或 以下的指定区域生成即可
+!!! 注意：标签是未来数据，机器学习训练时只能做y,不能做X
 """
 import os
 import sys
@@ -11,64 +9,69 @@ from pathlib import Path
 pwd = str(Path(__file__).parents[1])
 os.chdir(pwd)
 sys.path.append(pwd)
-# ===============
+print("pwd:", os.getcwd())
+# ====================
 import inspect
 
-from expr_codegen.expr import string_to_exprs
+from expr_codegen.codes import source_to_asts
+from expr_codegen.expr import dict_to_exprs
 from expr_codegen.tool import ExprTool
 
 # 导入OPEN等特征
 from examples.sympy_define import *  # noqa
 
-# TODO 可以再导入补充其它算子
 
-# TODO 因子。请根据需要补充
-sw_l1, = symbols('sw_l1, ', cls=Symbol)
+def cs_label(cond, x, q=20):
+    """表达式太长，可自己封装一下。tool.all中指定extra_codes可以自动复制到目标代码中
+
+    注意：名字需要考虑是否设置前缀`ts_`、`cs_`
+    内部函数前缀要统一，否则生成的代码混乱。
+    如cs_label与内部的cs_bucket、cs_winsorize_quantile是统一的
+    """
+    return if_else(cond, None, cs_bucket(cs_winsorize_quantile(x, 0.01, 0.99), q))
 
 
-def _expr_code():
+def _code_block_():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
-    RETURN_OPEN_001 = ts_returns(OPEN, 1)
-    RETURN_OPEN_003 = ts_returns(OPEN, 3)
-    RETURN_OPEN_005 = ts_returns(OPEN, 5)
-    RETURN_OPEN_010 = ts_returns(OPEN, 10)
-    RETURN_OPEN_020 = ts_returns(OPEN, 20)
+    import polars as pl  # noqa
 
-    RETURN_SHIFT_001 = ts_delay(RETURN_OPEN_001, -1 - 1)
-    RETURN_SHIFT_003 = ts_delay(RETURN_OPEN_003, -3 - 1)
-    RETURN_SHIFT_005 = ts_delay(RETURN_OPEN_005, -5 - 1)
-    RETURN_SHIFT_010 = ts_delay(RETURN_OPEN_010, -10 - 1)
-    RETURN_SHIFT_020 = ts_delay(RETURN_OPEN_020, -20 - 1)
+    # 这里用未复权的价格更合适
+    # 今日涨停或跌停
+    DOJI = four_price_doji(OPEN, HIGH, LOW, CLOSE)
+    # 明日涨停或跌停
+    NEXT_DOJI = ts_delay(DOJI, -1)
 
-    LABEL_001 = cs_rank(RETURN_SHIFT_001)
-    LABEL_003 = cs_rank(RETURN_SHIFT_003)
-    LABEL_005 = cs_rank(RETURN_SHIFT_005)
-    LABEL_010 = cs_rank(RETURN_SHIFT_010)
-    LABEL_020 = cs_rank(RETURN_SHIFT_020)
+    # 远期收益率
+    RETURN_CC_1 = ts_delay(CLOSE, -1) / CLOSE - 1
+    RETURN_CO_1 = ts_delay(OPEN, -1) / CLOSE - 1
+    RETURN_OC_1 = ts_delay(OPEN, -1) / ts_delay(CLOSE, -1) - 1
+    RETURN_OO_1 = ts_delay(OPEN, -2) / ts_delay(OPEN, -1) - 1
+    RETURN_OO_5 = ts_delay(OPEN, -6) / ts_delay(OPEN, -1) - 1
 
-    隔夜收益率 = OPEN / ts_delay(CLOSE, 1)  # 支持中文
-
-    移动平均_10 = ts_mean(CLOSE, 10)
-    移动平均_20 = ts_mean(CLOSE, 20)
-    MAMA_20 = ts_mean(移动平均_10, 20)
+    # 标签
+    LABEL_CC_1 = cs_label(DOJI, RETURN_CC_1, 20)
+    LABEL_CO_1 = cs_label(DOJI, RETURN_CO_1, 20)
+    LABEL_OC_1 = cs_label(NEXT_DOJI, RETURN_OC_1, 20)
+    LABEL_OO_1 = cs_label(NEXT_DOJI, RETURN_OO_1, 20)
+    LABEL_OO_5 = cs_label(NEXT_DOJI, RETURN_OO_5, 20)
 
 
 # 读取源代码，转成字符串
-source = inspect.getsource(_expr_code)
-print(source)
-
-# 将字符串转成表达式，与streamlit中效果一样
-exprs_src = string_to_exprs(source, globals().copy())
+source = inspect.getsource(_code_block_)
+raw, assigns = source_to_asts(source)
+assigns_dict = dict_to_exprs(assigns, globals().copy())
 
 # 生成代码
 tool = ExprTool()
-codes, G = tool.all(exprs_src, style='polars', template_file='template.py.j2',
+codes, G = tool.all(assigns_dict, style='polars', template_file='template.py.j2',
                     replace=True, regroup=True, format=True,
-                    date='date', asset='asset')
+                    date='date', asset='asset',
+                    # 复制了需要使用的函数，还复制了最原始的表达式
+                    extra_codes=(raw, _code_block_, cs_label,))
 
 print(codes)
 #
 # 保存代码到指定文件
-output_file = 'examples/output.py'
+output_file = 'codes/output.py'
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write(codes)

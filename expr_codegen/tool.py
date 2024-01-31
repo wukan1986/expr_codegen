@@ -192,7 +192,7 @@ class ExprTool:
         else:
             from expr_codegen.pandas.code import codegen
 
-        extra_codes = [inspect.getsource(c) for c in extra_codes]
+        extra_codes = [c if isinstance(c, str) else inspect.getsource(c) for c in extra_codes]
 
         codes = codegen(exprs_ldl, exprs_src, syms_dst,
                         filename=template_file, date=date, asset=asset,

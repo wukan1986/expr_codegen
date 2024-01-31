@@ -10,7 +10,8 @@ from streamlit_ace import st_ace
 from sympy import numbered_symbols, Symbol, FunctionClass
 
 import expr_codegen
-from expr_codegen.expr import string_to_exprs, replace_exprs
+from expr_codegen.codes import source_to_asts
+from expr_codegen.expr import replace_exprs, dict_to_exprs
 from expr_codegen.tool import ExprTool
 
 
@@ -131,19 +132,20 @@ if st.button('生成代码'):
         sympy.var(factors_text_area)
 
         # eval处理，转成字典
-        exprs_src = string_to_exprs(exprs_src, globals().copy())
+        raw, assigns = source_to_asts(exprs_src)
+        assigns_dict = dict_to_exprs(assigns, globals().copy())
 
         if is_pre_opt:
             logger.info('事前 表达式 替换')
-            exprs_src = replace_exprs(exprs_src)
+            assigns_dict = replace_exprs(assigns_dict)
 
         tool = ExprTool()
 
         logger.info('表达式 抽取 合并')
-        exprs_dst, syms_dst = tool.merge(**exprs_src)
+        exprs_dst, syms_dst = tool.merge(**assigns_dict)
 
         logger.info('提取公共表达式')
-        tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
+        tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=assigns_dict.keys())
 
         logger.info('生成有向无环图')
         exprs_ldl, G = tool.dag(merge=True)
@@ -152,9 +154,10 @@ if st.button('生成代码'):
         exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
         logger.info('代码生成')
-        source = codegen(exprs_ldl, exprs_src, syms_dst,
+        source = codegen(exprs_ldl, assigns_dict, syms_dst,
                          filename='template.py.j2',
-                         date=date_name, asset=asset_name)
+                         date=date_name, asset=asset_name,
+                         extra_codes=(raw,))
 
         res = format_str(source, mode=Mode(line_length=600, magic_trailing_comma=True))
 

@@ -110,7 +110,10 @@ https://exprcodegen.streamlit.app
 
 2. `sympy`不支持`bool`转`int`。例如：
     1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
-    2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, -1, 0)`。具体示例请参考`Alpha101`中的`alpha_064`
+    2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, 1, 0)*-1`。具体示例请参考`Alpha101`中的`alpha_064`
+3. Python不支持`?:`三元表达式，只支持`if else`, 而在本项目中需要转成`if_else`
+
+以上三种问题本项目都使用`ast`进行了处理，可以简化使用
 
 ## 示例片段
 

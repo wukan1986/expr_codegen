@@ -27,4 +27,4 @@ from polars_ta.prefix.cdl import *  # noqa
 gp_rank, gp_demean, = symbols('gp_rank, gp_demean, ', cls=Function)
 
 # TODO: 因子。请根据需要补充
-OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, ', cls=Symbol)
+OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, VWAP, = symbols('OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT, OPEN_INTEREST, VWAP, ', cls=Symbol)
