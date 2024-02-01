@@ -54,7 +54,18 @@ class SympyTransformer(ast.NodeTransformer):
         return node
 
 
-def source_to_asts(source):
+def sources_to_asts(*sources):
+    """输入多份源代码"""
+    raw = []
+    assigns = {}
+    for arg in sources:
+        r, a = _source_to_asts(arg)
+        raw.append(r)
+        assigns.update(a)
+    return '\n'.join(raw), assigns
+
+
+def _source_to_asts(source):
     """源代码"""
     # 三元表达式转换成 错误if( )else
     source = re.sub(r':(.+?)', r' )else \1', source).replace('?', ' if( ')
@@ -70,11 +81,14 @@ def source_to_asts(source):
         body = tree.body
 
     for node in body:
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            raw.append(node)
         # 特殊处理的节点
         if isinstance(node, ast.Assign):
             assigns.append(node)
+            continue
+        # TODO 是否要把其它语句也加入？是否有安全问题？
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            raw.append(node)
+            continue
     return raw_to_code(raw), assigns_to_dict(assigns)
 
 
@@ -86,21 +100,3 @@ def assigns_to_dict(assigns):
 def raw_to_code(raw):
     """导入语句转字符列表"""
     return '\n'.join([ast.unparse(a) for a in raw])
-#
-#
-# value = f"""# 向编辑器登记自动完成关键字，按字母排序
-#
-# # 请在此添加表达式，`=`右边为表达式，`=`左边为新因子名。
-# alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
-#
-# """
-#
-# # value = f"""# 向编辑器登记自动完成关键字，按字母排序
-# #
-# # def aaa():
-# #     # 请在此添加表达式，`=`右边为表达式，`=`左边为新因子名。
-# #     alpha_003=-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)
-# #
-# # """
-#
-# source_to_asts(value)

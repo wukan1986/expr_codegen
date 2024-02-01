@@ -10,7 +10,7 @@ from streamlit_ace import st_ace
 from sympy import numbered_symbols, Symbol, FunctionClass
 
 import expr_codegen
-from expr_codegen.codes import source_to_asts
+from expr_codegen.codes import sources_to_asts
 from expr_codegen.expr import replace_exprs, dict_to_exprs
 from expr_codegen.tool import ExprTool
 
@@ -132,7 +132,7 @@ if st.button('生成代码'):
         sympy.var(factors_text_area)
 
         # eval处理，转成字典
-        raw, assigns = source_to_asts(exprs_src)
+        raw, assigns = sources_to_asts(exprs_src)
         assigns_dict = dict_to_exprs(assigns, globals().copy())
 
         if is_pre_opt:
