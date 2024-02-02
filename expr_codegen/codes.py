@@ -58,7 +58,18 @@ class SympyTransformer(ast.NodeTransformer):
         return node
 
     def visit_Compare(self, node):
-        # OPEN==CLOSE
+        # 比较符的左右也可能是变量，要处理
+        if isinstance(node.left, ast.Name):
+            self.args_old.add(node.left.id)
+            node.left.id = self.args_map.get(node.left.id, node.left.id)
+            self.args_new.add(node.left.id)
+        for com in node.comparators:
+            if isinstance(com, ast.Name):
+                self.args_old.add(com.id)
+                com.id = self.args_map.get(com.id, com.id)
+                self.args_new.add(com.id)
+
+        # OPEN==CLOSE，要转成Eq
         if isinstance(node.ops[0], ast.Eq):
             # 等号会直接比较变成False
             node = ast.Call(

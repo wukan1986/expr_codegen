@@ -45,11 +45,11 @@ def register_symbols(syms, globals_, is_function: bool):
 
 
 def dict_to_exprs(exprs_src, globals_):
-    exprs_src = {k: safe_eval(v, globals_) for k, v in exprs_src.items()}
+    exprs_src = {k: safe_eval(v, globals_, k) for k, v in exprs_src.items()}
     return exprs_src
 
 
-def safe_eval(string, globals_):
+def safe_eval(string, globals_, k=None):
     # print(string)
     code = compile(string, '<user input>', 'eval')
     reason = None
@@ -64,7 +64,12 @@ def safe_eval(string, globals_):
         if reason:
             raise NameError(f'{name} not allowed : {reason}')
 
-    return eval(code, globals_)
+    try:
+        return eval(code, globals_)
+    except:
+        print(k)
+        print(string)
+        raise
 
 
 def append_node(node, output_exprs):
@@ -384,8 +389,13 @@ def _replace__ts_xxx_1(e):
         if node_name in ('ts_mean', 'ts_sum', 'ts_decay_linear',
                          'ts_max', 'ts_min', 'ts_arg_max', 'ts_arg_min',
                          'ts_product', 'ts_std_dev', 'ts_rank'):
-            if node.args[1] <= 1:
-                replacements.append((node, node.args[0]))
+            try:
+                if node.args[1] <= 1:
+                    replacements.append((node, node.args[0]))
+            except:
+                print(node_name)
+                print(e)
+                raise
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
         e = e.xreplace({node: replacement})
