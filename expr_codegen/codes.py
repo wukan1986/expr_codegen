@@ -1,6 +1,8 @@
 import ast
 import re
 
+from expr_codegen.expr import register_symbols, dict_to_exprs
+
 
 class SympyTransformer(ast.NodeTransformer):
     """将ast转换成Sympy要求的格式"""
@@ -100,6 +102,16 @@ class SympyTransformer(ast.NodeTransformer):
                 )
             # 这种情况要处理吗？
             # (OPEN < CLOSE)*(OPEN < CLOSE)
+
+        if isinstance(node.left, ast.Name):
+            self.args_old.add(node.left.id)
+            node.left.id = self.args_map.get(node.left.id, node.left.id)
+            self.args_new.add(node.left.id)
+        if isinstance(node.right, ast.Name):
+            self.args_old.add(node.right.id)
+            node.right.id = self.args_map.get(node.right.id, node.right.id)
+            self.args_new.add(node.right.id)
+
         self.generic_visit(node)
         return node
 
@@ -108,11 +120,15 @@ def sources_to_asts(*sources):
     """输入多份源代码"""
     raw = []
     assigns = {}
+    funcs_new, args_new, targets_new = set(), set(), set()
     for arg in sources:
-        r, a = _source_to_asts(arg)
+        r, a, funcs_, args_, targets_ = _source_to_asts(arg)
         raw.append(r)
         assigns.update(a)
-    return '\n'.join(raw), assigns
+        funcs_new.update(funcs_)
+        args_new.update(args_)
+        targets_new.update(targets_)
+    return '\n'.join(raw), assigns, funcs_new, args_new, targets_new
 
 
 def source_replace(source):
@@ -126,7 +142,8 @@ def source_replace(source):
 def _source_to_asts(source):
     """源代码"""
     tree = ast.parse(source_replace(source))
-    SympyTransformer().visit(tree)
+    t = SympyTransformer()
+    t.visit(tree)
 
     raw = []
     assigns = []
@@ -145,7 +162,7 @@ def _source_to_asts(source):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raw.append(node)
             continue
-    return raw_to_code(raw), assigns_to_dict(assigns)
+    return raw_to_code(raw), assigns_to_dict(assigns), t.funcs_new, t.args_new, t.targets_new
 
 
 def assigns_to_dict(assigns):
@@ -156,3 +173,13 @@ def assigns_to_dict(assigns):
 def raw_to_code(raw):
     """导入语句转字符列表"""
     return '\n'.join([ast.unparse(a) for a in raw])
+
+
+def sources_to_exprs(globals_, *sources):
+    """将源代码转换成表达式"""
+    raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources)
+    register_symbols(funcs_new, globals_, is_function=True)
+    register_symbols(args_new, globals_, is_function=False)
+    register_symbols(targets_new, globals_, is_function=False)
+    exprs_dict = dict_to_exprs(assigns, globals_)
+    return raw, exprs_dict

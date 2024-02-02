@@ -58,7 +58,7 @@ def main(df: pl.DataFrame):
     {% endfor %}
 
     # drop intermediate columns
-    df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
+    df = df.select(pl.exclude(r'^_x_\d+$'))
 
     # shrink
     df = df.select(cs.all().shrink_dtype())

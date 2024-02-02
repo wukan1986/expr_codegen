@@ -1,4 +1,3 @@
-import inspect
 import re
 from functools import reduce
 
@@ -15,30 +14,37 @@ CL_TUP = (CL,)  # 整列元组
 CL_SET = {CL_TUP}  # 整列集合
 
 
-def keys_to_Symbol(keys):
-    """中间变量自注册。有了它可以将中间变量注册，方便实现多步计算"""
-    syms = symbols(','.join(keys.keys()), cls=Symbol, seq=True)
-    syms = {s.name: s for s in syms}
-    return syms
+def is_symbol(x, globals_):
+    s = globals_.get(x, None)
+    if s is None:
+        return False
+    if isinstance(s, Symbol):
+        # OPEN
+        return True
+    if type(s) is type:
+        # Eq
+        return issubclass(s, Basic)
+    return False
 
 
-def function_to_Function(globals_):
-    """函数自注册
-    !!! 非常重要，有几百个函数，如果每个都要写symbols()注册过于麻烦，这里按要求将导入的函数自动注册
-    """
-    funcs = {k: v for k, v in globals_.items() if inspect.isfunction(v)}
-    funcs = {k: v for k, v in funcs.items() if v.__module__ not in ('inspect', 'sympy.core.symbol')}
-    syms = symbols(','.join(funcs.keys()), cls=Function, seq=True)
+def register_symbols(syms, globals_, is_function: bool):
+    """注册sympy中需要使用的符号"""
+    # Eq等已经是sympy的符号不需注册
+    syms = [s for s in syms if not is_symbol(s, globals_)]
+    if len(syms) == 0:
+        return globals_
+
+    if is_function:
+        # 函数被注册后不能再调用，所以一定要用globals().copy()
+        syms = symbols(','.join(syms), cls=Function, seq=True)
+    else:
+        syms = symbols(','.join(syms), cls=Symbol, seq=True)
     syms = {s.name: s for s in syms}
-    return syms
+    globals_.update(syms)
+    return globals_
 
 
 def dict_to_exprs(exprs_src, globals_):
-    # 注册中间符号
-    globals_.update(keys_to_Symbol(exprs_src))
-    # !!! 函数自动注册
-    globals_.update(function_to_Function(globals_))
-
     exprs_src = {k: safe_eval(v, globals_) for k, v in exprs_src.items()}
     return exprs_src
 

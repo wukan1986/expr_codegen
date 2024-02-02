@@ -3,15 +3,14 @@ import inspect
 from itertools import islice
 
 import streamlit as st
-import sympy
 from black import format_str, Mode
 from loguru import logger
 from streamlit_ace import st_ace
 from sympy import numbered_symbols, Symbol, FunctionClass
 
 import expr_codegen
-from expr_codegen.codes import sources_to_asts
-from expr_codegen.expr import replace_exprs, dict_to_exprs
+from expr_codegen.codes import sources_to_exprs
+from expr_codegen.expr import replace_exprs
 from expr_codegen.tool import ExprTool
 
 
@@ -59,12 +58,6 @@ with st.sidebar:
     date_name = st.text_input('日期字段名', 'date')
     asset_name = st.text_input('资产字段名', 'asset')
 
-    factors_text_area = st.text_area(label='新增预定义因子', value="""# Alpha101基础因子
-OPEN, HIGH, LOW, CLOSE, VOLUME, AMOUNT,
-RETURNS, VWAP, CAP,
-ADV5, ADV10, ADV15, ADV20, ADV30, ADV40, ADV50, ADV60, ADV81, ADV120, ADV150, ADV180,
-SECTOR, INDUSTRY, SUBINDUSTRY,""")
-
     # 生成代码
     style = st.radio('代码风格', ('polars', 'pandas/cudf.pandas'))
     if style == 'polars':
@@ -92,16 +85,10 @@ SECTOR, INDUSTRY, SUBINDUSTRY,""")
 version: {expr_codegen.__version__}
     """)
 
-with st.expander(label="预定义**算子**"):
-    st.write('如缺算子，可以在issue中申请添加，或下载代码进行二次开发')
-
-    # 本可以不用写这么复杂，但为了证明可以动态加载和执行，所以演示一下
-    module = __import__('examples.sympy_define', fromlist=['*'])
-
-    source = inspect.getsource(module)
-    st.code(source)
-    # 执行
-    exec(source, globals())
+# 本可以不用写这么复杂，但为了证明可以动态加载和执行，所以演示一下
+module = __import__('examples.sympy_define', fromlist=['*'])
+source = inspect.getsource(module)
+exec(source, globals())
 
 st.subheader('自定义表达式')
 all_symbols, all_functions = get_symbols_functions(module)
@@ -128,24 +115,20 @@ LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
 
 if st.button('生成代码'):
     with st.spinner('生成中，请等待...'):
-        # 自定义注册到全局变量
-        sympy.var(factors_text_area)
-
         # eval处理，转成字典
-        raw, assigns = sources_to_asts(exprs_src)
-        assigns_dict = dict_to_exprs(assigns, globals().copy())
+        raw, exprs_dict = sources_to_exprs(globals().copy(), exprs_src)
 
         if is_pre_opt:
             logger.info('事前 表达式 替换')
-            assigns_dict = replace_exprs(assigns_dict)
+            exprs_dict = replace_exprs(exprs_dict)
 
         tool = ExprTool()
 
         logger.info('表达式 抽取 合并')
-        exprs_dst, syms_dst = tool.merge(**assigns_dict)
+        exprs_dst, syms_dst = tool.merge(**exprs_dict)
 
         logger.info('提取公共表达式')
-        tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=assigns_dict.keys())
+        tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_dict.keys())
 
         logger.info('生成有向无环图')
         exprs_ldl, G = tool.dag(merge=True)
@@ -154,7 +137,7 @@ if st.button('生成代码'):
         exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
 
         logger.info('代码生成')
-        source = codegen(exprs_ldl, assigns_dict, syms_dst,
+        source = codegen(exprs_ldl, exprs_dict, syms_dst,
                          filename='template.py.j2',
                          date=date_name, asset=asset_name,
                          extra_codes=(raw,))

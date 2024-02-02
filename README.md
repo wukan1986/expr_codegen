@@ -39,6 +39,7 @@ https://exprcodegen.streamlit.app
 │      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
 │      demo_cn.py # 中文注释示例。演示如何将表达式转换成代码
 │      demo_exec_pl.py # 演示调用转换后代码并绘图
+│      demo_transformer.py # 演示将第三方表达式转成内部表达式
 │      output.py # 结果输出。可不修改代码，直接被其它项目导入
 │      show_tree.py # 画表达式树形图。可用于分析对比优化结果
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
