@@ -5,6 +5,56 @@ import re
 class SympyTransformer(ast.NodeTransformer):
     """将ast转换成Sympy要求的格式"""
 
+    # 旧记录
+    funcs_old = set()
+    args_old = set()
+    targets_old = set()
+    # 旧记录
+    funcs_new = set()
+    args_new = set()
+    targets_new = set()
+
+    # 映射
+    funcs_map = {}
+    args_map = {}
+    targets_map = {}
+
+    def config_map(self, funcs_map, args_map, targets_map):
+        self.funcs_map = funcs_map
+        self.args_map = args_map
+        self.targets_map = targets_map
+
+    def visit_Call(self, node):
+        # 提取函数名
+        self.funcs_old.add(node.func.id)
+        node.func.id = self.funcs_map.get(node.func.id, node.func.id)
+        self.funcs_new.add(node.func.id)
+        # 提取参数名
+        for arg in node.args:
+            if isinstance(arg, ast.Name):
+                self.args_old.add(arg.id)
+                arg.id = self.args_map.get(arg.id, arg.id)
+                self.args_new.add(arg.id)
+
+        self.generic_visit(node)
+        return node
+
+    def visit_Assign(self, node):
+        # 提取输出变量名
+        for target in node.targets:
+            if isinstance(target, ast.Tuple):
+                for t in target.elts:
+                    self.targets_old.add(t.id)
+                    t.id = self.targets_map.get(t.id, t.id)
+                    self.targets_new.add(t.id)
+            else:
+                self.targets_old.add(target.id)
+                target.id = self.targets_map.get(target.id, target.id)
+                self.targets_new.add(target.id)
+
+        self.generic_visit(node)
+        return node
+
     def visit_Compare(self, node):
         # OPEN==CLOSE
         if isinstance(node.ops[0], ast.Eq):
@@ -65,11 +115,17 @@ def sources_to_asts(*sources):
     return '\n'.join(raw), assigns
 
 
+def source_replace(source):
+    # 三元表达式转换成 错误版if( )else，一定得在Transformer中修正
+    source = re.sub(r':(.+?)', r' )else \1', source).replace('?', ' if( ')
+    # 异或转成乘方
+    source = source.replace('^', '**')
+    return source
+
+
 def _source_to_asts(source):
     """源代码"""
-    # 三元表达式转换成 错误if( )else
-    source = re.sub(r':(.+?)', r' )else \1', source).replace('?', ' if( ')
-    tree = ast.parse(source)
+    tree = ast.parse(source_replace(source))
     SympyTransformer().visit(tree)
 
     raw = []
