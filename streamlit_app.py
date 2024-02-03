@@ -68,8 +68,6 @@ with st.sidebar:
     st.subheader("优化")
     is_pre_opt = st.checkbox('事前`表达式`替换', True)
     is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
-    # TODO: 好像这个还有问题等有空再改
-    is_back_opt = st.checkbox('事后`整列分组`向前合并', False)
 
     st.subheader("关于")
     st.markdown(f"""[Github仓库](https://github.com/wukan1986/expr_codegen)
@@ -133,8 +131,9 @@ if st.button('生成代码'):
         logger.info('生成有向无环图')
         exprs_ldl, G = tool.dag(merge=True)
 
-        logger.info('分组优化')
-        exprs_ldl.optimize(back_opt=is_back_opt, chain_opt=is_chain_opt)
+        if is_chain_opt:
+            logger.info('分组优化')
+            exprs_ldl.optimize()
 
         logger.info('代码生成')
         source = codegen(exprs_ldl, exprs_dict, syms_dst,

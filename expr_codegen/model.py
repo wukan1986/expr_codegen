@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, GP, get_symbols, get_children, get_key, is_NegativeX
+from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_NegativeX
 
 
 class ListDictList:
@@ -71,7 +71,8 @@ class ListDictList:
         last_v = None
         for k, v in zip(keys, values):
             # 当前是整列时可以向上合并，但前一个是gp_xxx一类时不合并，因为循环太多次了
-            if (last_v is not None) and (k[0] == CL) and (last_k[0] != GP):
+            # if (last_v is not None) and (k[0] == CL) and (last_k[0] != GP):
+            if (last_v is not None) and (k == last_k):
                 # print(1, k, last_k)
                 last_v.extend(v)
                 v.clear()
@@ -82,51 +83,42 @@ class ListDictList:
                 last_v = v
                 last_k = k
 
-    def optimize(self, back_opt=True, chain_opt=True):
-        """将多组groupby根据规则进行合并，减少运行时间
-
-        back_opt和chains_opt时。例如：ts、cl、ts，会先变成ts、ts，然后变成ts。大大提高速度
-
-        Parameters
-        ----------
-        back_opt:
-            不需要groupby的组，其实是可以直接合并到前一组的。例如‘+’，即可以放时序组中也可以放横截面组中
-        chain_opt:
-            首尾接龙优化。同一层的组进行重排序，让多层形成首尾接龙的，第二组的头中的列表可以合并到前一组尾。
-            如： 第一层最后的时序分组和第二层开始的时序分组是可以一起计算的
-
-        """
+    def optimize(self):
+        """将多组groupby根据规则进行合并，减少运行时间"""
         # 接龙。groupby的数量没少，首尾接龙数据比较整齐
-        chains, head, tail = chain_create(self._list)
-        self._list, new_head, new_tail = chain_sort(self._list, chains, head, tail)
-
-        if chain_opt:
-            # 将数据从第二的龙头复制到第一行的龙尾
-            chain_move(new_head, new_tail)
-            self.filter_empty()
-
-        # 解决接龙后，还有部分没有合并的情况
-        if back_opt:
-            self.back_merge()
-            self.filter_empty()
+        self._list = chain_create(self._list)
+        # 首尾一样，接上去
+        self.back_merge()
+        # 出现了空行，删除
+        self.filter_empty()
 
 
 def chain_create(nested_list):
-    """接龙。多个列表，头尾相连"""
+    """接龙。多个列表，头尾相连
+
+    测试用表达式
+    ma_10 = ts_mean(CLOSE, 10)
+    MAMA_20 = ts_mean(ma_10, 20)
+    alpha_031 = ((cs_rank(cs_rank(cs_rank(ts_decay_linear((-1 * cs_rank(cs_rank(ts_delta(CLOSE, 10)))), 10))))))
+
+    """
     # 两两取交集，交集为{}时，添加一个{None}，防止product时出错
     neighbor_inter = [set(x) & set(y) or {None} for x, y in zip(nested_list[:-1], nested_list[1:])]
 
     # 查找最小数字，表示两两不重复
     last_min = float('inf')
+    # 最小不重复的一行记录
     last_row = None
     for row in product(*neighbor_inter):
-        # 判断两两是否重复
+        # 判断两两是否重复，重复为1，反之为0
         result = sum([x == y for x, y in zip(row[:-1], row[1:])])
         if last_min > result:
             last_min = result
             last_row = row
         if result == 0:
             break
+
+    # 如何移动才是难点 如果两个连续 ts/ts，那么如何移动
 
     # 调整后的第0列
     head = [None] + list(last_row)
@@ -136,45 +128,20 @@ def chain_create(nested_list):
     # 调整新列表
     arr = []
     for ll, hh, tt in zip(nested_list, head, tail):
-        d = {}
-        if hh is not None:
-            d[hh] = 0
-        for l in ll:
-            if (l == hh) or (l == tt):
+        d = []
+        for k, v in ll.items():
+            if len(d) == 0:
+                d.append((k, v))
                 continue
-            d[l] = 1
-        if tt is not None:
-            d[tt] = 2
+            if k == hh:
+                d.insert(0, (k, v))
+            elif k == tt:
+                d.append((k, v))
+            else:
+                d.insert(1, (k, v))
+        arr.append(dict(d))
 
-        arr.append(list(d.keys()))
-    return arr, head, tail
-
-
-def chain_sort(old_ldl, chains, head, tail):
-    """三层嵌套结构根据接龙表进行复制"""
-    new_ldl = []
-    new_head = []
-    new_tail = []
-    for i, row in enumerate(chains):
-        # 构造
-        hh = head[i]
-        tt = tail[i]
-        new_head.append(old_ldl[i].get(hh, []))
-        new_tail.append(old_ldl[i].get(tt, []))
-
-        last_row = {}
-        new_ldl.append(last_row)
-        for r in row:
-            last_row[r] = old_ldl[i][r]
-
-    return new_ldl, new_head, new_tail
-
-
-def chain_move(head, tail):
-    """龙头复制到上一个龙尾"""
-    for hh, tt in reversed(list(zip(head[1:], tail[:-1]))):
-        tt.extend(hh)
-        hh.clear()
+    return arr
 
 
 # ==========================
@@ -276,7 +243,7 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
     return G
 
 
-def merge_nodes_2(G: nx.DiGraph, keep_nodes,*args):
+def merge_nodes_2(G: nx.DiGraph, keep_nodes, *args):
     """合并节点，从当前节点开始，查看是否需要被替换，只做用于根节点"""
     # 准备一个当前节点列表
     this_pred = args
