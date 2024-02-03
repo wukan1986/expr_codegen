@@ -1,10 +1,10 @@
 import base64
 import inspect
-from itertools import islice
 
 import streamlit as st
 from black import format_str, Mode
 from loguru import logger
+from more_itertools import batched
 from streamlit_ace import st_ace
 from sympy import numbered_symbols, Symbol, FunctionClass
 
@@ -13,26 +13,6 @@ from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import replace_exprs
 from expr_codegen.tool import ExprTool
 
-
-def _batched(iterable, n):
-    """Batch data into lists of length *n*. The last batch may be shorter.
-
-    >>> list(batched('ABCDEFG', 3))
-    [('A', 'B', 'C'), ('D', 'E', 'F'), ('G',)]
-
-    On Python 3.12 and above, this is an alias for :func:`itertools.batched`.
-    """
-    if n < 1:
-        raise ValueError('n must be at least one')
-    it = iter(iterable)
-    while True:
-        batch = tuple(islice(it, n))
-        if not batch:
-            break
-        yield batch
-
-
-# batched
 
 def get_symbols_functions(module):
     """获取Symbol与Function"""
@@ -45,7 +25,7 @@ def get_symbols_functions(module):
 
 def list_to_string(items, n):
     txts = []
-    for ss in _batched(items, n):
+    for ss in batched(items, n):
         txts.append(f'# {",".join(ss)}')
     return '\n'.join(txts)
 

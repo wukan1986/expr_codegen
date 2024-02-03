@@ -1,8 +1,9 @@
 black
 Jinja2
 loguru
-streamlit
-streamlit-ace
 sympy
 networkx
+streamlit
+streamlit-ace
+more_itertools
 polars_ta

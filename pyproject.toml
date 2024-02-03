@@ -30,6 +30,7 @@ dynamic = ["version"]
 streamlit = [
     'streamlit',
     'streamlit-ace',
+    'more_itertools',
 ]
 
 [tool.setuptools]
