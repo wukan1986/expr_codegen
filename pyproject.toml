@@ -9,7 +9,7 @@ authors = [
 ]
 description = "symbol expression to polars expression tool"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = ["polars", "expression", "talib"]
 license = { file = "LICENSE" }
 classifiers = [
