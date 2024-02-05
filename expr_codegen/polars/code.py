@@ -16,13 +16,13 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset = tup
-        return f'df = df.group_by(by=[_ASSET_]).map_groups({func_name})'
+        return f'df = df.group_by(_ASSET_).map_groups({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = df.group_by(by=[_DATE_]).map_groups({func_name})'
+        return f'df = df.group_by(_DATE_).map_groups({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = df.group_by(by=[_DATE_, "{group}"]).map_groups({func_name})'
+        return f'df = df.group_by(_DATE_, "{group}").map_groups({func_name})'
 
     return f'df = {func_name}(df)'
 
