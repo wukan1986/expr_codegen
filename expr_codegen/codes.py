@@ -144,9 +144,14 @@ def sources_to_asts(*sources):
 
 def source_replace(source):
     # 三元表达式转换成 错误版if( )else，一定得在Transformer中修正
-    source = re.sub(r':(.+?)', r' )else \1', source).replace('?', ' if( ')
-    # 异或转成乘方
-    source = source.replace('^', '**')
+    num = 1
+    while num > 0:
+        # A == B?D == E?1: 2:0 + 0
+        # 其实会导致?与:错配，但无所谓，只要多执行几次即可
+        source, num = re.subn(r'\?(.+?):(.+?)', r' if( \1 )else \2', source, flags=re.S)
+        # break
+    # 异或转成乘方，或、与
+    source = source.replace('^', '**').replace('||', '|').replace('&&', '&')
     return source
 
 
