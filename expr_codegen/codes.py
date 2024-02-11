@@ -191,11 +191,11 @@ def raw_to_code(raw):
     return '\n'.join([ast.unparse(a) for a in raw])
 
 
-def sources_to_exprs(globals_, *sources):
+def sources_to_exprs(globals_, *sources, safe: bool = True):
     """将源代码转换成表达式"""
     raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources)
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
     register_symbols(targets_new, globals_, is_function=False)
-    exprs_dict = dict_to_exprs(assigns, globals_)
+    exprs_dict = dict_to_exprs(assigns, globals_, safe)
     return raw, exprs_dict

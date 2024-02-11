@@ -57,7 +57,7 @@ def _code_block_():
 
 # 读取源代码，转成字符串
 source = inspect.getsource(_code_block_)
-raw, exprs_dict = sources_to_exprs(globals().copy(), source)
+raw, exprs_dict = sources_to_exprs(globals().copy(), source, safe=True)
 
 # 生成代码
 tool = ExprTool()

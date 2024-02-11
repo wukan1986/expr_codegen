@@ -44,25 +44,26 @@ def register_symbols(syms, globals_, is_function: bool):
     return globals_
 
 
-def dict_to_exprs(exprs_src, globals_):
-    exprs_src = {k: safe_eval(v, globals_, k) for k, v in exprs_src.items()}
+def dict_to_exprs(exprs_src, globals_, safe: bool = True):
+    exprs_src = {k: safe_eval(v, globals_, k, safe) for k, v in exprs_src.items()}
     return exprs_src
 
 
-def safe_eval(string, globals_, k=None):
+def safe_eval(string, globals_, k=None, safe: bool = True):
     # print(string)
     code = compile(string, '<user input>', 'eval')
-    reason = None
-    banned = ('eval', 'compile', 'exec', 'getattr', 'hasattr', 'setattr', 'delattr',
-              'classmethod', 'globals', 'help', 'input', 'isinstance', 'issubclass', 'locals',
-              'open', 'print', 'property', 'staticmethod', 'vars')
-    for name in code.co_names:
-        if re.search(r'^__\S*__$', name):
-            reason = 'attributes not allowed'
-        elif name in banned:
-            reason = 'code execution not allowed'
-        if reason:
-            raise NameError(f'{name} not allowed : {reason}')
+    if safe:
+        reason = None
+        banned = ('eval', 'compile', 'exec', 'getattr', 'hasattr', 'setattr', 'delattr',
+                  'classmethod', 'globals', 'help', 'input', 'isinstance', 'issubclass', 'locals',
+                  'open', 'print', 'property', 'staticmethod', 'vars')
+        for name in code.co_names:
+            if re.search(r'^__\S*__$', name):
+                reason = 'attributes not allowed'
+            elif name in banned:
+                reason = 'code execution not allowed'
+            if reason:
+                raise NameError(f'{name} not allowed : {reason}')
 
     try:
         return eval(code, globals_)
