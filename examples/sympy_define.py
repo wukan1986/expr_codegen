@@ -5,7 +5,6 @@
 # sign由于会被翻译成Piecewise，所以使用自义函数sign
 
 """
-from sympy import Add, Mul, Pow, Eq  # noqa
 from sympy import Symbol, Function, symbols  # noqa
 
 # 由于实现了函数名自注册，现在只要import即可，如果你要使用其它库也可以修改此处

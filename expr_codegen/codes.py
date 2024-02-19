@@ -1,6 +1,8 @@
 import ast
 import re
 
+from sympy import Add, Mul, Pow, Eq
+
 from expr_codegen.expr import register_symbols, dict_to_exprs
 
 
@@ -191,8 +193,20 @@ def raw_to_code(raw):
     return '\n'.join([ast.unparse(a) for a in raw])
 
 
+def _add_default_type(globals_):
+    # 这种写法可以省去由用户导入Eq一类的工作
+    globals_['Add'] = Add
+    globals_['Mul'] = Mul
+    globals_['Pow'] = Pow
+    globals_['Eq'] = Eq
+    return globals_
+
+
 def sources_to_exprs(globals_, *sources, safe: bool = True):
     """将源代码转换成表达式"""
+
+    globals_ = _add_default_type(globals_)
+
     raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources)
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
