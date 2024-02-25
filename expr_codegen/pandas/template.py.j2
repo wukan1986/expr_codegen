@@ -49,7 +49,7 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 """
 
 
-def main(df: pd.DataFrame):
+def main(df: pd.DataFrame) -> pd.DataFrame:
     # logger.info("start...")
     {% for key, value in groupbys.items() %}
     {{ value-}}
