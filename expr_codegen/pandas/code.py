@@ -1,5 +1,5 @@
 import os
-from typing import Sequence
+from typing import Sequence, Dict
 
 import jinja2
 from jinja2 import FileSystemLoader, TemplateNotFound
@@ -27,9 +27,9 @@ def get_groupby_from_tuple(tup, func_name):
     return f'df = {func_name}(df)'
 
 
-def symbols_to_code(syms):
+def symbols_to_code(syms, alias):
     a = [f"{s}" for s in syms]
-    b = [f"'{s}'" for s in syms]
+    b = [f"r'{alias.get(s, s)}'" for s in syms]
     return f"""_ = ({','.join(b)},)
 ({','.join(a)},) = _"""
 
@@ -37,6 +37,7 @@ def symbols_to_code(syms):
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename='template.py.j2',
             date='date', asset='asset',
+            alias: Dict[str, str] = {},
             extra_codes: Sequence[str] = ()):
     """基于模板的代码生成"""
     # 打印Pandas风格代码
@@ -65,7 +66,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     va, ex = kv
                     func_code.append(f"    # {va} = {ex}\n    df[{va}] = {p.doprint(ex)}")
                     exprs_dst.append(f"{va} = {ex}")
-                    syms_out.append(va)
+                    if va not in syms_dst:
+                        syms_out.append(va)
 
             if k[0] == TS:
                 groupbys['sort'] = f'df = df.sort_values(by=[_DATE_, _ASSET_]).reset_index(drop=True)'
@@ -77,8 +79,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name)
 
-    syms1 = symbols_to_code(syms_dst)
-    syms2 = symbols_to_code(syms_out)
+    syms1 = symbols_to_code(syms_dst, alias)
+    syms2 = symbols_to_code(syms_out, alias)
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))

@@ -64,6 +64,8 @@ tool = ExprTool()
 codes, G = tool.all(exprs_dict, style='polars', template_file='template.py.j2',
                     replace=True, regroup=True, format=True,
                     date='date', asset='asset',
+                    # 演示别名功能
+                    alias={'OPEN': 'ABCD'},
                     # 复制了需要使用的函数，还复制了最原始的表达式
                     extra_codes=(raw, _code_block_, cs_label,))
 
