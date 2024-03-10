@@ -352,7 +352,7 @@ def _replace__repeat(e):
         node_name = get_node_name(node)
         node_args0_name = get_node_name(node.args[0])
         if node_name == node_args0_name:
-            if node.name in ('cs_rank', 'sign', 'Abs'):
+            if node.name in ('cs_rank', 'sign', 'Abs', 'abs_'):
                 replacements.append((node, node.args[0]))
     for node, replacement in replacements:
         print(node, '  ->  ', replacement)
