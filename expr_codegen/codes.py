@@ -56,6 +56,12 @@ class SympyTransformer(ast.NodeTransformer):
                 target.id = self.targets_map.get(target.id, target.id)
                 self.targets_new.add(target.id)
 
+        # 处理 alpha=close 这种情况
+        if isinstance(node.value, ast.Name):
+            self.args_old.add(node.value.id)
+            node.value.id = self.args_map.get(node.value.id, node.value.id)
+            self.args_new.add(node.value.id)
+
         self.generic_visit(node)
         return node
 
