@@ -58,7 +58,8 @@ def main(df: pl.DataFrame) -> pl.DataFrame:
     {% endfor %}
 
     # drop intermediate columns
-    df = df.select(pl.exclude(r'^_x_\d+$'))
+    # df = df.select(pl.exclude(r'^_x_\d+$'))
+    df = df.select(~cs.starts_with("_"))
 
     # shrink
     df = df.select(cs.all().shrink_dtype())

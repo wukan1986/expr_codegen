@@ -56,7 +56,8 @@ def main(df: pd.DataFrame) -> pd.DataFrame:
     {% endfor %}
 
     # drop intermediate columns
-    df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
+    # df = df.drop(columns=list(filter(lambda x: re.search(r"^_x_\d+", x), df.columns)))
+    df = df.drop(columns=list(filter(lambda x: x.startswith("_"), df.columns)))
 
     # logger.info('done')
 

@@ -1,5 +1,6 @@
 import ast
 import re
+from ast import expr
 
 from sympy import Add, Mul, Pow, Eq
 
@@ -21,7 +22,7 @@ class SympyTransformer(ast.NodeTransformer):
     # 映射
     funcs_map = {}
     args_map = {}
-    targets_map = {}
+    targets_map = {}  # 只对非下划线开头的生效
 
     def config_map(self, funcs_map, args_map, targets_map):
         self.funcs_map = funcs_map
@@ -43,18 +44,29 @@ class SympyTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
+    def __visit_Assign(self, target: expr):
+        old_target_id = target.id
+        new_target_id = self.targets_map.get(old_target_id, old_target_id)
+        self.targets_old.add(old_target_id)
+
+        # 赋值给下划线开头代码时，对其进行重命名，方便重复书写表达式时不冲突
+        if old_target_id.startswith('_'):
+            new_target_id = f'{old_target_id}_{len(self.targets_new):03d}'
+
+        if old_target_id != new_target_id:
+            self.targets_new.add(new_target_id)
+            target.id = new_target_id
+            # 记录修改的变量名，之后会使用到
+            self.args_map[old_target_id] = new_target_id
+
     def visit_Assign(self, node):
         # 提取输出变量名
         for target in node.targets:
             if isinstance(target, ast.Tuple):
                 for t in target.elts:
-                    self.targets_old.add(t.id)
-                    t.id = self.targets_map.get(t.id, t.id)
-                    self.targets_new.add(t.id)
+                    self.__visit_Assign(t)
             else:
-                self.targets_old.add(target.id)
-                target.id = self.targets_map.get(target.id, target.id)
-                self.targets_new.add(target.id)
+                self.__visit_Assign(target)
 
         # 处理 alpha=close 这种情况
         if isinstance(node.value, ast.Name):

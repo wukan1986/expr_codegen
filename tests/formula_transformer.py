@@ -14,6 +14,15 @@ max(((vwap-8.6)^ts_mean(close,7)),ts_sum(min(vwap,4.5),3))
 
 """
 
+source = """
+_A = CLOSE
+_B = 3+4
+C = _A+_B
+_A = 10+20
+_B = 30+40
+D = _A+_B
+"""
+
 tree = ast.parse(source_replace(source))
 t = SympyTransformer()
 
@@ -24,7 +33,7 @@ funcs_map = {'abs': 'abs_',
              'delay': 'ts_delay',
              }
 args_map = {}
-targets_map = {}
+targets_map = {'_A': '_12'}
 
 t.config_map(funcs_map, args_map, targets_map)
 
