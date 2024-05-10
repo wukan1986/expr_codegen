@@ -1,9 +1,11 @@
 import inspect
+from functools import lru_cache
 from typing import Sequence, Dict
 
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
 
+from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
@@ -15,6 +17,7 @@ class ExprTool:
         self.get_current_func_kwargs = {}
         self.exprs_dict = {}
         self.exprs_names = []
+        self.globals_ = {}
 
     def set_current(self, func, **kwargs):
         self.get_current_func = func
@@ -206,3 +209,55 @@ class ExprTool:
             codes = format_str(codes, mode=Mode(line_length=600, magic_trailing_comma=True))
 
         return codes, G
+
+    def exec(self, codes: str, df_input):
+        """执行代码
+
+        Notes
+        -----
+        注意生成的代码已经约定输入用df_input，输出用df_output
+
+        """
+        globals_ = {'df_input': df_input}
+        exec(codes, globals_)
+        return globals_['df_output']
+
+    @lru_cache(maxsize=64)
+    def _get_codes(self, source, extra_codes, output_file):
+        """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
+        raw, exprs_dict = sources_to_exprs(self.globals_, source, safe=False)
+
+        # 生成代码
+        codes, G = _TOOL_.all(exprs_dict, style='polars', template_file='template.py.j2',
+                              replace=True, regroup=True, format=True,
+                              date='date', asset='asset',
+                              # 复制了需要使用的函数，还复制了最原始的表达式
+                              extra_codes=(raw,
+                                           # 传入多个列的方法
+                                           extra_codes,
+                                           ))
+
+        if output_file is not None:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(codes)
+
+        return codes
+
+
+_TOOL_ = ExprTool()
+
+
+def codegen_exec(globals_, code_block, df_input,
+                 extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
+                 output_file=None):
+    """快速转换源代码并执行"""
+    _TOOL_.globals_ = globals_
+
+    if isinstance(code_block, str):
+        source = code_block
+    else:
+        source = inspect.getsource(code_block)
+
+    codes = _TOOL_._get_codes(source, extra_codes, output_file)
+
+    return _TOOL_.exec(codes, df_input)
