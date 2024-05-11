@@ -247,11 +247,14 @@ class ExprTool:
 _TOOL_ = ExprTool()
 
 
-def codegen_exec(globals_, code_block, df_input,
+def codegen_exec(code_block, df_input,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
                  output_file: Optional[str] = None):
     """快速转换源代码并执行"""
-    _TOOL_.globals_ = globals_
+    # 此代码来自于sympy.var
+    frame = inspect.currentframe().f_back
+    _TOOL_.globals_ = frame.f_globals.copy()
+    del frame
 
     if isinstance(code_block, str):
         source = code_block
