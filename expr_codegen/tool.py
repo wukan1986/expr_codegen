@@ -1,6 +1,6 @@
 import inspect
 from functools import lru_cache
-from typing import Sequence, Dict
+from typing import Sequence, Dict, Optional
 
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
@@ -223,7 +223,7 @@ class ExprTool:
         return globals_['df_output']
 
     @lru_cache(maxsize=64)
-    def _get_codes(self, source, extra_codes, output_file):
+    def _get_codes(self, source: str, extra_codes: str, output_file: str) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_dict = sources_to_exprs(self.globals_, source, safe=False)
 
@@ -249,7 +249,7 @@ _TOOL_ = ExprTool()
 
 def codegen_exec(globals_, code_block, df_input,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
-                 output_file=None):
+                 output_file: Optional[str] = None):
     """快速转换源代码并执行"""
     _TOOL_.globals_ = globals_
 
