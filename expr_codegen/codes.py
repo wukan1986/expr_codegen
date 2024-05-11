@@ -60,6 +60,10 @@ class SympyTransformer(ast.NodeTransformer):
             self.args_map[old_target_id] = new_target_id
 
     def visit_Assign(self, node):
+        # 调整位置，支持循环赋值
+        # _A = _A+1 调整成 _A_001 = _A_000 + 1
+        self.generic_visit(node)
+
         # 提取输出变量名
         for target in node.targets:
             if isinstance(target, ast.Tuple):
@@ -74,7 +78,6 @@ class SympyTransformer(ast.NodeTransformer):
             node.value.id = self.args_map.get(node.value.id, node.value.id)
             self.args_new.add(node.value.id)
 
-        self.generic_visit(node)
         return node
 
     def visit_Compare(self, node):

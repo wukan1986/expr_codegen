@@ -15,12 +15,18 @@ max(((vwap-8.6)^ts_mean(close,7)),ts_sum(min(vwap,4.5),3))
 """
 
 source = """
-_A = CLOSE
+_A = 1+2
 _B = 3+4
 C = _A+_B
 _A = 10+20
 _B = 30+40
 D = _A+_B
+"""
+
+source = """
+_A = 1+2
+_A = _A+1
+C = _A+_B
 """
 
 tree = ast.parse(source_replace(source))
