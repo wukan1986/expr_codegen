@@ -263,4 +263,7 @@ def codegen_exec(code_block, df_input,
 
     codes = _TOOL_._get_codes(source, extra_codes, output_file)
 
-    return _TOOL_.exec(codes, df_input)
+    if df_input is None:
+        return df_input
+    else:
+        return _TOOL_.exec(codes, df_input)
