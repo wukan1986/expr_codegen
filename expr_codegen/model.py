@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_NegativeX
+from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_NegativeX, is_simple_expr
 
 
 class ListDictList:
@@ -214,7 +214,7 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
             expr = dic['expr']
             symbols = dic['symbols']
             if key[0] == CL:
-                if is_NegativeX(expr):
+                if is_simple_expr(expr):
                     # 检查表达式是否很简单, 是就替换，可能会替换多个
                     skip_expr_node(G, node, keep_nodes)
                 else:
@@ -253,7 +253,7 @@ def merge_nodes_2(G: nx.DiGraph, keep_nodes, *args):
         for node in this_pred:
             dic = G.nodes[node]
             expr = dic['expr']
-            if not is_NegativeX(expr):
+            if not is_simple_expr(expr):
                 continue
             pred = G.pred[node]
             for p in pred.copy():
@@ -337,8 +337,10 @@ def dag_start(exprs_dict, func, func_kwargs):
 def dag_middle(G, exprs_names, func, func_kwargs):
     """删除几个没有必要的节点"""
     G = remove_paths_by_zero_outdegree(G, exprs_names)
-    G = merge_nodes_1(G, exprs_names, *exprs_names)
-    G = merge_nodes_2(G, exprs_names, *exprs_names)
+    # 以下划线开头的节点，不保留
+    keep_nodes = [k for k in exprs_names if not k.startswith('_')]
+    G = merge_nodes_1(G, keep_nodes, *keep_nodes)
+    G = merge_nodes_2(G, keep_nodes, *keep_nodes)
 
     # 由于表达式修改，需再次更新表达式
     G = init_dag_exprs(G, func, func_kwargs)

@@ -51,7 +51,8 @@ class SympyTransformer(ast.NodeTransformer):
 
         # 赋值给下划线开头代码时，对其进行重命名，方便重复书写表达式时不冲突
         if old_target_id.startswith('_'):
-            new_target_id = f'{old_target_id}_{len(self.targets_new):03d}'
+            # 减少与cse中_x_冲突
+            new_target_id = f'{old_target_id}_{len(self.targets_new)}_'
 
         if old_target_id != new_target_id:
             self.targets_new.add(new_target_id)
@@ -145,6 +146,16 @@ class SympyTransformer(ast.NodeTransformer):
             self.args_old.add(node.right.id)
             node.right.id = self.args_map.get(node.right.id, node.right.id)
             self.args_new.add(node.right.id)
+
+        self.generic_visit(node)
+        return node
+
+    def visit_UnaryOp(self, node):
+        # -x
+        if isinstance(node.operand, ast.Name):
+            self.args_old.add(node.operand.id)
+            node.operand.id = self.args_map.get(node.operand.id, node.operand.id)
+            self.args_new.add(node.operand.id)
 
         self.generic_visit(node)
         return node

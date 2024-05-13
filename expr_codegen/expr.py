@@ -132,6 +132,15 @@ def is_NegativeX(expr):
     return False
 
 
+def is_simple_expr(expr):
+    if isinstance(expr, Mul):
+        if expr.args[0] == -1 and len(expr.args) == 2 and expr.args[1].is_Atom:
+            return True
+    if isinstance(expr, Symbol):
+        return True
+    return False
+
+
 def get_current_by_prefix(expr, **kwargs):
     """表达式根节点信息。按名称前缀。例如
 

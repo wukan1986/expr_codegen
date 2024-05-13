@@ -28,30 +28,43 @@ https://exprcodegen.streamlit.app
 ## 使用示例
 
 ```python
+import sys
+
+# from polars_ta.prefix.talib import *  # noqa
+from polars_ta.prefix.cdl import *  # noqa
+from polars_ta.prefix.ta import *  # noqa
+from polars_ta.prefix.tdx import *  # noqa
+from polars_ta.prefix.wq import *  # noqa
+
 from expr_codegen.tool import codegen_exec
 
 
 def _code_block_():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
 
-    # 会在生成的代码中自动导入
-    from polars_ta.wq import cs_mad_zscore_resid
+    # 模板中已经默认导入了from polars_ta.prefix下大量的算子，但
+    # talib在模板中没有默认导入。这种写法可实现在生成的代码中导入
+    from polars_ta.prefix.talib import ts_LINEARREG_SLOPE  # noqa
 
-    # 1. 下划线开头的变量只是中间变量，最终输出时会被剔除
-    _a = ts_returns(CLOSE, 1)
-    _b = ts_sum(min_(_a, 0) ** 2, 20)
-    _c = ts_sum(max_(_a, 0) ** 2, 20)
-    _d = ts_sum(_a ** 2, 20)
-    _e = (_b - _c) / _d
-    # 2. 下划线开头的变量可以重复使用。 多个复杂因子多行书写时有重复中间变时不再冲突
-    # 3. 下划线开头的变量循环赋值。 在调试时可快速用注释进行切换了
-    _e = cs_mad_zscore_resid(_e, LOG_MC_ZS, ONE)
-    RSJ = _e
+    # 1. 下划线开头的变量是中间变量,会被自动更名，最终输出时会被剔除
+    # 2. 下划线开头的变量可重复使用。多个复杂因子多行书写时有重复中间变时不再冲突
+    _avg = ts_mean(corr, 20)
+    _std = ts_std_dev(corr, 20)
+    _beta = ts_LINEARREG_SLOPE(corr, 20)
+
+    # 3. 下划线开头的变量支持有环循环赋值。在调试时可快速用注释进行切换
+    _avg = cs_mad_zscore_resid(_avg, LOG_MC_ZS, ONE)
+    _std = cs_mad_zscore_resid(_std, LOG_MC_ZS, ONE)
+    # _beta = cs_mad_zscore_resid(_beta, LOG_MC_ZS, ONE)
+
+    _corr = cs_zscore(_avg) + cs_zscore(_std)
+    CPV = cs_zscore(_corr) + cs_zscore(_beta)
 
 
 df = None  # 替换成真实的polars数据
-df = codegen_exec(_code_block_, df, output_file="output.py")
-
+df = codegen_exec(_code_block_, df, output_file=sys.stdout)  # 打印代码
+df = codegen_exec(_code_block_, df, output_file="output.py")  # 保存到文件
+df = codegen_exec(_code_block_, df)  # 只执行，不保存代码
 
 ```
 
@@ -62,9 +75,7 @@ df = codegen_exec(_code_block_, df, output_file="output.py")
 ├─data
 │      prepare_date.py # 准备数据
 ├─examples
-│      alpha101.txt # WorldQuant Alpha101示例，可复制到`streamlit`应用
-│      demo_cn.py # 中文注释示例。演示如何将表达式转换成代码
-│      demo_express.py # 速成示例
+│      demo_express.py # 速成示例。演示如何将表达式转换成代码
 │      demo_exec_pl.py # 演示调用转换后代码并绘图
 │      demo_transformer.py # 演示将第三方表达式转成内部表达式
 │      output.py # 结果输出。可不修改代码，直接被其它项目导入
@@ -121,7 +132,7 @@ df = codegen_exec(_code_block_, df, output_file="output.py")
 
 ## 二次开发
 
-1. 备份后编辑`demo_cn.py`, `import`需要引入的函数
+1. 备份后编辑`demo_express.py`, `import`需要引入的函数
 2. 然后`printer.py`有可能需要添加对应函数的打印代码
     - 注意：需要留意是否要加括号`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
 
@@ -143,58 +154,42 @@ df = codegen_exec(_code_block_, df, output_file="output.py")
 
 以上三种问题本项目都使用`ast`进行了处理，可以简化使用
 
-## 示例片段
+## 转译结果示例
 
-需要转译的部分公式，详细代码请参考 [Demo](examples/demo_cn.py)
-
-```python
-exprs_src = {
-    "expr_1": -ts_corr(cs_rank(ts_mean(OPEN, 10)), cs_rank(ts_mean(CLOSE, 10)), 10),
-    "expr_2": cs_rank(ts_mean(OPEN, 10)) - abs_(log(ts_mean(CLOSE, 10))) + gp_rank(sw_l1, CLOSE),
-    "expr_3": ts_mean(cs_rank(ts_mean(OPEN, 10)), 10),
-    "expr_4": cs_rank(ts_mean(cs_rank(OPEN), 10)),
-    "expr_5": -ts_corr(OPEN, CLOSE, 10),
-}
-```
-
-转译后的代码片段，详细代码请参考[Polars版](codes)
+转译后的代码片段，详细代码请参考[Polars版](examples/output_polars.py)
 
 ```python
 def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.sort(by=[_DATE_])
-    # ========================================
-    df = df.with_columns(
-        _x_0=1 / ts_delay(OPEN, -1),
-        LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
-    )
-    # ========================================
-    df = df.with_columns(
-        LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
-        LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
-    )
-    return df
+   df = df.sort(by=[_DATE_])
+   # ========================================
+   df = df.with_columns(
+      _x_0=1 / ts_delay(OPEN, -1),
+      LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
+   )
+   # ========================================
+   df = df.with_columns(
+      LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
+      LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
+   )
+   return df
 ```
 
 转译后的代码片段，详细代码请参考[Pandas版](examples/output_pandas.py)
 
 ```python
 def func_2_cs__date(df: pd.DataFrame) -> pd.DataFrame:
-    # expr_4 = cs_rank(x_7)
-    df["expr_4"] = (df["x_7"]).rank(pct=True)
-    return df
+   # expr_4 = cs_rank(x_7)
+   df["expr_4"] = (df["x_7"]).rank(pct=True)
+   return df
 
 
 def func_3_ts__asset__date(df: pd.DataFrame) -> pd.DataFrame:
-    # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-    df["expr_5"] = -(df["OPEN"]).rolling(10).corr(df["CLOSE"])
-    # expr_6 = ts_delta(OPEN, 10)
-    df["expr_6"] = df["OPEN"].diff(10)
-    return df
+   # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+   df["expr_5"] = -(df["OPEN"]).rolling(10).corr(df["CLOSE"])
+   # expr_6 = ts_delta(OPEN, 10)
+   df["expr_6"] = df["OPEN"].diff(10)
+   return df
 
-
-df = df.sort_values(by=["asset", "date"]).groupby(by=["asset"], group_keys=False).apply(func_0_ts__asset__date)
-df = df.groupby(by=["date"], group_keys=False).apply(func_0_cs__date)
-df = func_0_cl(df)
 ```
 
 ## 本地部署交互网页

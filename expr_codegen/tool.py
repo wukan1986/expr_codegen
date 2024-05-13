@@ -1,5 +1,6 @@
 import inspect
 from functools import lru_cache
+from io import TextIOWrapper
 from typing import Sequence, Dict, Optional
 
 from black import Mode, format_str
@@ -223,21 +224,24 @@ class ExprTool:
         return globals_['df_output']
 
     @lru_cache(maxsize=64)
-    def _get_codes(self, source: str, extra_codes: str, output_file: str) -> str:
+    def _get_codes(self, source: str, extra_codes: str, output_file: str,
+                   style='polars', template_file='template.py.j2',
+                   date='date', asset='asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_dict = sources_to_exprs(self.globals_, source, safe=False)
 
         # 生成代码
-        codes, G = _TOOL_.all(exprs_dict, style='polars', template_file='template.py.j2',
+        codes, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,
                               replace=True, regroup=True, format=True,
-                              date='date', asset='asset',
+                              date=date, asset=asset,
                               # 复制了需要使用的函数，还复制了最原始的表达式
                               extra_codes=(raw,
                                            # 传入多个列的方法
                                            extra_codes,
                                            ))
-
-        if output_file is not None:
+        if isinstance(output_file, TextIOWrapper):
+            output_file.write(codes)
+        elif output_file is not None:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(codes)
 
@@ -247,9 +251,13 @@ class ExprTool:
 _TOOL_ = ExprTool()
 
 
-def codegen_exec(code_block, df_input,
+def codegen_exec(code_block,
+                 df_input,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
-                 output_file: Optional[str] = None):
+                 output_file: Optional[str] = None,
+                 style: str = 'polars', template_file: str = 'template.py.j2',
+                 date: str = 'date', asset: str = 'asset'
+                 ):
     """快速转换源代码并执行"""
     # 此代码来自于sympy.var
     frame = inspect.currentframe().f_back
@@ -261,7 +269,10 @@ def codegen_exec(code_block, df_input,
     else:
         source = inspect.getsource(code_block)
 
-    codes = _TOOL_._get_codes(source, extra_codes, output_file)
+    codes = _TOOL_._get_codes(source, extra_codes, output_file,
+                              style=style, template_file=template_file,
+                              date=date, asset=asset,
+                              )
 
     if df_input is None:
         return df_input

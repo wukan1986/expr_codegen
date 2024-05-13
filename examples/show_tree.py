@@ -1,4 +1,8 @@
 from matplotlib import pyplot as plt
+from polars_ta.prefix.cdl import *  # noqa
+from polars_ta.prefix.ta import *  # noqa
+from polars_ta.prefix.tdx import *  # noqa
+from polars_ta.prefix.wq import *  # noqa
 from sympy import numbered_symbols
 
 from examples.sympy_define import *
@@ -6,11 +10,6 @@ from expr_codegen.codes import sources_to_exprs
 from expr_codegen.dag import zero_outdegree
 from expr_codegen.model import create_dag_exprs, init_dag_exprs, draw_expr_tree, merge_nodes_1, merge_nodes_2
 from expr_codegen.tool import ExprTool
-
-from polars_ta.prefix.tdx import *  # noqa
-from polars_ta.prefix.ta import *  # noqa
-from polars_ta.prefix.wq import *  # noqa
-from polars_ta.prefix.cdl import *  # noqa
 
 RETURNS, VWAP, = symbols('RETURNS, VWAP, ', cls=Symbol)
 
@@ -26,8 +25,18 @@ RETURNS, VWAP, = symbols('RETURNS, VWAP, ', cls=Symbol)
 
 # 表达式设置
 exprs_src = """
-alpha_101=(CLOSE - OPEN) / ((HIGH - LOW) + 0.001)
-alpha_201=alpha_101+CLOSE # 中间变量示例
+_avg = ts_mean(corr, 20)
+_std = ts_std_dev(corr, 20)
+_beta = ts_LINEARREG_SLOPE(corr, 20)
+
+# 3. 下划线开头的变量有环赋值。在调试时可快速用注释进行切换
+_avg = cs_mad_zscore_resid(_avg, LOG_MC_ZS, ONE)
+_std = cs_mad_zscore_resid(_std, LOG_MC_ZS, ONE)
+_beta = cs_mad_zscore_resid(_beta, LOG_MC_ZS, ONE)
+
+_corr = cs_zscore(_avg) + cs_zscore(_std)
+_CPV = cs_zscore(_corr) + cs_zscore(_beta)
+# CPV = _CPV
 """
 raw, exprs_src = sources_to_exprs(globals().copy(), exprs_src)
 
@@ -42,6 +51,8 @@ exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_re
 G = create_dag_exprs(exprs_dict)
 G = init_dag_exprs(G, tool.get_current_func, tool.get_current_func_kwargs)
 
+keep_nodes = [k for k in exprs_src.keys() if not k.startswith('_')]
+# keep_nodes = exprs_src.keys()
 # 以下可以看到节点的合并过程
 zero = zero_outdegree(G)
 for z in zero:
@@ -49,7 +60,7 @@ for z in zero:
     # 在同一画布上画上下两图
     fig, axs = plt.subplots(2, 1)
     draw_expr_tree(G, z, ax=axs[0])
-    merge_nodes_1(G, exprs_src.keys(), z)
-    merge_nodes_2(G, exprs_src.keys(), z)
+    merge_nodes_1(G, keep_nodes, z)
+    merge_nodes_2(G, keep_nodes, z)
     draw_expr_tree(G, z, ax=axs[1])
     plt.show()
