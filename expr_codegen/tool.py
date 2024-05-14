@@ -135,7 +135,7 @@ class ExprTool:
 
         return self.exprs_dict
 
-    def dag(self, merge):
+    def dag(self, merge: bool):
         """生成DAG"""
         G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs)
         if merge:
@@ -224,57 +224,83 @@ class ExprTool:
         return globals_['df_output']
 
     @lru_cache(maxsize=64)
-    def _get_codes(self, source: str, extra_codes: str, output_file: str,
-                   style='polars', template_file='template.py.j2',
-                   date='date', asset='asset') -> str:
+    def _get_code(self,
+                  source: str, *more_sources: str,
+                  extra_codes: str, output_file: str,
+                  style='polars', template_file='template.py.j2',
+                  date='date', asset='asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
-        raw, exprs_dict = sources_to_exprs(self.globals_, source, safe=False)
+        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, safe=False)
 
         # 生成代码
-        codes, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,
-                              replace=True, regroup=True, format=True,
-                              date=date, asset=asset,
-                              # 复制了需要使用的函数，还复制了最原始的表达式
-                              extra_codes=(raw,
-                                           # 传入多个列的方法
-                                           extra_codes,
-                                           ))
+        code, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,
+                             replace=True, regroup=True, format=True,
+                             date=date, asset=asset,
+                             # 复制了需要使用的函数，还复制了最原始的表达式
+                             extra_codes=(raw,
+                                          # 传入多个列的方法
+                                          extra_codes,
+                                          ))
         if isinstance(output_file, TextIOWrapper):
-            output_file.write(codes)
+            output_file.write(code)
         elif output_file is not None:
             with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(codes)
+                f.write(code)
 
-        return codes
+        return code
 
 
 _TOOL_ = ExprTool()
 
 
-def codegen_exec(code_block,
-                 df_input,
+def codegen_exec(df,
+                 *codes,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
                  output_file: Optional[str] = None,
                  style: str = 'polars', template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset'
                  ):
-    """快速转换源代码并执行"""
+    """快速转换源代码并执行
+
+    Parameters
+    ----------
+    df: pl.DataFrame
+        输入DataFrame
+    codes:
+        函数体。此部分中的表达式会被翻译成目标代码
+    extra_codes: str
+        额外代码。不做处理，会被直接复制到目标代码中
+    output_file: str
+        保存生成的目标代码到文件中
+    style: str
+        代码风格。可选值 ('polars', 'pandas')
+    template_file: str
+        代码模板
+    date: str
+        时间字段
+    asset: str
+        资产字段
+
+    Returns
+    -------
+    pl.DataFrame
+
+    """
     # 此代码来自于sympy.var
     frame = inspect.currentframe().f_back
     _TOOL_.globals_ = frame.f_globals.copy()
     del frame
 
-    if isinstance(code_block, str):
-        source = code_block
-    else:
-        source = inspect.getsource(code_block)
+    more_sources = [c if isinstance(c, str) else inspect.getsource(c) for c in codes]
 
-    codes = _TOOL_._get_codes(source, extra_codes, output_file,
-                              style=style, template_file=template_file,
-                              date=date, asset=asset,
-                              )
+    code = _TOOL_._get_code(
+        *more_sources, extra_codes=extra_codes,
+        output_file=output_file,
+        style=style, template_file=template_file,
+        date=date, asset=asset,
+    )
 
-    if df_input is None:
-        return df_input
+    if df is None:
+        return df
     else:
-        return _TOOL_.exec(codes, df_input)
+        return _TOOL_.exec(code, df)

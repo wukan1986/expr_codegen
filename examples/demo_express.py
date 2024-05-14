@@ -9,9 +9,12 @@ from polars_ta.prefix.wq import *  # noqa
 from expr_codegen.tool import codegen_exec
 
 
-def _code_block_():
+def _code_block_1():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
+    LOG_MC_ZS = cs_mad_zscore(log1p(market_cap))
 
+
+def _code_block_2():
     # 模板中已经默认导入了from polars_ta.prefix下大量的算子，但
     # talib在模板中没有默认导入。这种写法可实现在生成的代码中导入
     from polars_ta.prefix.talib import ts_LINEARREG_SLOPE  # noqa
@@ -32,6 +35,6 @@ def _code_block_():
 
 
 df = None  # 替换成真实的polars数据
-df = codegen_exec(_code_block_, df, output_file=sys.stdout)  # 打印代码
-df = codegen_exec(_code_block_, df, output_file="output.py")  # 保存到文件
-df = codegen_exec(_code_block_, df)  # 只执行，不保存代码
+df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)  # 打印代码
+df = codegen_exec(df, _code_block_1, _code_block_2, output_file="output.py")  # 保存到文件
+df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代码
