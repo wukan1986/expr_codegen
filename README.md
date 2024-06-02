@@ -40,28 +40,28 @@ from expr_codegen.tool import codegen_exec
 
 
 def _code_block_1():
-   # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
-   LOG_MC_ZS = cs_mad_zscore(log1p(market_cap))
+    # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
+    LOG_MC_ZS = cs_mad_zscore(log1p(market_cap))
 
 
 def _code_block_2():
-   # 模板中已经默认导入了from polars_ta.prefix下大量的算子，但
-   # talib在模板中没有默认导入。这种写法可实现在生成的代码中导入
-   from polars_ta.prefix.talib import ts_LINEARREG_SLOPE  # noqa
+    # 模板中已经默认导入了from polars_ta.prefix下大量的算子，但
+    # talib在模板中没有默认导入。这种写法可实现在生成的代码中导入
+    from polars_ta.prefix.talib import ts_LINEARREG_SLOPE  # noqa
 
-   # 1. 下划线开头的变量只是中间变量,会被自动更名，最终输出时会被剔除
-   # 2. 下划线开头的变量可以重复使用。多个复杂因子多行书写时有重复中间变时不再冲突
-   _avg = ts_mean(corr, 20)
-   _std = ts_std_dev(corr, 20)
-   _beta = ts_LINEARREG_SLOPE(corr, 20)
+    # 1. 下划线开头的变量只是中间变量,会被自动更名，最终输出时会被剔除
+    # 2. 下划线开头的变量可以重复使用。多个复杂因子多行书写时有重复中间变时不再冲突
+    _avg = ts_mean(corr, 20)
+    _std = ts_std_dev(corr, 20)
+    _beta = ts_LINEARREG_SLOPE(corr, 20)
 
-   # 3. 下划线开头的变量有环循环赋值。在调试时可快速用注释进行切换
-   _avg = cs_mad_zscore_resid(_avg, LOG_MC_ZS, ONE)
-   _std = cs_mad_zscore_resid(_std, LOG_MC_ZS, ONE)
-   # _beta = cs_mad_zscore_resid(_beta, LOG_MC_ZS, ONE)
+    # 3. 下划线开头的变量有环循环赋值。在调试时可快速用注释进行切换
+    _avg = cs_mad_zscore_resid(_avg, LOG_MC_ZS, ONE)
+    _std = cs_mad_zscore_resid(_std, LOG_MC_ZS, ONE)
+    # _beta = cs_mad_zscore_resid(_beta, LOG_MC_ZS, ONE)
 
-   _corr = cs_zscore(_avg) + cs_zscore(_std)
-   CPV = cs_zscore(_corr) + cs_zscore(_beta)
+    _corr = cs_zscore(_avg) + cs_zscore(_std)
+    CPV = cs_zscore(_corr) + cs_zscore(_beta)
 
 
 df = None  # 替换成真实的polars数据
@@ -139,10 +139,12 @@ df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代�
 2. 然后`printer.py`有可能需要添加对应函数的打印代码
     - 注意：需要留意是否要加括号`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
 
-## 贡献代码
+## `expr_codegen`局限性
 
-1. 还有很多函数没有添加，需要大家提交代码一起完善
-2. 目前表达式样式优先向WorldQuant 的 Alpha101 靠齐
+1. `DAG`只能增加列无法删除。增加列时，遇到同名列会覆盖
+2. 不支持`删除行`，但可以添加删除标记列，然后在外进行删除行。删除行影响了所有列，不满足`DAG`
+3. 不支持`重采样`，原理同不支持删除行。需在外进行
+4. 可以将`删除行`与`重采样`做为分割线，一大块代码分成多个`DAG`串联。复杂不易理解，所以最终没有实现
 
 ## 小技巧
 
@@ -163,35 +165,35 @@ df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代�
 
 ```python
 def func_0_ts__asset(df: pl.DataFrame) -> pl.DataFrame:
-   df = df.sort(by=[_DATE_])
-   # ========================================
-   df = df.with_columns(
-      _x_0=1 / ts_delay(OPEN, -1),
-      LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
-   )
-   # ========================================
-   df = df.with_columns(
-      LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
-      LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
-   )
-   return df
+    df = df.sort(by=[_DATE_])
+    # ========================================
+    df = df.with_columns(
+        _x_0=1 / ts_delay(OPEN, -1),
+        LABEL_CC_1=(-CLOSE + ts_delay(CLOSE, -1)) / CLOSE,
+    )
+    # ========================================
+    df = df.with_columns(
+        LABEL_OO_1=_x_0 * ts_delay(OPEN, -2) - 1,
+        LABEL_OO_2=_x_0 * ts_delay(OPEN, -3) - 1,
+    )
+    return df
 ```
 
 转译后的代码片段，详细代码请参考[Pandas版](examples/output_pandas.py)
 
 ```python
 def func_2_cs__date(df: pd.DataFrame) -> pd.DataFrame:
-   # expr_4 = cs_rank(x_7)
-   df["expr_4"] = (df["x_7"]).rank(pct=True)
-   return df
+    # expr_4 = cs_rank(x_7)
+    df["expr_4"] = (df["x_7"]).rank(pct=True)
+    return df
 
 
 def func_3_ts__asset__date(df: pd.DataFrame) -> pd.DataFrame:
-   # expr_5 = -ts_corr(OPEN, CLOSE, 10)
-   df["expr_5"] = -(df["OPEN"]).rolling(10).corr(df["CLOSE"])
-   # expr_6 = ts_delta(OPEN, 10)
-   df["expr_6"] = df["OPEN"].diff(10)
-   return df
+    # expr_5 = -ts_corr(OPEN, CLOSE, 10)
+    df["expr_5"] = -(df["OPEN"]).rolling(10).corr(df["CLOSE"])
+    # expr_6 = ts_delta(OPEN, 10)
+    df["expr_6"] = df["OPEN"].diff(10)
+    return df
 
 ```
 
