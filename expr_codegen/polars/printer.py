@@ -59,4 +59,4 @@ class PolarsStrPrinter(StrPrinter):
         return "cs_rank(%s)" % self._print(expr.args[1])
 
     def _print_gp_demean(self, expr):
-        return "cs_neutralize_demean(%s)" % self._print(expr.args[1])
+        return "cs_demean(%s)" % self._print(expr.args[1])
