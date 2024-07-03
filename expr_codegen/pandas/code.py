@@ -29,7 +29,7 @@ def get_groupby_from_tuple(tup, func_name):
 
 def symbols_to_code(syms, alias):
     a = [f"{s}" for s in syms]
-    b = [f"r'{alias.get(s, s)}'" for s in syms]
+    b = [f"'{alias.get(s, s)}'" for s in syms]
     return f"""_ = ({','.join(b)},)
 ({','.join(a)},) = _"""
 
@@ -46,7 +46,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # polars风格代码
     funcs = {}
     # 分组应用代码。这里利用了字典按插入顺序排序的特点，将排序放在最前
-    groupbys = {'sort': 'df = df'}
+    groupbys = {'sort': ''}
     # 处理过后的表达式
     exprs_dst = []
     syms_out = []
@@ -70,9 +70,13 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         syms_out.append(va)
 
             if k[0] == TS:
-                groupbys['sort'] = f'df = df.sort_values(by=[_DATE_, _ASSET_]).reset_index(drop=True)'
+                if len(groupbys['sort']) == 0:
+                    groupbys['sort'] = f'df = df.sort_values(by=[_ASSET_, _DATE_]).reset_index(drop=True)'
                 # 时序需要排序
                 func_code = [f'    df = df.sort_values(by=[_DATE_])'] + func_code
+            elif k[0] == CS:
+                if len(groupbys['sort']) == 0:
+                    groupbys['sort'] = f'df = df.sort_values(by=[_DATE_, _ASSET_]).reset_index(drop=True)'
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)

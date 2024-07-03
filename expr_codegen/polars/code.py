@@ -16,20 +16,21 @@ def get_groupby_from_tuple(tup, func_name):
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset = tup
-        return f'df = df.group_by(_ASSET_).map_groups({func_name})'
+        return f'df = df.sort(_ASSET_, _DATE_).group_by(_ASSET_).map_groups({func_name})'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = df.group_by(_DATE_).map_groups({func_name})'
+        return f'df = df.sort(_DATE_).group_by(_DATE_).map_groups({func_name})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = df.group_by(_DATE_, "{group}").map_groups({func_name})'
+        return f'df = df.sort(_DATE_, "{group}").group_by(_DATE_, "{group}").map_groups({func_name})'
 
     return f'df = {func_name}(df)'
 
 
 def symbols_to_code(syms, alias):
     a = [f"{s}" for s in syms]
-    b = [f"r'{alias.get(s, s)}'" for s in syms]
+    b = [f"r'{alias.get(s, s)}'" for s in syms]  #
+    b = [f"'{alias.get(s, s)}'" for s in syms]
     return f"""_ = ({','.join(b)},)
 ({','.join(a)},) = (pl.col(i) for i in _)"""
 
@@ -46,7 +47,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # polars风格代码
     funcs = {}
     # 分组应用代码。这里利用了字典按插入顺序排序的特点，将排序放在最前
-    groupbys = {'sort': 'df = df'}
+    groupbys = {'sort': ''}
     # 处理过后的表达式
     exprs_dst = []
     syms_out = []
@@ -80,9 +81,10 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             func_code = func_code[1:]
 
             if k[0] == TS:
-                groupbys['sort'] = f'df = df.sort(by=[_DATE_, _ASSET_])'
+                # if len(groupbys['sort']) == 0:
+                #     groupbys['sort'] = f'df = df.sort(_ASSET_, _DATE_)'
                 # 时序需要排序
-                func_code = [f'    df = df.sort(by=[_DATE_])'] + func_code
+                func_code = [f'    df = df.sort(_DATE_)'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)
