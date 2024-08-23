@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_NegativeX, is_simple_expr
+from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
 
 
 class ListDictList:
@@ -91,6 +91,32 @@ class ListDictList:
         self.back_merge()
         # 出现了空行，删除
         self.filter_empty()
+
+    def drop_symbols(self):
+        """组装一种数据结构，用来存储之后会用到的变量名，用于提前删除不需要的变量"""
+        # 获取每一小块所用到的所有变量名
+        l1 = []
+        for row in self._list:
+            for k, v in row.items():
+                vv = []
+                for v1 in v:
+                    if v1 is None:
+                        continue
+                    vv.extend(v1[2])
+                l1.append(set(vv))
+
+        # 得到此行与之后都会出现的变量名
+        l2 = [set()]
+        s = set()
+        for i in reversed(l1):
+            s = s | i
+            l2.append(s)
+        l2 = list(reversed(l2))
+
+        # 计算之后不会再出现的变量名
+        l3 = [list(s - e) for s, e in zip(l2[:-1], l2[1:])]
+
+        return l3
 
 
 def chain_create(nested_list):
@@ -358,7 +384,8 @@ def dag_end(G):
         for node in generation:
             key = G.nodes[node]['key']
             expr = G.nodes[node]['expr']
-            exprs_ldl.append(key, (node, expr))
+            symbols = G.nodes[node]['symbols']
+            exprs_ldl.append(key, (node, expr, symbols))
 
     exprs_ldl._list = exprs_ldl.values()[1:]
 

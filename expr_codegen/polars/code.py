@@ -9,22 +9,22 @@ from expr_codegen.model import ListDictList
 from expr_codegen.polars.printer import PolarsStrPrinter
 
 
-def get_groupby_from_tuple(tup, func_name):
+def get_groupby_from_tuple(tup, func_name, drop_cols):
     """从传入的元组中生成分组运行代码"""
     prefix2, *_ = tup
 
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset = tup
-        return f'df = df.sort(_ASSET_, _DATE_).group_by(_ASSET_).map_groups({func_name})'
+        return f'df = df.sort(_ASSET_, _DATE_).group_by(_ASSET_).map_groups({func_name}).drop(*{drop_cols})'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = df.sort(_DATE_).group_by(_DATE_).map_groups({func_name})'
+        return f'df = df.sort(_DATE_).group_by(_DATE_).map_groups({func_name}).drop(*{drop_cols})'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = df.sort(_DATE_, "{group}").group_by(_DATE_, "{group}").map_groups({func_name})'
+        return f'df = df.sort(_DATE_, "{group}").group_by(_DATE_, "{group}").map_groups({func_name}).drop(*{drop_cols})'
 
-    return f'df = {func_name}(df)'
+    return f'df = {func_name}(df).drop(*{drop_cols})'
 
 
 def symbols_to_code(syms, alias):
@@ -52,8 +52,11 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     exprs_dst = []
     syms_out = []
 
+    drop_symbols = exprs_ldl.drop_symbols()
+    j = -1
     for i, row in enumerate(exprs_ldl.values()):
         for k, vv in row.items():
+            j += 1
             if len(vv) == 0:
                 continue
             # 函数名
@@ -66,7 +69,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     func_code.append(f"    df = df.with_columns(")
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
-                    va, ex = kv
+                    va, ex, sym = kv
                     s1 = str(ex)
                     s2 = p.doprint(ex)
                     if s1 != s2:
@@ -88,8 +91,10 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)
+            # 只有下划线开头再删除
+            ds = [x for x in drop_symbols[j] if x.startswith('_')]
             # 分组应用代码
-            groupbys[func_name] = get_groupby_from_tuple(k, func_name)
+            groupbys[func_name] = get_groupby_from_tuple(k, func_name, ds)
 
     syms1 = symbols_to_code(syms_dst, alias)
     syms2 = symbols_to_code(syms_out, alias)
