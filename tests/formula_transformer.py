@@ -26,10 +26,11 @@ D = _A+_B
 # 再也不怕出现有环了
 source = """
 _A = 1+2
-_A = _A+1
+_A = _A+_A
 _B = _A+2
-_A = _B+3
-C = _A+_B
+_C = _A+_B
+_A = _C+4
+D = _A
 """
 
 tree = ast.parse(source_replace(source))
