@@ -109,7 +109,8 @@ class ListDictList:
         l2 = [set()]
         s = set()
         for i in reversed(l1):
-            s = s | i
+            # 这三变量需要排除
+            s = s | i - {'_NONE_', '_TRUE_', '_FALSE_'}
             l2.append(s)
         l2 = list(reversed(l2))
 

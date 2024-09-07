@@ -25,12 +25,16 @@ D = _A+_B
 
 # 再也不怕出现有环了
 source = """
-_A = 1+2
-_A = _A+_A
-_B = _A+2
-_C = _A+_B
-_A = _C+4
-D = _A
+_A = True+None
+# F = 1>None
+# _A = Add(1,True)
+# 
+# _A = _A+_A
+# _B = _A+2
+# _C = _A+_B
+# 
+# D = _A
+
 """
 
 tree = ast.parse(source_replace(source))
@@ -42,7 +46,7 @@ funcs_map = {'abs': 'abs_',
              'delta': 'ts_delta',
              'delay': 'ts_delay',
              }
-args_map = {}
+args_map = {'True': "TRUE", 'False': "FALSE", 'None': "NONE"}
 targets_map = {'_A': '_12'}
 
 t.config_map(funcs_map, args_map, targets_map)
