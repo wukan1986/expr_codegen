@@ -238,7 +238,7 @@ class ExprTool:
                   style='polars', template_file='template.py.j2',
                   date='date', asset='asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
-        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, safe=False)
+        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources)
 
         # 生成代码
         code, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,

@@ -147,17 +147,12 @@ df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代�
 4. 可以将`删除行`与`重采样`做为分割线，一大块代码分成多个`DAG`串联。复杂不易理解，所以最终没有实现
 
 ## 小技巧
-
-1. `sympy`不支持`==`，而是当成两个对象比较。例如：
-    1. `if_else(OPEN==CLOSE, HIGH, LOW)`, 一开始就变成了`if_else(False, HIGH, LOW)`
-    2. 可以用`Eq`来代替，`if_else(Eq(OPEN, CLOSE), HIGH, LOW)`。具体示例请参考`Alpha101`中的`alpha_021`
-
-2. `sympy`不支持`bool`转`int`。例如：
+1. `sympy`不支持`bool`转`int`。例如：
     1. `(OPEN < CLOSE) * -1`报错 `TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'`
     2. 可以用`if_else`代替。`if_else(OPEN<CLOSE, 1, 0)*-1`。具体示例请参考`Alpha101`中的`alpha_064`
-3. Python不支持`?:`三元表达式，只支持`if else`, 而在本项目中需要转成`if_else`
+2. Python不支持`?:`三元表达式，只支持`if else`, 而在本项目中需要转成`if_else`
 
-以上三种问题本项目都使用`ast`进行了处理，可以简化使用
+以上两种问题本项目都使用`ast`进行了处理，可以简化使用
 
 ## 下划线开头的变量
 1. 输出的数据，所有以`_`开头的列，最后会被自动删除。所以需要保留的变量一定不要以`_`开头

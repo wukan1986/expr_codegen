@@ -126,15 +126,7 @@ class SympyTransformer(ast.NodeTransformer):
                     node.comparators[i] = ast.Name(new_com_value, ctx=ast.Load())
                     self.args_new.add(new_com_value)
 
-        assert len(node.comparators) == 1, f"不支持连等，请手工添加括号, {ast.unparse(node)}"
-        # OPEN==CLOSE，要转成Eq
-        if isinstance(node.ops[0], ast.Eq):
-            # 等号会直接比较变成False
-            node = ast.Call(
-                func=ast.Name(id='Eq', ctx=ast.Load()),
-                args=[node.left, node.comparators[0]],
-                keywords=[],
-            )
+        assert len(node.comparators) == 1, f"不支持连续等号，请手工添加括号, {ast.unparse(node)}"
 
         self.generic_visit(node)
         return node
@@ -291,7 +283,7 @@ def _add_default_type(globals_):
     return globals_
 
 
-def sources_to_exprs(globals_, *sources, safe: bool = True):
+def sources_to_exprs(globals_, *sources):
     """将源代码转换成表达式"""
 
     globals_ = _add_default_type(globals_)
@@ -300,5 +292,5 @@ def sources_to_exprs(globals_, *sources, safe: bool = True):
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
     register_symbols(targets_new, globals_, is_function=False)
-    exprs_dict = dict_to_exprs(assigns, globals_, safe)
+    exprs_dict = dict_to_exprs(assigns, globals_)
     return raw, exprs_dict
