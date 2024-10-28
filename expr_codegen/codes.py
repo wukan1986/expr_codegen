@@ -126,6 +126,7 @@ class SympyTransformer(ast.NodeTransformer):
                     node.comparators[i] = ast.Name(new_com_value, ctx=ast.Load())
                     self.args_new.add(new_com_value)
 
+        assert len(node.comparators) == 1, f"不支持连等，请手工添加括号, {ast.unparse(node)}"
         # OPEN==CLOSE，要转成Eq
         if isinstance(node.ops[0], ast.Eq):
             # 等号会直接比较变成False
@@ -238,8 +239,10 @@ def source_replace(source):
         # 其实会导致?与:错配，但无所谓，只要多执行几次即可
         source, num = re.subn(r'\?(.+?):(.+?)', r' if( \1 )else \2', source, flags=re.S)
         # break
-    # 异或转成乘方，或、与
-    source = source.replace('^', '**').replace('||', '|').replace('&&', '&')
+    # 或、与
+    source = source.replace('||', '|').replace('&&', '&')
+    # 异或转成乘方
+    source = source.replace('^', '**')
     return source
 
 

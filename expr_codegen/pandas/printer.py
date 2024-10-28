@@ -59,15 +59,15 @@ class PandasStrPrinter(StrPrinter):
 
     def _print_Or(self, expr):
         PREC = PRECEDENCE["Mul"]
-        return "%s | %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+        return " | ".join(self.parenthesize(arg, PREC) for arg in expr.args)
 
     def _print_Xor(self, expr):
         PREC = PRECEDENCE["Mul"]
-        return "%s ^ %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+        return " ^ ".join(self.parenthesize(arg, PREC) for arg in expr.args)
 
     def _print_And(self, expr):
         PREC = PRECEDENCE["Mul"]
-        return "%s & %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+        return " & ".join(self.parenthesize(arg, PREC) for arg in expr.args)
 
     def _print_Not(self, expr):
         PREC = PRECEDENCE["Mul"]
