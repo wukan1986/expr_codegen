@@ -11,6 +11,14 @@ from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
 
+def simplify2(expr):
+    try:
+        expr = simplify(expr)
+    except AttributeError as e:
+        print(f'{expr} ,表达式无法简化, {e}')
+    return expr
+
+
 class ExprTool:
 
     def __init__(self):
@@ -38,7 +46,7 @@ class ExprTool:
 
         """
         # 抽取前先化简
-        expr = simplify(expr)
+        expr = simplify2(expr)
 
         exprs = []
         syms = []
@@ -87,9 +95,9 @@ class ExprTool:
 
         # 不做改动，直接生成
         for variable, expr in repl:
-            exprs_dict[variable] = simplify(expr)
+            exprs_dict[variable] = simplify2(expr)
         for variable, expr in redu:
-            exprs_dict[variable] = simplify(expr)
+            exprs_dict[variable] = simplify2(expr)
 
         return exprs_dict
 
