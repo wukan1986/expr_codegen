@@ -1,5 +1,5 @@
 from sympy import Basic, Function, StrPrinter
-from sympy.printing.precedence import precedence
+from sympy.printing.precedence import precedence, PRECEDENCE
 
 
 # TODO: 如有新添加函数，但表达式有变更才需要在此补充对应的打印代码，否则可以省略
@@ -54,6 +54,22 @@ class PolarsStrPrinter(StrPrinter):
     def _print_Equality(self, expr):
         PREC = precedence(expr)
         return "%s==%s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_Or(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s | %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_Xor(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s ^ %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_And(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "%s & %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+
+    def _print_Not(self, expr):
+        PREC = PRECEDENCE["Mul"]
+        return "~%s" % self.parenthesize(expr.args[0], PREC)
 
     def _print_gp_rank(self, expr):
         return "cs_rank(%s)" % self._print(expr.args[1])
