@@ -5,10 +5,15 @@ from typing import Sequence, Dict, Optional
 
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
+from sympy.logic import boolalg
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
+
+# TypeError: expecting bool or Boolean, not `ts_delay(高量, 3)`.
+# 自定义函数无法直接用于&，所以对sympy代码进行修改
+boolalg.as_Boolean = lambda x: x
 
 
 def simplify2(expr):
