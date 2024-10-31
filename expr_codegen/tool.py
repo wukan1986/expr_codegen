@@ -5,18 +5,34 @@ from typing import Sequence, Dict, Optional
 
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
+from sympy.core.expr import Expr
 from sympy.logic import boolalg
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
 
-# TypeError: expecting bool or Boolean, not `ts_delay(高量, 3)`.
-# 自定义函数无法直接用于&，所以对sympy代码进行修改
+# ===============================
+# TypeError: expecting bool or Boolean, not `ts_delay(X, 3)`.
+# ts_delay(X, 3) & ts_delay(Y, 3)
 boolalg.as_Boolean = lambda x: x
 
 
+# AttributeError: 'StrictGreaterThan' object has no attribute 'diff'
+# ts_count(open > 1, 2) == 2
+def _diff(self, *symbols, **assumptions):
+    assumptions.setdefault("evaluate", False)
+    from sympy.core.function import _derivative_dispatch
+    return _derivative_dispatch(self, *symbols, **assumptions)
+
+
+Expr.diff = _diff
+
+
+# ===============================
+
 def simplify2(expr):
+    # return simplify(expr)
     try:
         expr = simplify(expr)
     except AttributeError as e:

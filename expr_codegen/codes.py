@@ -146,22 +146,22 @@ class SympyTransformer(ast.NodeTransformer):
 
     def visit_BinOp(self, node):
         # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'
-        if isinstance(node.op, ast.Mult):
+        if isinstance(node.op, (ast.Mult, ast.Add, ast.Div, ast.Sub)):
             # (OPEN < CLOSE) * -1
             if isinstance(node.left, ast.Compare):
                 node.left = ast.Call(
-                    func=ast.Name(id='if_else', ctx=ast.Load()),
-                    args=[node.left, ast.Constant(value=1), ast.Constant(value=0)],
+                    func=ast.Name(id='int_', ctx=ast.Load()),
+                    args=[node.left],
                     keywords=[],
                 )
             # -1*(OPEN < CLOSE)
             if isinstance(node.right, ast.Compare):
                 node.right = ast.Call(
-                    func=ast.Name(id='if_else', ctx=ast.Load()),
-                    args=[node.right, ast.Constant(value=1), ast.Constant(value=0)],
+                    func=ast.Name(id='int_', ctx=ast.Load()),
+                    args=[node.right],
                     keywords=[],
                 )
-            # 这种情况要处理吗？
+            # 这种情况，已经包含
             # (OPEN < CLOSE)*(OPEN < CLOSE)
 
         if isinstance(node.left, ast.Name):
