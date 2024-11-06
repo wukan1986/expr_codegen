@@ -2,7 +2,7 @@ import ast
 import re
 from ast import expr
 
-from sympy import Add, Mul, Pow, Eq
+from sympy import Add, Mul, Pow, Eq, Function
 
 from expr_codegen.expr import register_symbols, dict_to_exprs
 
@@ -25,6 +25,8 @@ class SympyTransformer(ast.NodeTransformer):
     # !!!一定要在drop_symbols时排除
     args_map = {'True': "_TRUE_", 'False': "_FALSE_", 'None': "_NONE_"}
     targets_map = {}  # 只对非下划线开头的生效
+    # ^ 是异或还是乘方呢？
+    convert_xor: bool = True
 
     def config_map(self, funcs_map, args_map, targets_map):
         self.funcs_map = funcs_map
@@ -187,6 +189,21 @@ class SympyTransformer(ast.NodeTransformer):
                 node.right = ast.Name(new_node_value, ctx=ast.Load())
                 self.args_new.add(new_node_value)
 
+        if isinstance(node.op, ast.BitXor):
+            # ^ 运算符，转换为pow还是xor
+            if self.convert_xor:
+                node = ast.Call(
+                    func=ast.Name(id='Pow', ctx=ast.Load()),
+                    args=[node.left, node.right],
+                    keywords=[],
+                )
+            else:
+                node = ast.Call(
+                    func=ast.Name(id='xor', ctx=ast.Load()),
+                    args=[node.left, node.right],
+                    keywords=[],
+                )
+
         self.generic_visit(node)
         return node
 
@@ -207,14 +224,26 @@ class SympyTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
+    def visit_Subscript(self, node):
+        if node.slice.value == 0:
+            node = node.value
+        else:
+            node = ast.Call(
+                func=ast.Name(id='ts_delay', ctx=ast.Load()),
+                args=[node.value, node.slice],
+                keywords=[],
+            )
+        self.generic_visit(node)
+        return node
 
-def sources_to_asts(*sources):
+
+def sources_to_asts(*sources, convert_xor: bool):
     """输入多份源代码"""
     raw = []
     assigns = {}
     funcs_new, args_new, targets_new = set(), set(), set()
     for arg in sources:
-        r, a, funcs_, args_, targets_ = _source_to_asts(arg)
+        r, a, funcs_, args_, targets_ = _source_to_asts(arg, convert_xor)
         raw.append(r)
         assigns.update(a)
         funcs_new.update(funcs_)
@@ -233,15 +262,14 @@ def source_replace(source):
         # break
     # 或、与
     source = source.replace('||', '|').replace('&&', '&')
-    # 异或转成乘方
-    source = source.replace('^', '**')
     return source
 
 
-def _source_to_asts(source):
+def _source_to_asts(source, convert_xor: bool):
     """源代码"""
     tree = ast.parse(source_replace(source))
     t = SympyTransformer()
+    t.convert_xor = convert_xor
     t.visit(tree)
 
     raw = []
@@ -280,15 +308,17 @@ def _add_default_type(globals_):
     globals_['Mul'] = Mul
     globals_['Pow'] = Pow
     globals_['Eq'] = Eq
+    # 支持OPEN[1]
+    globals_['ts_delay'] = Function('ts_delay')
     return globals_
 
 
-def sources_to_exprs(globals_, *sources):
+def sources_to_exprs(globals_, *sources, convert_xor: bool):
     """将源代码转换成表达式"""
 
     globals_ = _add_default_type(globals_)
 
-    raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources)
+    raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources, convert_xor=convert_xor)
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
     register_symbols(targets_new, globals_, is_function=False)

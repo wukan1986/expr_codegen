@@ -256,10 +256,11 @@ class ExprTool:
     def _get_code(self,
                   source: str, *more_sources: str,
                   extra_codes: str, output_file: str,
+                  convert_xor: bool,
                   style='polars', template_file='template.py.j2',
                   date='date', asset='asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
-        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources)
+        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
 
         # 生成代码
         code, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,
@@ -286,6 +287,7 @@ def codegen_exec(df,
                  *codes,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
                  output_file: Optional[str] = None,
+                 convert_xor: bool = True,
                  style: str = 'polars', template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset'
                  ):
@@ -301,6 +303,8 @@ def codegen_exec(df,
         额外代码。不做处理，会被直接复制到目标代码中
     output_file: str
         保存生成的目标代码到文件中
+    convert_xor: bool
+        ^ 转成异或还是乘方
     style: str
         代码风格。可选值 ('polars', 'pandas')
     template_file: str
@@ -325,6 +329,7 @@ def codegen_exec(df,
     code = _TOOL_._get_code(
         *more_sources, extra_codes=extra_codes,
         output_file=output_file,
+        convert_xor=convert_xor,
         style=style, template_file=template_file,
         date=date, asset=asset,
     )
