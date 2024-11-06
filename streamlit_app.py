@@ -45,6 +45,8 @@ with st.sidebar:
     else:
         from expr_codegen.pandas.code import codegen
 
+    convert_xor = st.checkbox('将`^`转换为`**`', True)
+
     st.subheader("优化")
     is_pre_opt = st.checkbox('事前`表达式`替换', True)
     is_chain_opt = st.checkbox('事后`首尾接龙`向前合并', True)
@@ -94,7 +96,7 @@ LABEL_CC_1=ts_delay(CLOSE, -1)/CLOSE-1 # 每天收盘交易
 if st.button('生成代码'):
     with st.spinner('生成中，请等待...'):
         # eval处理，转成字典
-        raw, exprs_dict = sources_to_exprs(globals().copy(), exprs_src)
+        raw, exprs_dict = sources_to_exprs(globals().copy(), exprs_src, convert_xor=convert_xor)
 
         if is_pre_opt:
             logger.info('事前 表达式 替换')
