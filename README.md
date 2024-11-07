@@ -152,7 +152,7 @@ df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代�
 2. 支持`C?T:F`三元表达式（只能在字符串中使用），Python只支持`T if C else F`, 而在本项目中会自动转成`if_else(C,T,F)`
 3. 为防止`A==B`被`sympy`替换成`False`，底层会换成`Eq(A,B)`
 4. `A^B`的含义与`convert_xor`参数有关，`convert_xor=True`底层会转换成`Pow(A,B)`，反之为`Xor(A,B)`。默认为`False`，用`**`表示乘方
-5. 支持`A&B&C`，但不支持`A==B==C`。如果C是布尔，AB是数值，可以替换成`(A==B)==C`。如果ABC是数值需手工替换成`(A==B)&(B==C)`
+5. 支持`A&B&C`，但不支持`A==B==C`。如果C是布尔，AB是数值，可手工替换成`(A==B)==C`。如果ABC是数值需手工替换成`(A==B)&(B==C)`
 6. 不支持`A<=B<=C`，需手工替换成`(A<=B)&(B<=C)`
 7. 支持`A[0]+B[1]+C[2]`，底层会转成`A+ts_delay(B,1)+ts_delay(C,2)`
 8. 支持`~A`,底层会转换成`Not(A)`

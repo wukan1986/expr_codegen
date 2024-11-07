@@ -1,7 +1,6 @@
 import ast
-import sys
 
-from expr_codegen.codes import source_replace, SympyTransformer
+from expr_codegen.codes import source_replace, SyntaxTransformer, RenameTransformer
 
 encoding = 'utf-8'
 input_file = 'factors_test1.txt'
@@ -16,7 +15,10 @@ with open(input_file, 'r', encoding=encoding) as f:
     source = '\n'.join(sources[:1000])
 
     tree = ast.parse(source_replace(source))
-    t = SympyTransformer()
+    t1 = SyntaxTransformer()
+    t1.convert_xor = True
+    t1.visit(tree)
+    t = RenameTransformer()
     t.visit(tree)
 
     print('=' * 60)
@@ -42,12 +44,14 @@ args_map = {}
 targets_map = {}
 
 # TODO 如果后面文件太大，耗时太久，需要手工放开后面一段
-sys.exit(-1)
+# sys.exit(-1)
 # ==========================
 with open(input_file, 'r', encoding=encoding) as f:
     sources = f.readlines()
 
-    t = SympyTransformer()
+    t1 = SyntaxTransformer()
+    t1.convert_xor = True
+    t = RenameTransformer()
     t.config_map(funcs_map, args_map, targets_map)
 
     outputs = []
@@ -56,6 +60,7 @@ with open(input_file, 'r', encoding=encoding) as f:
         source = '\n'.join(sources[i:i + 1000])
 
         tree = ast.parse(source_replace(source))
+        t1.visit(tree)
         t.visit(tree)
         outputs.append(ast.unparse(tree))
 

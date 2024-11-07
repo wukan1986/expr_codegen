@@ -7,8 +7,96 @@ from sympy import Add, Mul, Pow, Eq
 from expr_codegen.expr import register_symbols, dict_to_exprs
 
 
-class SympyTransformer(ast.NodeTransformer):
-    """将ast转换成Sympy要求的格式"""
+class SyntaxTransformer(ast.NodeTransformer):
+    """修改语法。注意：一定要修改语法后才能改名"""
+
+    # ^ 是异或还是乘方呢？
+    convert_xor: bool = True
+
+    def visit_Compare(self, node):
+        assert len(node.comparators) == 1, f"不支持连续等号，请手工添加括号, {ast.unparse(node)}"
+
+        self.generic_visit(node)
+        return node
+
+    def visit_IfExp(self, node):
+        # 三元表达式。需要在外部提前替换成if else
+        # OPEN>=CLOSE?1:0
+        # OPEN>CLOSE?A==B?3:DE>FG?5:6:0
+        node = ast.Call(
+            func=ast.Name(id='if_else', ctx=ast.Load()),
+            args=[node.body, node.test, node.orelse],
+            keywords=[],
+        )
+
+        self.generic_visit(node)
+        return node
+
+    def visit_BinOp(self, node):
+        # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'
+        if isinstance(node.op, (ast.Mult, ast.Add, ast.Div, ast.Sub)):
+            # (OPEN < CLOSE) * -1
+            if isinstance(node.left, ast.Compare):
+                node.left = ast.Call(
+                    func=ast.Name(id='int_', ctx=ast.Load()),
+                    args=[node.left],
+                    keywords=[],
+                )
+            # -1*(OPEN < CLOSE)
+            if isinstance(node.right, ast.Compare):
+                node.right = ast.Call(
+                    func=ast.Name(id='int_', ctx=ast.Load()),
+                    args=[node.right],
+                    keywords=[],
+                )
+            # 这种情况，已经包含
+            # (OPEN < CLOSE)*(OPEN < CLOSE)
+
+        if isinstance(node.op, ast.BitXor):
+            # ^ 运算符，转换为pow还是xor
+            if self.convert_xor:
+                node = ast.Call(
+                    func=ast.Name(id='Pow', ctx=ast.Load()),
+                    args=[node.left, node.right],
+                    keywords=[],
+                )
+            else:
+                node = ast.Call(
+                    func=ast.Name(id='Xor', ctx=ast.Load()),
+                    args=[node.left, node.right],
+                    keywords=[],
+                )
+
+        self.generic_visit(node)
+        return node
+
+    def visit_UnaryOp(self, node):
+        # ~ts_delay 报错，替换成Not(ts_delay)
+        if isinstance(node.op, ast.Invert):
+            node = ast.Call(
+                func=ast.Name(id='Not', ctx=ast.Load()),
+                args=[node.operand],
+                keywords=[],
+            )
+
+        self.generic_visit(node)
+        return node
+
+    def visit_Subscript(self, node):
+        if node.slice.value == 0:
+            node = node.value
+        else:
+            node = ast.Call(
+                func=ast.Name(id='ts_delay', ctx=ast.Load()),
+                args=[node.value, node.slice],
+                keywords=[],
+            )
+        self.generic_visit(node)
+        return node
+
+
+class RenameTransformer(ast.NodeTransformer):
+    """改名处理。改名前需要语法规范"""
 
     # 旧记录
     funcs_old = set()
@@ -25,8 +113,6 @@ class SympyTransformer(ast.NodeTransformer):
     # !!!一定要在drop_symbols时排除
     args_map = {'True': "_TRUE_", 'False': "_FALSE_", 'None': "_NONE_"}
     targets_map = {}  # 只对非下划线开头的生效
-    # ^ 是异或还是乘方呢？
-    convert_xor: bool = True
 
     def config_map(self, funcs_map, args_map, targets_map):
         self.funcs_map = funcs_map
@@ -115,6 +201,7 @@ class SympyTransformer(ast.NodeTransformer):
             self.args_old.add(node.left.id)
             node.left.id = self.args_map.get(node.left.id, node.left.id)
             self.args_new.add(node.left.id)
+
         for i, com in enumerate(node.comparators):
             if isinstance(com, ast.Name):
                 self.args_old.add(com.id)
@@ -128,44 +215,23 @@ class SympyTransformer(ast.NodeTransformer):
                     node.comparators[i] = ast.Name(new_com_value, ctx=ast.Load())
                     self.args_new.add(new_com_value)
 
-        assert len(node.comparators) == 1, f"不支持连续等号，请手工添加括号, {ast.unparse(node)}"
-
         self.generic_visit(node)
         return node
 
     def visit_IfExp(self, node):
-        # 三元表达式。需要在外部提前替换成if else
-        # OPEN>=CLOSE?1:0
-        # OPEN>CLOSE?A==B?3:DE>FG?5:6:0
-        node = ast.Call(
-            func=ast.Name(id='if_else', ctx=ast.Load()),
-            args=[node.body, node.test, node.orelse],
-            keywords=[],
-        )
+        if isinstance(node.body, ast.Name):
+            self.args_old.add(node.body.id)
+            node.body.id = self.args_map.get(node.body.id, node.body.id)
+            self.args_new.add(node.body.id)
+        if isinstance(node.orelse, ast.Name):
+            self.args_old.add(node.orelse.id)
+            node.orelse.id = self.args_map.get(node.orelse.id, node.orelse.id)
+            self.args_new.add(node.orelse.id)
 
         self.generic_visit(node)
         return node
 
     def visit_BinOp(self, node):
-        # TypeError: unsupported operand type(s) for *: 'StrictLessThan' and 'int'
-        if isinstance(node.op, (ast.Mult, ast.Add, ast.Div, ast.Sub)):
-            # (OPEN < CLOSE) * -1
-            if isinstance(node.left, ast.Compare):
-                node.left = ast.Call(
-                    func=ast.Name(id='int_', ctx=ast.Load()),
-                    args=[node.left],
-                    keywords=[],
-                )
-            # -1*(OPEN < CLOSE)
-            if isinstance(node.right, ast.Compare):
-                node.right = ast.Call(
-                    func=ast.Name(id='int_', ctx=ast.Load()),
-                    args=[node.right],
-                    keywords=[],
-                )
-            # 这种情况，已经包含
-            # (OPEN < CLOSE)*(OPEN < CLOSE)
-
         if isinstance(node.left, ast.Name):
             self.args_old.add(node.left.id)
             node.left.id = self.args_map.get(node.left.id, node.left.id)
@@ -189,21 +255,6 @@ class SympyTransformer(ast.NodeTransformer):
                 node.right = ast.Name(new_node_value, ctx=ast.Load())
                 self.args_new.add(new_node_value)
 
-        if isinstance(node.op, ast.BitXor):
-            # ^ 运算符，转换为pow还是xor
-            if self.convert_xor:
-                node = ast.Call(
-                    func=ast.Name(id='Pow', ctx=ast.Load()),
-                    args=[node.left, node.right],
-                    keywords=[],
-                )
-            else:
-                node = ast.Call(
-                    func=ast.Name(id='Xor', ctx=ast.Load()),
-                    args=[node.left, node.right],
-                    keywords=[],
-                )
-
         self.generic_visit(node)
         return node
 
@@ -221,26 +272,14 @@ class SympyTransformer(ast.NodeTransformer):
                 node.operand = ast.Name(new_operand_value, ctx=ast.Load())
                 self.args_new.add(new_operand_value)
 
-        # ~ts_delay 报错，替换成Not(ts_delay)
-        if isinstance(node.op, ast.Invert):
-            node = ast.Call(
-                func=ast.Name(id='Not', ctx=ast.Load()),
-                args=[node.operand],
-                keywords=[],
-            )
-
         self.generic_visit(node)
         return node
 
     def visit_Subscript(self, node):
-        if node.slice.value == 0:
-            node = node.value
-        else:
-            node = ast.Call(
-                func=ast.Name(id='ts_delay', ctx=ast.Load()),
-                args=[node.value, node.slice],
-                keywords=[],
-            )
+        self.args_old.add(node.value.id)
+        node.value.id = self.args_map.get(node.value.id, node.value.id)
+        self.args_new.add(node.value.id)
+
         self.generic_visit(node)
         return node
 
@@ -276,8 +315,10 @@ def source_replace(source):
 def _source_to_asts(source, convert_xor: bool):
     """源代码"""
     tree = ast.parse(source_replace(source))
-    t = SympyTransformer()
-    t.convert_xor = convert_xor
+    t1 = SyntaxTransformer()
+    t1.convert_xor = convert_xor
+    t1.visit(tree)
+    t = RenameTransformer()
     t.visit(tree)
 
     raw = []
