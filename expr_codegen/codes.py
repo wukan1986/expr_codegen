@@ -20,12 +20,16 @@ class SyntaxTransformer(ast.NodeTransformer):
         return node
 
     def visit_IfExp(self, node):
-        # 三元表达式。需要在外部提前替换成if else
-        # OPEN>=CLOSE?1:0
-        # OPEN>CLOSE?A==B?3:DE>FG?5:6:0
+        # 三元表达式。需要在外部提前替换成or True if else
+        # 只要body区域，出现了or True，就认为是特殊处理过的
+        if isinstance(node.body, ast.BoolOp) and isinstance(node.body.op, ast.Or):
+            if isinstance(node.body.values[-1], ast.Constant):
+                if node.body.values[-1].value == True:
+                    node.test, node.body = node.body.values[0], node.test
+
         node = ast.Call(
             func=ast.Name(id='if_else', ctx=ast.Load()),
-            args=[node.body, node.test, node.orelse],
+            args=[node.test, node.body, node.orelse],
             keywords=[],
         )
 
@@ -299,13 +303,13 @@ def sources_to_asts(*sources, convert_xor: bool):
     return '\n'.join(raw), assigns, funcs_new, args_new, targets_new
 
 
-def source_replace(source):
+def source_replace(source: str) -> str:
     # 三元表达式转换成 错误版if( )else，一定得在Transformer中修正
     num = 1
     while num > 0:
-        # A == B?D == E?1: 2:0 + 0
-        # 其实会导致?与:错配，但无所谓，只要多执行几次即可
-        source, num = re.subn(r'\?(.+?):(.+?)', r' if( \1 )else \2', source, flags=re.S)
+        # 利用or 的优先级最低，构造特殊的if else，只要出现，就认为位置要替换
+        # C?T:F --> C or True if( T )else F
+        source, num = re.subn(r'\?(.+?):(.+?)', r' or True if( \1 )else \2', source, flags=re.S)
         # break
     # 或、与
     source = source.replace('||', '|').replace('&&', '&')

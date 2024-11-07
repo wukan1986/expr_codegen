@@ -1,6 +1,6 @@
 import ast
 
-from expr_codegen.codes import SympyTransformer, source_replace
+from expr_codegen.codes import source_replace, RenameTransformer
 
 source = """
 OPEN>=CLOSE?1:0
@@ -36,9 +36,8 @@ _A = True+None
 # D = _A
 
 """
-
 tree = ast.parse(source_replace(source))
-t = SympyTransformer()
+t = RenameTransformer()
 
 funcs_map = {'abs': 'abs_',
              'max': 'max_',
