@@ -287,7 +287,7 @@ def codegen_exec(df,
                  *codes,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
                  output_file: Optional[str] = None,
-                 convert_xor: bool = True,
+                 convert_xor: bool = False,
                  style: str = 'polars', template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset'
                  ):
