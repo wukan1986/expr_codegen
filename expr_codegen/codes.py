@@ -2,7 +2,7 @@ import ast
 import re
 from ast import expr
 
-from sympy import Add, Mul, Pow, Eq, Function
+from sympy import Add, Mul, Pow, Eq
 
 from expr_codegen.expr import register_symbols, dict_to_exprs
 
@@ -221,6 +221,14 @@ class SympyTransformer(ast.NodeTransformer):
                 node.operand = ast.Name(new_operand_value, ctx=ast.Load())
                 self.args_new.add(new_operand_value)
 
+        # ~ts_delay 报错，替换成Not(ts_delay)
+        if isinstance(node.op, ast.Invert):
+            node = ast.Call(
+                func=ast.Name(id='Not', ctx=ast.Load()),
+                args=[node.operand],
+                keywords=[],
+            )
+
         self.generic_visit(node)
         return node
 
@@ -308,8 +316,6 @@ def _add_default_type(globals_):
     globals_['Mul'] = Mul
     globals_['Pow'] = Pow
     globals_['Eq'] = Eq
-    # 支持OPEN[1]
-    globals_['ts_delay'] = Function('ts_delay')
     return globals_
 
 
@@ -319,6 +325,9 @@ def sources_to_exprs(globals_, *sources, convert_xor: bool):
     globals_ = _add_default_type(globals_)
 
     raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources, convert_xor=convert_xor)
+    # 支持OPEN[1]转ts_delay(OPEN,1)
+    funcs_new.add('ts_delay')
+
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
     register_symbols(targets_new, globals_, is_function=False)
