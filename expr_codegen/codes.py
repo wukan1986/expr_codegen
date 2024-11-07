@@ -199,7 +199,7 @@ class SympyTransformer(ast.NodeTransformer):
                 )
             else:
                 node = ast.Call(
-                    func=ast.Name(id='xor', ctx=ast.Load()),
+                    func=ast.Name(id='Xor', ctx=ast.Load()),
                     args=[node.left, node.right],
                     keywords=[],
                 )
