@@ -18,7 +18,7 @@ with open(input_file, 'r', encoding=encoding) as f:
     t1 = SyntaxTransformer()
     t1.convert_xor = True
     t1.visit(tree)
-    t = RenameTransformer()
+    t = RenameTransformer({}, {})
     t.visit(tree)
 
     print('=' * 60)
@@ -51,8 +51,7 @@ with open(input_file, 'r', encoding=encoding) as f:
 
     t1 = SyntaxTransformer()
     t1.convert_xor = True
-    t = RenameTransformer()
-    t.config_map(funcs_map, args_map, targets_map)
+    t = RenameTransformer(funcs_map, targets_map, args_map)
 
     outputs = []
     for i in range(0, len(sources), 1000):

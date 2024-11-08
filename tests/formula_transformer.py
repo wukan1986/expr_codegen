@@ -36,9 +36,6 @@ _A = True+None
 # D = _A
 
 """
-tree = ast.parse(source_replace(source))
-t = RenameTransformer()
-
 funcs_map = {'abs': 'abs_',
              'max': 'max_',
              'min': 'min_',
@@ -48,7 +45,8 @@ funcs_map = {'abs': 'abs_',
 args_map = {'True': "TRUE", 'False': "FALSE", 'None': "NONE"}
 targets_map = {'_A': '_12'}
 
-t.config_map(funcs_map, args_map, targets_map)
+tree = ast.parse(source_replace(source))
+t = RenameTransformer(funcs_map, targets_map, args_map)
 
 t.visit(tree)
 print('=' * 60)

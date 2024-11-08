@@ -24,7 +24,7 @@ class SyntaxTransformer(ast.NodeTransformer):
         # 只要body区域，出现了or True，就认为是特殊处理过的
         if isinstance(node.body, ast.BoolOp) and isinstance(node.body.op, ast.Or):
             if isinstance(node.body.values[-1], ast.Constant):
-                if node.body.values[-1].value == True:
+                if node.body.values[-1].value:
                     node.test, node.body = node.body.values[0], node.test
 
         node = ast.Call(
@@ -102,25 +102,22 @@ class SyntaxTransformer(ast.NodeTransformer):
 class RenameTransformer(ast.NodeTransformer):
     """改名处理。改名前需要语法规范"""
 
-    # 旧记录
-    funcs_old = set()
-    args_old = set()
-    targets_old = set()
-    # 旧记录
-    funcs_new = set()
-    args_new = set()
-    targets_new = set()
+    def __init__(self, funcs_map, targets_map, args_map=None):
 
-    # 映射
-    funcs_map = {}
-    # 由于None等常量无法在sympy中正确处理，只能改成Symbol变量
-    # !!!一定要在drop_symbols时排除
-    args_map = {'True': "_TRUE_", 'False': "_FALSE_", 'None': "_NONE_"}
-    targets_map = {}  # 只对非下划线开头的生效
-
-    def config_map(self, funcs_map, args_map, targets_map):
+        if args_map is None:
+            args_map = {'True': "_TRUE_", 'False': "_FALSE_", 'None': "_NONE_"}
+        self.funcs_old = set()
+        self.args_old = set()
+        self.targets_old = set()
+        self.funcs_new = set()
+        self.args_new = set()
+        self.targets_new = set()
+        # 映射
         self.funcs_map = funcs_map
+        # 由于None等常量无法在sympy中正确处理，只能改成Symbol变量
+        # !!!一定要在drop_symbols时排除
         self.args_map = args_map
+        # 只对非下划线开头的生效
         self.targets_map = targets_map
 
     def visit_Call(self, node):
@@ -288,21 +285,6 @@ class RenameTransformer(ast.NodeTransformer):
         return node
 
 
-def sources_to_asts(*sources, convert_xor: bool):
-    """输入多份源代码"""
-    raw = []
-    assigns = {}
-    funcs_new, args_new, targets_new = set(), set(), set()
-    for arg in sources:
-        r, a, funcs_, args_, targets_ = _source_to_asts(arg, convert_xor)
-        raw.append(r)
-        assigns.update(a)
-        funcs_new.update(funcs_)
-        args_new.update(args_)
-        targets_new.update(targets_)
-    return '\n'.join(raw), assigns, funcs_new, args_new, targets_new
-
-
 def source_replace(source: str) -> str:
     # 三元表达式转换成 错误版if( )else，一定得在Transformer中修正
     num = 1
@@ -316,24 +298,44 @@ def source_replace(source: str) -> str:
     return source
 
 
-def _source_to_asts(source, convert_xor: bool):
-    """源代码"""
-    tree = ast.parse(source_replace(source))
+def assigns_to_dict(assigns):
+    """赋值表达式转成字典"""
+    return {ast.unparse(a.targets): ast.unparse(a.value) for a in assigns}
+
+
+def raw_to_code(raw):
+    """导入语句转字符列表"""
+    return '\n'.join([ast.unparse(a) for a in raw])
+
+
+def sources_to_asts(*sources, convert_xor: bool):
+    """输入多份源代码"""
+
+    def _source_to_asts(source):
+        """源代码"""
+        tree = ast.parse(source_replace(source))
+
+        if isinstance(tree.body[0], ast.FunctionDef):
+            body = tree.body[0].body
+        else:
+            body = tree.body
+
+        return body
+
+    tree = ast.parse("")
+    for arg in sources:
+        tree.body.extend(_source_to_asts(arg))
+
     t1 = SyntaxTransformer()
     t1.convert_xor = convert_xor
     t1.visit(tree)
-    t = RenameTransformer()
+    t = RenameTransformer({}, {})
     t.visit(tree)
 
     raw = []
     assigns = []
 
-    if isinstance(tree.body[0], ast.FunctionDef):
-        body = tree.body[0].body
-    else:
-        body = tree.body
-
-    for node in body:
+    for node in tree.body:
         # 特殊处理的节点
         if isinstance(node, ast.Assign):
             assigns.append(node)
@@ -343,16 +345,6 @@ def _source_to_asts(source, convert_xor: bool):
             raw.append(node)
             continue
     return raw_to_code(raw), assigns_to_dict(assigns), t.funcs_new, t.args_new, t.targets_new
-
-
-def assigns_to_dict(assigns):
-    """赋值表达式转成字典"""
-    return {ast.unparse(a.targets): ast.unparse(a.value) for a in assigns}
-
-
-def raw_to_code(raw):
-    """导入语句转字符列表"""
-    return '\n'.join([ast.unparse(a) for a in raw])
 
 
 def _add_default_type(globals_):
