@@ -248,7 +248,11 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
                     succ = G.succ[node]
                     # 下游只有一个，直接替换。
                     if len(succ) == 1:
-                        skip_expr_node(G, node, keep_nodes)
+                        for s in succ:
+                            # if_else(_A>_B,_A,_B)会出现量次，不能删
+                            if G.nodes[s]['symbols'].count(node) > 1:
+                                continue
+                            skip_expr_node(G, node, keep_nodes)
             else:
                 # 复制一次，防止修改后报错
                 for p in pred.copy():
@@ -263,7 +267,10 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
                         succ = G.succ[p]
                         # 下游只有一个，直接替换。
                         if len(succ) == 1:
-                            skip_expr_node(G, p, keep_nodes)
+                            for s in succ:
+                                if G.nodes[s]['symbols'].count(p) > 1:
+                                    continue
+                                skip_expr_node(G, p, keep_nodes)
             next_pred.extend(pred)
         # 更新下一次循环
         this_pred = list(set(next_pred))
@@ -288,7 +295,10 @@ def merge_nodes_2(G: nx.DiGraph, keep_nodes, *args):
                 if len(succ) > 1:
                     # 上游节点只有一个下游，当前就是自己了
                     continue
-                skip_expr_node(G, p, keep_nodes)
+                for s in succ:
+                    if G.nodes[s]['symbols'].count(p) > 1:
+                        continue
+                    skip_expr_node(G, p, keep_nodes)
             # 只做根节点，所以没有下一次了
             # next_pred.extend(pred)
         # 更新下一次循环

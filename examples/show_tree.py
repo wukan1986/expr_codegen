@@ -13,32 +13,28 @@ from expr_codegen.tool import ExprTool
 
 RETURNS, VWAP, = symbols('RETURNS, VWAP, ', cls=Symbol)
 
-# exprs_src = {
-#     "alpha_001": (
-#             cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5),
-#     "alpha_002": (-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6)),
-#     "alpha_003": (-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10)),
-#     "alpha_004": (-1 * ts_rank(cs_rank(LOW), 9)),
-#     "alpha_005": (cs_rank((OPEN - (ts_sum(VWAP, 10) / 10))) * (-1 * abs_(cs_rank((CLOSE - VWAP))))),
-#     "alpha_006": -1 * ts_corr(OPEN, VOLUME, 10),
-# }
 
-# 表达式设置
 exprs_src = """
-_avg = ts_mean(corr, 20)
-_std = ts_std_dev(corr, 20)
-_beta = ts_LINEARREG_SLOPE(corr, 20)
-
-# 3. 下划线开头的变量有环赋值。在调试时可快速用注释进行切换
-_avg = cs_mad_zscore_resid(_avg, LOG_MC_ZS, ONE)
-_std = cs_mad_zscore_resid(_std, LOG_MC_ZS, ONE)
-_beta = cs_mad_zscore_resid(_beta, LOG_MC_ZS, ONE)
-
-_corr = cs_zscore(_avg) + cs_zscore(_std)
-_CPV = cs_zscore(_corr) + cs_zscore(_beta)
-# CPV = _CPV
+alpha_001=(
+            cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5)
+alpha_002=(-1 * ts_corr(cs_rank(ts_delta(log(VOLUME), 2)), cs_rank(((CLOSE - OPEN) / OPEN)), 6))
+alpha_003=(-1 * ts_corr(cs_rank(OPEN), cs_rank(VOLUME), 10))
+alpha_004=(-1 * ts_rank(cs_rank(LOW), 9))
+alpha_005=(cs_rank((OPEN - (ts_sum(VWAP, 10) / 10))) * (-1 * abs_(cs_rank((CLOSE - VWAP)))))
+alpha_006= -1 * ts_corr(OPEN, VOLUME, 10)
 """
-raw, exprs_src = sources_to_exprs(globals().copy(), exprs_src)
+# # 表达式设置
+# exprs_src = """
+# _A = OPEN * CLOSE
+# _B = CLOSE * VOLUME
+# C = _A > _B or True if _A else _B
+# """
+exprs_src = """
+_A = OPEN * CLOSE
+_B = CLOSE * VOLUME
+C = (_A > _B) + (_A == _B)
+"""
+raw, exprs_src = sources_to_exprs(globals().copy(), exprs_src, convert_xor=False)
 
 tool = ExprTool()
 # 子表达式在前，原表式在最后
