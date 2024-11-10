@@ -87,7 +87,9 @@ class SyntaxTransformer(ast.NodeTransformer):
         return node
 
     def visit_Subscript(self, node):
-        if node.slice.value == 0:
+        if isinstance(node.slice, ast.Constant) and node.slice.value == 0:
+            node = node.value
+        elif isinstance(node.slice, ast.UnaryOp) and isinstance(node.slice.operand, ast.Constant) and node.slice.operand.value == 0:
             node = node.value
         else:
             node = ast.Call(
