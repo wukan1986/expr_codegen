@@ -171,7 +171,7 @@ class ExprTool:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs)
         return dag_end(G)
 
-    def all(self, exprs_src, style: str = 'polars', template_file: str = 'template.py.j2',
+    def all(self, exprs_src, style: str = 'polars_over', template_file: str = 'template.py.j2',
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
@@ -183,7 +183,7 @@ class ExprTool:
         exprs_src: dict
             表达式字典
         style: str
-            代码风格。可选值 ('polars', 'pandas')
+            代码风格。可选值 ('polars_group', 'polars_over', 'pandas')
         template_file: str
             根据需求可定制模板
         replace:bool
@@ -206,7 +206,7 @@ class ExprTool:
         代码字符串
 
         """
-        assert style in ('polars', 'pandas')
+        assert style in ('polars_group', 'polars_over', 'pandas')
 
         if replace:
             exprs_src = replace_exprs(exprs_src)
@@ -222,8 +222,10 @@ class ExprTool:
         if regroup:
             exprs_ldl.optimize()
 
-        if style == 'polars':
-            from expr_codegen.polars.code import codegen
+        if style == 'polars_group':
+            from expr_codegen.polars_group.code import codegen
+        elif style == 'polars_over':
+            from expr_codegen.polars_over.code import codegen
         else:
             from expr_codegen.pandas.code import codegen
 
@@ -257,7 +259,7 @@ class ExprTool:
                   source: str, *more_sources: str,
                   extra_codes: str, output_file: str,
                   convert_xor: bool,
-                  style='polars', template_file='template.py.j2',
+                  style='polars_over', template_file='template.py.j2',
                   date='date', asset='asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
@@ -288,7 +290,7 @@ def codegen_exec(df,
                  extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
                  output_file: Optional[str] = None,
                  convert_xor: bool = False,
-                 style: str = 'polars', template_file: str = 'template.py.j2',
+                 style: str = 'polars_over', template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset'
                  ):
     """快速转换源代码并执行
@@ -306,7 +308,7 @@ def codegen_exec(df,
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
-        代码风格。可选值 ('polars', 'pandas')
+        代码风格。可选值 ('polars_group', 'polars_over', 'pandas')
     template_file: str
         代码模板
     date: str

@@ -39,9 +39,11 @@ with st.sidebar:
     asset_name = st.text_input('资产字段名', 'asset')
 
     # 生成代码
-    style = st.radio('代码风格', ('polars', 'pandas/cudf.pandas'))
-    if style == 'polars':
-        from expr_codegen.polars.code import codegen
+    style = st.radio('代码风格', ('polars_over', 'polars_group', 'pandas/cudf.pandas'))
+    if style == 'polars_group':
+        from expr_codegen.polars_group.code import codegen
+    elif style == 'polars_over':
+        from expr_codegen.polars_over.code import codegen
     else:
         from expr_codegen.pandas.code import codegen
 
