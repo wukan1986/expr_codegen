@@ -116,7 +116,7 @@ def is_simple_expr(expr):
     return False
 
 
-def get_current_by_prefix(expr, **kwargs):
+def get_current_by_prefix(expr, date, asset, **kwargs):
     """表达式根节点信息。按名称前缀。例如
 
     OPEN取的是OPEN，得cl
@@ -130,16 +130,16 @@ def get_current_by_prefix(expr, **kwargs):
                 prefix2 = expr.name[:2]
 
                 if prefix2 == TS:
-                    return TS, 'asset'
+                    return TS, asset
                 if prefix2 == CS:
-                    return CS, 'date'
+                    return CS, date
                 if prefix2 == GP:
-                    return GP, 'date', expr.args[0].name
+                    return GP, date, expr.args[0].name
     # 不需分组
     return CL_TUP
 
 
-def get_current_by_name(expr, ts_names, cs_names, gp_names, **kwargs):
+def get_current_by_name(expr, ts_names, cs_names, gp_names, date, asset, **kwargs):
     """表达式根节点信息。按名称。
 
     Parameters
@@ -151,17 +151,21 @@ def get_current_by_name(expr, ts_names, cs_names, gp_names, **kwargs):
         横截面算子名称字符串集合
     gp_names
         分组算子名称字符串集合
+    date
+        日期字符串
+    asset
+        资产字符串
     kwargs
 
     """
     if expr.is_Function:
         if hasattr(expr, 'name'):  # Or 没有名字
             if expr.name in ts_names:
-                return TS, 'asset'
+                return TS, asset
             if expr.name in cs_names:
-                return CS, 'date'
+                return CS, date
             if expr.name in gp_names:
-                return GP, 'date', expr.args[0].name
+                return GP, date, expr.args[0].name
 
     # 不需分组
     return CL_TUP
@@ -171,7 +175,7 @@ def get_current_by_name(expr, ts_names, cs_names, gp_names, **kwargs):
 # __level__ = 0
 
 
-def get_children(func, func_kwargs, expr, output_exprs, output_symbols):
+def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, asset):
     """表达式整体信息。例如
 
     -ts_corr返回{ts}而不是 {cl}
@@ -190,6 +194,8 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols):
         输出分割后的了表达式
     output_symbols
         输出每个子表达式中的符号
+    date
+    asset
 
     Returns
     -------
@@ -199,8 +205,8 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols):
     # __level__ += 1
 
     try:
-        curr = func(expr, **func_kwargs)
-        children = [get_children(func, func_kwargs, a, output_exprs, output_symbols) for a in expr.args]
+        curr = func(expr, date, asset, **func_kwargs)
+        children = [get_children(func, func_kwargs, a, output_exprs, output_symbols, date, asset) for a in expr.args]
 
         # print(expr, curr, children, __level__)
         # if __level__ == 6:

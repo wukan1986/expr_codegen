@@ -53,7 +53,7 @@ class ExprTool:
         self.get_current_func = func
         self.get_current_func_kwargs = kwargs
 
-    def extract(self, expr):
+    def extract(self, expr, date, asset):
         """抽取分割后的子公式
 
         Parameters
@@ -73,12 +73,13 @@ class ExprTool:
         syms = []
         get_children(self.get_current_func, self.get_current_func_kwargs,
                      expr,
-                     output_exprs=exprs, output_symbols=syms)
+                     output_exprs=exprs, output_symbols=syms,
+                     date=date, asset=asset)
         # print('=' * 20, expr)
         # print(exprs)
         return exprs, syms
 
-    def merge(self, **kwargs):
+    def merge(self, date, asset, **kwargs):
         """合并多个表达式
 
         1. 先抽取分割子公式
@@ -93,7 +94,7 @@ class ExprTool:
         -------
         表达式列表
         """
-        exprs_syms = [self.extract(v) for v in kwargs.values()]
+        exprs_syms = [self.extract(v, date, asset) for v in kwargs.values()]
         exprs = []
         syms = []
         for e, s in exprs_syms:
@@ -164,11 +165,11 @@ class ExprTool:
 
         return self.exprs_dict
 
-    def dag(self, merge: bool):
+    def dag(self, merge: bool, date, asset):
         """生成DAG"""
-        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs)
+        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
-            G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs)
+            G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
     def all(self, exprs_src, style: str = 'polars_over', template_file: str = 'template.py.j2',
@@ -212,12 +213,12 @@ class ExprTool:
             exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
-        exprs_dst, syms_dst = self.merge(**exprs_src)
+        exprs_dst, syms_dst = self.merge(date, asset, **exprs_src)
 
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
         # 有向无环图流转
-        exprs_ldl, G = self.dag(True)
+        exprs_ldl, G = self.dag(True, date, asset)
 
         if regroup:
             exprs_ldl.optimize()

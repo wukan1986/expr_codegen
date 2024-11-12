@@ -107,13 +107,13 @@ if st.button('生成代码'):
         tool = ExprTool()
 
         logger.info('表达式 抽取 合并')
-        exprs_dst, syms_dst = tool.merge(**exprs_dict)
+        exprs_dst, syms_dst = tool.merge(date_name, asset_name, **exprs_dict)
 
         logger.info('提取公共表达式')
         tool.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_dict.keys())
 
         logger.info('生成有向无环图')
-        exprs_ldl, G = tool.dag(merge=True)
+        exprs_ldl, G = tool.dag(True, date_name, asset_name)
 
         if is_chain_opt:
             logger.info('分组优化')

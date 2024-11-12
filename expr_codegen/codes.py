@@ -10,8 +10,9 @@ from expr_codegen.expr import register_symbols, dict_to_exprs
 class SyntaxTransformer(ast.NodeTransformer):
     """修改语法。注意：一定要修改语法后才能改名"""
 
-    # ^ 是异或还是乘方呢？
-    convert_xor: bool = True
+    def __init__(self, convert_xor):
+        # ^ 是异或还是乘方呢？
+        self.convert_xor = convert_xor
 
     def visit_Compare(self, node):
         assert len(node.comparators) == 1, f"不支持连续等号，请手工添加括号, {ast.unparse(node)}"
@@ -328,8 +329,7 @@ def sources_to_asts(*sources, convert_xor: bool):
     for arg in sources:
         tree.body.extend(_source_to_asts(arg))
 
-    t1 = SyntaxTransformer()
-    t1.convert_xor = convert_xor
+    t1 = SyntaxTransformer(convert_xor)
     t1.visit(tree)
     t = RenameTransformer({}, {})
     t.visit(tree)

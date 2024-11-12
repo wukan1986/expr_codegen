@@ -206,14 +206,14 @@ def create_dag_exprs(exprs):
     return G
 
 
-def init_dag_exprs(G, func, func_kwargs):
+def init_dag_exprs(G, func, func_kwargs, date, asset):
     """使用表达式信息初始化DAG"""
     for i, generation in enumerate(nx.topological_generations(G)):
         # print(i, generation)
         for node in generation:
             expr = G.nodes[node]['expr']
             syms = []
-            children = get_children(func, func_kwargs, expr, [], syms)
+            children = get_children(func, func_kwargs, expr, [], syms, date, asset)
             G.nodes[node]['children'] = children
             G.nodes[node]['key'] = get_key(children)
             G.nodes[node]['symbols'] = [str(s) for s in syms]
@@ -362,16 +362,16 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
     return G
 
 
-def dag_start(exprs_dict, func, func_kwargs):
+def dag_start(exprs_dict, func, func_kwargs, date, asset):
     """初始生成DAG"""
     G = create_dag_exprs(exprs_dict)
-    G = init_dag_exprs(G, func, func_kwargs)
+    G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
     # 分层输出
     return G
 
 
-def dag_middle(G, exprs_names, func, func_kwargs):
+def dag_middle(G, exprs_names, func, func_kwargs, date, asset):
     """删除几个没有必要的节点"""
     G = remove_paths_by_zero_outdegree(G, exprs_names)
     # 以下划线开头的节点，不保留
@@ -380,7 +380,7 @@ def dag_middle(G, exprs_names, func, func_kwargs):
     G = merge_nodes_2(G, keep_nodes, *keep_nodes)
 
     # 由于表达式修改，需再次更新表达式
-    G = init_dag_exprs(G, func, func_kwargs)
+    G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
     # 分层输出
     return G

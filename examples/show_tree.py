@@ -13,7 +13,6 @@ from expr_codegen.tool import ExprTool
 
 RETURNS, VWAP, = symbols('RETURNS, VWAP, ', cls=Symbol)
 
-
 exprs_src = """
 alpha_001=(
             cs_rank(ts_arg_max(signed_power(if_else((RETURNS < 0), ts_std_dev(RETURNS, 20), CLOSE), 2.), 5)) - 0.5)
@@ -38,14 +37,14 @@ raw, exprs_src = sources_to_exprs(globals().copy(), exprs_src, convert_xor=False
 
 tool = ExprTool()
 # 子表达式在前，原表式在最后
-exprs_dst, syms_dst = tool.merge(**exprs_src)
+exprs_dst, syms_dst = tool.merge("date", "asset", **exprs_src)
 
 # 提取公共表达式
 exprs_dict = tool.cse(exprs_dst, symbols_repl=numbered_symbols('x_'), symbols_redu=exprs_src.keys())
 
 # 创建DAG
 G = create_dag_exprs(exprs_dict)
-G = init_dag_exprs(G, tool.get_current_func, tool.get_current_func_kwargs)
+G = init_dag_exprs(G, tool.get_current_func, tool.get_current_func_kwargs, "date", "asset")
 
 keep_nodes = [k for k in exprs_src.keys() if not k.startswith('_')]
 # keep_nodes = exprs_src.keys()

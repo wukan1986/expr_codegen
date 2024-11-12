@@ -15,8 +15,7 @@ with open(input_file, 'r', encoding=encoding) as f:
     source = '\n'.join(sources[:1000])
 
     tree = ast.parse(source_replace(source))
-    t1 = SyntaxTransformer()
-    t1.convert_xor = True
+    t1 = SyntaxTransformer(True)
     t1.visit(tree)
     t = RenameTransformer({}, {})
     t.visit(tree)
@@ -49,8 +48,7 @@ targets_map = {}
 with open(input_file, 'r', encoding=encoding) as f:
     sources = f.readlines()
 
-    t1 = SyntaxTransformer()
-    t1.convert_xor = True
+    t1 = SyntaxTransformer(True)
     t = RenameTransformer(funcs_map, targets_map, args_map)
 
     outputs = []
