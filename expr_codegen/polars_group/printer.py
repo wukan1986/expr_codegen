@@ -40,6 +40,11 @@ class PolarsStrPrinter(StrPrinter):
                                 c.__name__.endswith("Base")) + classes[i:]
             for cls in classes:
                 printmethodname = '_print_' + cls.__name__
+
+                # 所有以gp_开头的函数都转换成cs_开头
+                if printmethodname.startswith('_print_gp_'):
+                    printmethodname = "_print_gp_"
+
                 printmethod = getattr(self, printmethodname, None)
                 if printmethod is not None:
                     return printmethod(expr, **kwargs)
@@ -71,8 +76,8 @@ class PolarsStrPrinter(StrPrinter):
         PREC = PRECEDENCE["Mul"]
         return "~%s" % self.parenthesize(expr.args[0], PREC)
 
-    def _print_gp_rank(self, expr):
-        return "cs_rank(%s)" % self._print(expr.args[1])
-
-    def _print_gp_demean(self, expr):
-        return "cs_demean(%s)" % self._print(expr.args[1])
+    def _print_gp_(self, expr):
+        """gp_函数都转换成cs_函数，但要丢弃第一个参数"""
+        new_args = [self._print(arg) for arg in expr.args[1:]]
+        func_name = expr.func.__name__[3:]
+        return "cs_%s(%s)" % (func_name, ",".join(new_args))
