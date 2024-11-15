@@ -288,7 +288,7 @@ _TOOL_ = ExprTool()
 
 def codegen_exec(df,
                  *codes,
-                 extra_codes: str = r'CS_SW_L1 = pl.col(r"^sw_l1_\d+$")',
+                 extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
                  output_file: Optional[str] = None,
                  convert_xor: bool = False,
                  style: str = 'polars_over', template_file: str = 'template.py.j2',
