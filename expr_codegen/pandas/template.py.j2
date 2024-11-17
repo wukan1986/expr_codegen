@@ -6,8 +6,8 @@ import numpy as np  # noqa
 import pandas as pd  # noqa
 from loguru import logger  # noqa
 
+from expr_codegen.pandas.helper import GlobalVariable
 from expr_codegen.pandas.ta import *  # noqa
-
 
 {{ syms1 }}
 
@@ -19,15 +19,19 @@ _NONE_ = None
 _TRUE_ = True
 _FALSE_ = False
 
+g = GlobalVariable()
+
+def unpack(x: Tuple, idx: int = 0) -> pd.Series:
+    return x[idx]
+
 {%-for row in extra_codes %}
 {{ row-}}
 {% endfor %}
 
-
 {% for key, value in funcs.items() %}
 def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 {{ value }}
-    return df
+    return g.df
 {% endfor %}
 
 """

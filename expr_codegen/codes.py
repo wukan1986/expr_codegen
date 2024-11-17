@@ -14,6 +14,23 @@ class SyntaxTransformer(ast.NodeTransformer):
         # ^ 是异或还是乘方呢？
         self.convert_xor = convert_xor
 
+    def visit_Assign(self, node):
+        t = node.targets[0]
+        nodes = []
+        if isinstance(t, ast.Tuple):
+            for i, dim in enumerate(t.dims):
+                _v = ast.Call(
+                    func=ast.Name(id='unpack', ctx=ast.Load()),
+                    args=[node.value, ast.Constant(i)],
+                    keywords=[],
+                )
+                n = ast.Assign([dim], _v, ctx=ast.Load())
+                nodes.append(n)
+            return nodes
+
+        self.generic_visit(node)
+        return node
+
     def visit_Compare(self, node):
         assert len(node.comparators) == 1, f"不支持连续等号，请手工添加括号, {ast.unparse(node)}"
 

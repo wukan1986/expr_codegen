@@ -7,8 +7,15 @@
 
 所以有必要使用类似于polars_ta的公共库，但因目前未找到合适库，所以以下是临时版，以后要独立出去
 """
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
+
+try:
+    import talib
+except:
+    pass
 
 
 def abs_(x: pd.Series) -> pd.Series:
@@ -93,3 +100,7 @@ def ts_std_dev(x: pd.Series, d: int = 5, ddof: int = 0) -> pd.Series:
 
 def ts_sum(x: pd.Series, d: int = 5) -> pd.Series:
     return x.rolling(d).sum()
+
+
+def ts_MACD(close: pd.Series, fastperiod: int = 12, slowperiod: int = 26, signalperiod: int = 9) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    return talib.MACD(close, fastperiod, slowperiod, signalperiod)

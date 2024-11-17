@@ -30,6 +30,9 @@ _NONE_ = None
 _TRUE_ = True
 _FALSE_ = False
 
+def unpack(x: Expr, idx: int = 0) -> Expr:
+    return x.struct[idx]
+
 {%-for row in extra_codes %}
 {{ row-}}
 {% endfor %}

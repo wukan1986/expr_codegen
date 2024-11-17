@@ -67,19 +67,19 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
                     va, ex, sym = kv
-                    func_code.append(f"    # {va} = {ex}\n    df[{va}] = {p.doprint(ex)}")
+                    func_code.append(f"    # {va} = {ex}\n    g[{va}] = {p.doprint(ex)}")
                     exprs_dst.append(f"{va} = {ex}")
                     if va not in syms_dst:
                         syms_out.append(va)
 
+            if len(groupbys['sort']) == 0:
+                groupbys['sort'] = f'df = df.sort_values(by=[_ASSET_, _DATE_]).reset_index(drop=True)'
             if k[0] == TS:
-                if len(groupbys['sort']) == 0:
-                    groupbys['sort'] = f'df = df.sort_values(by=[_ASSET_, _DATE_]).reset_index(drop=True)'
                 # 时序需要排序
-                func_code = [f'    df = df.sort_values(by=[_DATE_])'] + func_code
-            elif k[0] == CS:
-                if len(groupbys['sort']) == 0:
-                    groupbys['sort'] = f'df = df.sort_values(by=[_DATE_, _ASSET_]).reset_index(drop=True)'
+                func_code = [f'    g.df = df.sort_values(by=[_DATE_])'] + func_code
+            else:
+                # 时序需要排序
+                func_code = [f'    g.df = df'] + func_code
 
             # polars风格代码列表
             funcs[func_name] = '\n'.join(func_code)

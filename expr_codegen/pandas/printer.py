@@ -54,7 +54,7 @@ class PandasStrPrinter(StrPrinter):
             self._print_level -= 1
 
     def _print_Symbol(self, expr):
-        return f"df[{expr.name}]"
+        return f"g[{expr.name}]"
 
     def _print_Equality(self, expr):
         PREC = precedence(expr)
