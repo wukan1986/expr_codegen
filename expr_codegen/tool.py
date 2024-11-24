@@ -1,7 +1,7 @@
 import inspect
 from functools import lru_cache
 from io import TextIOWrapper
-from typing import Sequence, Dict, Optional
+from typing import Sequence, Dict, Union, TextIO, TypeVar, Optional, Literal
 
 from black import Mode, format_str
 from sympy import simplify, cse, symbols, numbered_symbols
@@ -11,6 +11,18 @@ from sympy.logic import boolalg
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle
+
+try:
+    from pandas import DataFrame as _pd_DataFrame
+except ImportError:
+    _pd_DataFrame = None
+
+try:
+    from polars import DataFrame as _pl_DataFrame
+except ImportError:
+    _pl_DataFrame = None
+
+DataFrame = TypeVar('DataFrame', _pl_DataFrame, _pd_DataFrame)
 
 # ===============================
 # TypeError: expecting bool or Boolean, not `ts_delay(X, 3)`.
@@ -172,7 +184,7 @@ class ExprTool:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: str = 'polars_over', template_file: str = 'template.py.j2',
+    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
@@ -207,7 +219,7 @@ class ExprTool:
         代码字符串
 
         """
-        assert style in ('polars_group', 'polars_over', 'pandas')
+        assert style in ('pandas', 'polars_group', 'polars_over')
 
         if replace:
             exprs_src = replace_exprs(exprs_src)
@@ -260,8 +272,8 @@ class ExprTool:
                   source: str, *more_sources: str,
                   extra_codes: str, output_file: str,
                   convert_xor: bool,
-                  style='polars_over', template_file='template.py.j2',
-                  date='date', asset='asset') -> str:
+                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
+                  date: str = 'date', asset: str = 'asset') -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
 
@@ -286,19 +298,19 @@ class ExprTool:
 _TOOL_ = ExprTool()
 
 
-def codegen_exec(df,
+def codegen_exec(df: Optional[DataFrame],
                  *codes,
                  extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
-                 output_file: Optional[str] = None,
+                 output_file: Union[str, TextIO, None] = None,
                  convert_xor: bool = False,
-                 style: str = 'polars_over', template_file: str = 'template.py.j2',
+                 style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset'
-                 ):
+                 ) -> Optional[DataFrame]:
     """快速转换源代码并执行
 
     Parameters
     ----------
-    df: pl.DataFrame
+    df: pl.DataFrame or pd.DataFrame
         输入DataFrame
     codes:
         函数体。此部分中的表达式会被翻译成目标代码
@@ -309,7 +321,7 @@ def codegen_exec(df,
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
-        代码风格。可选值 ('polars_group', 'polars_over', 'pandas')
+        代码风格。可选值 'pandas', 'polars_group', 'polars_over'
     template_file: str
         代码模板
     date: str
@@ -338,6 +350,6 @@ def codegen_exec(df,
     )
 
     if df is None:
-        return df
+        return None
     else:
         return _TOOL_.exec(code, df)
