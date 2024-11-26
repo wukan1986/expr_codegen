@@ -2,7 +2,7 @@ import ast
 import re
 from ast import expr
 
-from sympy import Add, Mul, Pow, Eq
+from sympy import Add, Mul, Pow, Eq, Not, Xor
 
 from expr_codegen.expr import register_symbols, dict_to_exprs
 
@@ -372,6 +372,8 @@ def _add_default_type(globals_):
     globals_['Mul'] = Mul
     globals_['Pow'] = Pow
     globals_['Eq'] = Eq
+    globals_['Not'] = Not
+    globals_['Xor'] = Xor
     return globals_
 
 

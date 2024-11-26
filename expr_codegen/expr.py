@@ -1,6 +1,6 @@
 from functools import reduce
 
-from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic, Symbol, sympify
+from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic, Symbol, sympify, FunctionClass
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
@@ -23,6 +23,9 @@ def is_symbol(x, globals_):
     if type(s) is type:
         # Eq
         return issubclass(s, Basic)
+    if isinstance(s, FunctionClass):
+        # Not
+        return True
     return False
 
 

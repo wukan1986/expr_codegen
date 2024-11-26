@@ -100,7 +100,7 @@ if __name__ == '__main__':
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2)
+    df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)
     t2 = time.perf_counter()
     print(t2 - t1)
     logger.info('计算结束')

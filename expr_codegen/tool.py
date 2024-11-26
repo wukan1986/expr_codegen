@@ -127,11 +127,12 @@ class ExprTool:
 
         exprs_dict = {}
 
-        # 不做改动，直接生成
+        # cse前简化一次，cse后不再简化
+        # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
         for variable, expr in repl:
-            exprs_dict[variable] = simplify2(expr)
+            exprs_dict[variable] = expr
         for variable, expr in redu:
-            exprs_dict[variable] = simplify2(expr)
+            exprs_dict[variable] = expr
 
         return exprs_dict
 
