@@ -325,6 +325,8 @@ def codegen_exec(df: Optional[DataFrame],
         ^ 转成异或还是乘方
     style: str
         代码风格。可选值 'pandas', 'polars_group', 'polars_over'
+        - polars_group: 不支持Lazy
+        - pandas: 不支持struct
     template_file: str
         代码模板
     date: str
