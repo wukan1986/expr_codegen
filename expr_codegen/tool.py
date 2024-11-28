@@ -19,10 +19,12 @@ except ImportError:
 
 try:
     from polars import DataFrame as _pl_DataFrame
+    from polars import LazyFrame as _pl_LazyFrame
 except ImportError:
     _pl_DataFrame = None
+    _pl_LazyFrame = None
 
-DataFrame = TypeVar('DataFrame', _pl_DataFrame, _pd_DataFrame)
+DataFrame = TypeVar('DataFrame', _pl_LazyFrame, _pl_DataFrame, _pd_DataFrame)
 
 # ===============================
 # TypeError: expecting bool or Boolean, not `ts_delay(X, 3)`.

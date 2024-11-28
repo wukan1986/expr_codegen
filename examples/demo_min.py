@@ -33,7 +33,8 @@ df = pl.DataFrame(
         "OPEN": np.random.rand(DATE_COUNT * ASSET_COUNT),
         "FILTER": np.tri(DATE_COUNT, ASSET_COUNT, k=-2).reshape(-1),
     }
-)
+).lazy()
+
 df = df.filter(pl.col('FILTER') == 1)
 
 # 交易日，期货夜盘属于下一个交易日，后移4小时夜盘日期就一样了
@@ -66,5 +67,5 @@ df = codegen_exec(df, _code_block_1, output_file=sys.stdout,  # 打印代码
 # 演示中间某天的数据
 df = df.filter(pl.col('asset') == 'A0000', pl.col('trading_day') == pl.datetime(2020, 1, 6))
 
-print(df)
+print(df.collect())
 # df.write_csv('output.csv')

@@ -68,7 +68,7 @@ def main(df: pl.DataFrame) -> pl.DataFrame:
 
     # shrink
     df = df.select(cs.all().shrink_dtype())
-    df = df.shrink_to_fit()
+    # df = df.shrink_to_fit()
 
     # logger.info('done')
 

@@ -38,3 +38,6 @@ df = None  # 替换成真实的polars数据
 df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)  # 打印代码
 df = codegen_exec(df, _code_block_1, _code_block_2, output_file="output.py")  # 保存到文件
 df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代码
+
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect()  # Lazy CPU
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")  # Lazy GPU
