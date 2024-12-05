@@ -328,6 +328,7 @@ def codegen_exec(df: Optional[DataFrame],
         - 如果是True，会自动从output_file中读取代码
         - 如果是字符串，会自动从run_file中读取代码
         - 如果是模块名，会自动从模块中读取代码(可调试)
+            - 注意：可能调用到其他目录下的同名模块，所以保存的文件名要有辨识度
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
