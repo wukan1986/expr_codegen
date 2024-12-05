@@ -11,7 +11,7 @@ sys.path.append(pwd)
 print("pwd:", os.getcwd())
 # ====================
 import polars as pl
-from expr_codegen.tool import codegen_exec
+from expr_codegen import codegen_exec
 from loguru import logger
 from polars_ta.prefix.wq import *
 
@@ -100,11 +100,11 @@ if __name__ == '__main__':
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)
+    df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, output_file=sys.stdout)
     t2 = time.perf_counter()
     print(t2 - t1)
     logger.info('计算结束')
     df = df.filter(
         ~pl.col('is_st'),
     )
-    print(df)
+    print(df.collect())
