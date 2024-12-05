@@ -258,22 +258,10 @@ class ExprTool:
 
         return codes, G
 
-    def exec(self, codes: str, df_input):
-        """执行代码
-
-        Notes
-        -----
-        注意生成的代码已经约定输入用df_input，输出用df_output
-
-        """
-        globals_ = {'df_input': df_input}
-        exec(codes, globals_)
-        return globals_['df_output']
-
     @lru_cache(maxsize=64)
     def _get_code(self,
                   source: str, *more_sources: str,
-                  extra_codes: str, output_file: str,
+                  extra_codes: str,
                   convert_xor: bool,
                   style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
                   date: str = 'date', asset: str = 'asset') -> str:
@@ -289,13 +277,26 @@ class ExprTool:
                                           # 传入多个列的方法
                                           extra_codes,
                                           ))
-        if isinstance(output_file, TextIOWrapper):
-            output_file.write(code)
-        elif output_file is not None:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(code)
 
         return code
+
+
+def _exec_code(code: str, df_input):
+    globals_ = {'df_input': df_input}
+    exec(code, globals_)
+    return globals_['df_output']
+
+
+def _exec_file(file: str, df_input):
+    with open(file, 'r', encoding='utf-8') as f:
+        code = f.read()
+        return _exec_code(code, df_input)
+
+
+def _exec_module(module: str, df_input):
+    """"可下断点调试"""
+    m = __import__(module, fromlist=['*'])
+    return m.main(df_input)
 
 
 _TOOL_ = ExprTool()
@@ -305,9 +306,10 @@ def codegen_exec(df: Optional[DataFrame],
                  *codes,
                  extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
                  output_file: Union[str, TextIO, None] = None,
+                 run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
-                 date: str = 'date', asset: str = 'asset'
+                 date: str = 'date', asset: str = 'asset',
                  ) -> Optional[DataFrame]:
     """快速转换源代码并执行
 
@@ -321,6 +323,11 @@ def codegen_exec(df: Optional[DataFrame],
         额外代码。不做处理，会被直接复制到目标代码中
     output_file: str
         保存生成的目标代码到文件中
+    run_file: bool or str
+        是否不生成脚本，直接运行代码。
+        - 如果是True，会自动从output_file中读取代码
+        - 如果是字符串，会自动从run_file中读取代码
+        - 如果是模块名，会自动从模块中读取代码(可调试)
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
@@ -336,9 +343,20 @@ def codegen_exec(df: Optional[DataFrame],
 
     Returns
     -------
-    pl.DataFrame
+    DataFrame
 
     """
+    if df is not None:
+        if run_file is True:
+            assert output_file is not None, 'output_file is required'
+            return _exec_file(output_file, df)
+        if run_file is not False:
+            run_file = str(run_file)
+            if run_file.endswith('.py'):
+                return _exec_file(run_file, df)
+            else:
+                return _exec_module(run_file, df)  # 可断点调试
+
     # 此代码来自于sympy.var
     frame = inspect.currentframe().f_back
     _TOOL_.globals_ = frame.f_globals.copy()
@@ -348,13 +366,20 @@ def codegen_exec(df: Optional[DataFrame],
 
     code = _TOOL_._get_code(
         *more_sources, extra_codes=extra_codes,
-        output_file=output_file,
         convert_xor=convert_xor,
         style=style, template_file=template_file,
         date=date, asset=asset,
     )
 
+    if isinstance(output_file, TextIOWrapper):
+        # 输出到控制台
+        output_file.write(code)
+    elif output_file is not None:
+        # 保存到文件
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(code)
+
     if df is None:
         return None
     else:
-        return _TOOL_.exec(code, df)
+        return _exec_code(code, df)
