@@ -1,9 +1,11 @@
 import inspect
+import pathlib
 from functools import lru_cache
 from io import TextIOWrapper
 from typing import Sequence, Dict, Union, TextIO, TypeVar, Optional, Literal
 
 from black import Mode, format_str
+from loguru import logger
 from sympy import simplify, cse, symbols, numbered_symbols
 from sympy.core.expr import Expr
 from sympy.logic import boolalg
@@ -262,6 +264,7 @@ class ExprTool:
     def _get_code(self,
                   source: str, *more_sources: str,
                   extra_codes: str,
+                  output_file: str,
                   convert_xor: bool,
                   style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
                   date: str = 'date', asset: str = 'asset') -> str:
@@ -278,6 +281,16 @@ class ExprTool:
                                           extra_codes,
                                           ))
 
+        # 移回到cache，防止多次调用多次保存
+        if isinstance(output_file, TextIOWrapper):
+            # 输出到控制台
+            output_file.write(code)
+        elif output_file is not None:
+            output_file = pathlib.Path(output_file)
+            logger.info(f'save to {output_file.absolute()}')
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(code)
+
         return code
 
 
@@ -287,7 +300,7 @@ def _exec_code(code: str, df_input):
     return globals_['df_output']
 
 
-def _exec_file(file: str, df_input):
+def _exec_file(file, df_input):
     with open(file, 'r', encoding='utf-8') as f:
         code = f.read()
         return _exec_code(code, df_input)
@@ -308,14 +321,15 @@ def codegen_exec(df: Optional[DataFrame],
                  output_file: Union[str, TextIO, None] = None,
                  run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
-                 style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
+                 style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
+                 template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset',
                  ) -> Optional[DataFrame]:
     """快速转换源代码并执行
 
     Parameters
     ----------
-    df: pl.DataFrame or pd.DataFrame
+    df: pl.DataFrame, pd.DataFrame, pl.LazyFrame
         输入DataFrame
     codes:
         函数体。此部分中的表达式会被翻译成目标代码
@@ -350,12 +364,17 @@ def codegen_exec(df: Optional[DataFrame],
     if df is not None:
         if run_file is True:
             assert output_file is not None, 'output_file is required'
+            output_file = pathlib.Path(output_file)
+            logger.info(f'run file "{output_file.absolute()}"')
             return _exec_file(output_file, df)
         if run_file is not False:
             run_file = str(run_file)
             if run_file.endswith('.py'):
+                run_file = pathlib.Path(run_file)
+                logger.info(f'run file "{run_file.absolute()}"')
                 return _exec_file(run_file, df)
             else:
+                logger.info(f'run module "{run_file}"')
                 return _exec_module(run_file, df)  # 可断点调试
 
     # 此代码来自于sympy.var
@@ -366,19 +385,13 @@ def codegen_exec(df: Optional[DataFrame],
     more_sources = [c if isinstance(c, str) else inspect.getsource(c) for c in codes]
 
     code = _TOOL_._get_code(
-        *more_sources, extra_codes=extra_codes,
+        *more_sources,
+        extra_codes=extra_codes,
+        output_file=output_file,
         convert_xor=convert_xor,
         style=style, template_file=template_file,
         date=date, asset=asset,
     )
-
-    if isinstance(output_file, TextIOWrapper):
-        # 输出到控制台
-        output_file.write(code)
-    elif output_file is not None:
-        # 保存到文件
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(code)
 
     if df is None:
         return None
