@@ -140,15 +140,20 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
 非常棒的点子，总结下来有两种实现方式：
 
-1. 将`null`分成一组，`not_null`分成另一组，要计算两次
-2. 仅一组，但复合排序，将`null`排在前面，`not_null`排后面，只要计算一次
+1. 将`null`分成一组，`not_null`分成另一组。要计算两次
+2. 仅一组，但复合排序，将`null`排在前面，`not_null`排后面。只计算一次，略快一些
 
 ```python
 X1 = (ts_returns(CLOSE, 3)).over(CLOSE.is_not_null(), _ASSET_, order_by=_DATE_),
 X2 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=[CLOSE.is_not_null(), _DATE_]),
+X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 ```
 
-目前使用的是第2种
+第2种开头的`null`区域，是否影响结果由算子所决定，特别时是多列输入`null`区域可能有数据
+
+1. `over_null='partition_by'`。分到两个区域
+2. `over_null='order_by'`。分到一个区域，`null`排在前面
+3. `over_null=None`。不处理，直接计算，速度更快
 
 ## 二次开发
 

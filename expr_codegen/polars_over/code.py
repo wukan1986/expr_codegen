@@ -1,5 +1,5 @@
 import os
-from typing import Sequence, Dict
+from typing import Sequence, Dict, Literal
 
 import jinja2
 from jinja2 import FileSystemLoader, TemplateNotFound
@@ -39,7 +39,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename='template.py.j2',
             date='date', asset='asset',
             alias: Dict[str, str] = {},
-            extra_codes: Sequence[str] = ()):
+            extra_codes: Sequence[str] = (),
+            over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+            **kwargs):
     """基于模板的代码生成"""
     # 打印Polars风格代码
     p = PolarsStrPrinter()
@@ -82,8 +84,12 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                             _sym = f"pl.all_horizontal({','.join(_sym)})"
                         else:
                             _sym = ','.join(_sym)
-                        # func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
-                        func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
+                        if over_null == 'partition_by':
+                            func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
+                        elif over_null == 'order_by':
+                            func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
+                        else:
+                            func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
                     elif k[0] == CS:
                         func_code.append(f"{va}=({s2}).over(_DATE_),")
                     elif k[0] == GP:

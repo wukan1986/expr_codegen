@@ -193,7 +193,8 @@ class ExprTool:
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
-            extra_codes: Sequence[object] = ()):
+            extra_codes: Sequence[object] = (),
+            **kwargs):
         """功能集成版，将几个功能写到一起方便使用
 
         Parameters
@@ -252,7 +253,8 @@ class ExprTool:
         codes = codegen(exprs_ldl, exprs_src, syms_dst,
                         filename=template_file, date=date, asset=asset,
                         alias=alias,
-                        extra_codes=extra_codes)
+                        extra_codes=extra_codes,
+                        **kwargs)
 
         if format:
             # 格式化。在遗传算法中没有必要
@@ -267,7 +269,8 @@ class ExprTool:
                   output_file: str,
                   convert_xor: bool,
                   style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
-                  date: str = 'date', asset: str = 'asset') -> str:
+                  date: str = 'date', asset: str = 'asset',
+                  **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
 
@@ -279,7 +282,8 @@ class ExprTool:
                              extra_codes=(raw,
                                           # 传入多个列的方法
                                           extra_codes,
-                                          ))
+                                          ),
+                             **kwargs)
 
         # 移回到cache，防止多次调用多次保存
         if isinstance(output_file, TextIOWrapper):
@@ -324,7 +328,8 @@ def codegen_exec(df: Optional[DataFrame],
                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
                  template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset',
-                 ) -> Optional[DataFrame]:
+                 over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+                 **kwargs) -> Optional[DataFrame]:
     """快速转换源代码并执行
 
     Parameters
@@ -355,6 +360,11 @@ def codegen_exec(df: Optional[DataFrame],
         时间字段
     asset: str
         资产字段
+    over_null: str
+        时序中遇到null时的处理方式
+        - order_by: 空值排同一分区的前排
+        - partition_by: 空值划分到不同分区
+        - None: 不做处理
 
     Returns
     -------
@@ -391,6 +401,8 @@ def codegen_exec(df: Optional[DataFrame],
         convert_xor=convert_xor,
         style=style, template_file=template_file,
         date=date, asset=asset,
+        over_null=over_null,
+        **kwargs
     )
 
     if df is None:

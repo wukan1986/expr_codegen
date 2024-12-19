@@ -38,7 +38,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename='template.py.j2',
             date='date', asset='asset',
             alias: Dict[str, str] = {},
-            extra_codes: Sequence[str] = ()):
+            extra_codes: Sequence[str] = (),
+            **kwargs):
     """基于模板的代码生成"""
     # 打印Pandas风格代码
     p = PandasStrPrinter()
