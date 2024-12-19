@@ -135,6 +135,21 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 1. 根据算子前缀分类(`get_current_by_prefix`)，限制算子必需以`ts_`、`cs_`、`gp_`开头
 2. 根据算子全名分类(`get_current_by_name`), 不再限制算子名。比如`cs_rank`可以叫`rank`
 
+## Null处理/停牌处理
+
+https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
+非常棒的点子，总结下来有两种实现方式：
+
+1. 将`null`分成一组，`not_null`分成另一组，要计算两次
+2. 仅一组，但复合排序，将`null`排在前面，`not_null`排后面，只要计算一次
+
+```python
+X1 = (ts_returns(CLOSE, 3)).over(CLOSE.is_not_null(), _ASSET_, order_by=_DATE_),
+X2 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=[CLOSE.is_not_null(), _DATE_]),
+```
+
+目前使用的是第2种
+
 ## 二次开发
 
 1. 备份后编辑`demo_express.py`, `import`需要引入的函数
@@ -161,12 +176,12 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 9. `gp_`开头的函数都会返回对应的`cs_`函数。如`gp_func(A,B,C)`会替换成`cs_func(B,C)`,其中`A`用在了`groupby([date, A])`
 10. 支持`A,B,C=MACD()`元组解包，在底层会替换成
 
-   ```python
-   _x_0 = MACD()
-   A = unpack(_x_0, 0)
-   B = unpack(_x_0, 1)
-   C = unpack(_x_0, 2)
-   ```
+```python
+_x_0 = MACD()
+A = unpack(_x_0, 0)
+B = unpack(_x_0, 1)
+C = unpack(_x_0, 2)
+```
 
 ## 下划线开头的变量
 

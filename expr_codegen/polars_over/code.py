@@ -76,7 +76,14 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         # 不想等，打印注释，显示会更直观察
                         func_code.append(f"# {va} = {s1}")
                     if k[0] == TS:
-                        func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
+                        # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
+                        _sym = [f"{s}.is_not_null()" for s in set(sym)]
+                        if len(_sym) > 1:
+                            _sym = f"pl.all_horizontal({','.join(_sym)})"
+                        else:
+                            _sym = ','.join(_sym)
+                        # func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
+                        func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
                     elif k[0] == CS:
                         func_code.append(f"{va}=({s2}).over(_DATE_),")
                     elif k[0] == GP:
