@@ -1,6 +1,4 @@
-# expr_codegen 符号表达式代码生成器
-
-表达式转代码工具
+# expr_codegen 表达式转译器
 
 ## 项目背景
 
@@ -30,13 +28,7 @@ https://exprcodegen.streamlit.app
 ```python
 import sys
 
-# from polars_ta.prefix.talib import *  # noqa
-from polars_ta.prefix.cdl import *  # noqa
-from polars_ta.prefix.ta import *  # noqa
-from polars_ta.prefix.tdx import *  # noqa
-from polars_ta.prefix.wq import *  # noqa
-
-from expr_codegen.tool import codegen_exec
+from expr_codegen import codegen_exec
 
 
 def _code_block_1():
@@ -135,13 +127,18 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 1. 根据算子前缀分类(`get_current_by_prefix`)，限制算子必需以`ts_`、`cs_`、`gp_`开头
 2. 根据算子全名分类(`get_current_by_name`), 不再限制算子名。比如`cs_rank`可以叫`rank`
 
-## Null处理/停牌处理
+## Null处理
+
+`null`是如何产生的？
+
+1. 停牌导致。在计算前就直接过滤掉了，不会对后续计算产生影响。
+2. 计算产生。`null`在数列两端不影响后续时序算子结果，但中间出现`null`会影响。例如： `if_else(close<2, None, close)`
 
 https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
 非常棒的点子，总结下来有两种实现方式：
 
-1. 将`null`分成一组，`not_null`分成另一组。要计算两次
-2. 仅一组，但复合排序，将`null`排在前面，`not_null`排后面。只计算一次，略快一些
+1. 将`null`分成一组，`not_null`分成另一组。要调用两次
+2. 仅一组，但复合排序，将`null`排在前面，`not_null`排后面。只调用一次，略快一些
 
 ```python
 X1 = (ts_returns(CLOSE, 3)).over(CLOSE.is_not_null(), _ASSET_, order_by=_DATE_),
@@ -149,17 +146,11 @@ X2 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=[CLOSE.is_not_null(), _DATE_]
 X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 ```
 
-第2种开头的`null`区域，是否影响结果由算子所决定，特别时是多列输入`null`区域可能有数据
+第2种开头的`null`区域，是否影响结果由算子所决定，特别时是多列输入时`null`区域可能有数据
 
 1. `over_null='partition_by'`。分到两个区域
 2. `over_null='order_by'`。分到一个区域，`null`排在前面
-3. `over_null=None`。不处理，直接计算，速度更快
-
-## 二次开发
-
-1. 备份后编辑`demo_express.py`, `import`需要引入的函数
-2. 然后`printer.py`有可能需要添加对应函数的打印代码
-    - 注意：需要留意是否要加括号`()`，不加时可能优先级混乱，可以每次都加括号，也可用提供的`parenthesize`简化处理
+3. `over_null=None`。不处理，直接调用，速度更快。如果确信不会中段产生`null`建议使用此参数
 
 ## `expr_codegen`局限性
 

@@ -1,12 +1,6 @@
 import sys
 
-# from polars_ta.prefix.talib import *  # noqa
-from polars_ta.prefix.cdl import *  # noqa
-from polars_ta.prefix.ta import *  # noqa
-from polars_ta.prefix.tdx import *  # noqa
-from polars_ta.prefix.wq import *  # noqa
-
-from expr_codegen.tool import codegen_exec
+from expr_codegen import codegen_exec
 
 
 def _code_block_1():
