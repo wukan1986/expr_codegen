@@ -1,8 +1,8 @@
 import inspect
 import pathlib
 from functools import lru_cache
-from io import TextIOWrapper
-from typing import Sequence, Dict, Union, TextIO, TypeVar, Optional, Literal
+from io import TextIOBase
+from typing import Sequence, Dict, Union, TypeVar, Optional, Literal
 
 from black import Mode, format_str
 from loguru import logger
@@ -286,7 +286,7 @@ class ExprTool:
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
-        if isinstance(output_file, TextIOWrapper):
+        if isinstance(output_file, TextIOBase):
             # 输出到控制台
             output_file.write(code)
         elif output_file is not None:
@@ -322,13 +322,13 @@ _TOOL_ = ExprTool()
 def codegen_exec(df: Optional[DataFrame],
                  *codes,
                  extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
-                 output_file: Union[str, TextIO, None] = None,
+                 output_file: Union[str, TextIOBase, None] = None,
                  run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
                  template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset',
-                 over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+                 over_null: Literal['partition_by', 'order_by', None] = 'partition_by',
                  **kwargs) -> Optional[DataFrame]:
     """快速转换源代码并执行
 
@@ -340,7 +340,7 @@ def codegen_exec(df: Optional[DataFrame],
         函数体。此部分中的表达式会被翻译成目标代码
     extra_codes: str
         额外代码。不做处理，会被直接复制到目标代码中
-    output_file: str
+    output_file: str| TextIOBase
         保存生成的目标代码到文件中
     run_file: bool or str
         是否不生成脚本，直接运行代码。
@@ -362,8 +362,8 @@ def codegen_exec(df: Optional[DataFrame],
         资产字段
     over_null: str
         时序中遇到null时的处理方式
-        - order_by: 空值排同一分区的前排
         - partition_by: 空值划分到不同分区
+        - order_by: 空值排同一分区的前排
         - None: 不做处理
 
     Returns

@@ -27,6 +27,7 @@ https://exprcodegen.streamlit.app
 
 ```python
 import sys
+from io import StringIO
 
 from expr_codegen import codegen_exec
 
@@ -56,10 +57,15 @@ def _code_block_2():
     CPV = cs_zscore(_corr) + cs_zscore(_beta)
 
 
+code = StringIO()
+
 df = None  # 替换成真实的polars数据
 df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)  # 打印代码
 df = codegen_exec(df, _code_block_1, _code_block_2, output_file="output.py")  # 保存到文件
 df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代码
+df = codegen_exec(df, _code_block_1, _code_block_2, output_file=code)  # 保存到字符串
+code.seek(0)
+code.read()  # 读取代码
 
 df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect()  # Lazy CPU
 df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")  # Lazy GPU
@@ -80,7 +86,7 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 │      sympy_define.py # 符号定义，由于太多地方重复使用到，所以统一提取到此处
 ├─expr_codegen
 │   │  expr.py # 表达式处理基本函数
-│   │  tool.py # 核心工具代码。一般不需修改
+│   │  tool.py # 核心工具代码
 │   ├─polars
 │   │  │  code.py # 针对polars语法的代码生成功能
 │   │  │  template.py.j2 # `Jinja2`模板。用于生成对应py文件，一般不需修改
@@ -132,9 +138,11 @@ df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")
 `null`是如何产生的？
 
 1. 停牌导致。在计算前就直接过滤掉了，不会对后续计算产生影响。
-2. 计算产生。`null`在数列两端不影响后续时序算子结果，但中间出现`null`会影响。例如： `if_else(close<2, None, close)`
+2. 不同品种交易时段不同
+3. 计算产生。`null`在数列两端不影响后续时序算子结果，但中间出现`null`会影响。例如： `if_else(close<2, None, close)`
 
 https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
+
 非常棒的点子，总结下来有两种实现方式：
 
 1. 将`null`分成一组，`not_null`分成另一组。要调用两次
