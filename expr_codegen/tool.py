@@ -305,6 +305,8 @@ def _exec_code(code: str, df_input):
 
 
 def _exec_file(file, df_input):
+    file = pathlib.Path(file)
+    logger.info(f'run file "{file.absolute()}"')
     with open(file, 'r', encoding='utf-8') as f:
         code = f.read()
         return _exec_code(code, df_input)
@@ -313,6 +315,7 @@ def _exec_file(file, df_input):
 def _exec_module(module: str, df_input):
     """"可下断点调试"""
     m = __import__(module, fromlist=['*'])
+    logger.info(f'run module {m}')
     return m.main(df_input)
 
 
@@ -374,17 +377,12 @@ def codegen_exec(df: Optional[DataFrame],
     if df is not None:
         if run_file is True:
             assert output_file is not None, 'output_file is required'
-            output_file = pathlib.Path(output_file)
-            logger.info(f'run file "{output_file.absolute()}"')
             return _exec_file(output_file, df)
         if run_file is not False:
             run_file = str(run_file)
             if run_file.endswith('.py'):
-                run_file = pathlib.Path(run_file)
-                logger.info(f'run file "{run_file.absolute()}"')
                 return _exec_file(run_file, df)
             else:
-                logger.info(f'run module "{run_file}"')
                 return _exec_module(run_file, df)  # 可断点调试
 
     # 此代码来自于sympy.var
