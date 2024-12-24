@@ -7,6 +7,8 @@ from sympy import symbols
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
 from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
 
+_RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
+
 
 class ListDictList:
     """嵌套列表
@@ -109,8 +111,7 @@ class ListDictList:
         l2 = [set()]
         s = set()
         for i in reversed(l1):
-            # 这三变量需要排除
-            s = s | i - {'_NONE_', '_TRUE_', '_FALSE_'}
+            s = s | i  # - {'_NONE_', '_TRUE_', '_FALSE_'}
             l2.append(s)
         l2 = list(reversed(l2))
 
@@ -396,6 +397,9 @@ def dag_end(G):
             key = G.nodes[node]['key']
             expr = G.nodes[node]['expr']
             symbols = G.nodes[node]['symbols']
+            # 这几个特殊的不算成字段名
+            symbols = list(set(symbols) - _RESERVED_WORD_)
+
             exprs_ldl.append(key, (node, expr, symbols))
 
     exprs_ldl._list = exprs_ldl.values()[1:]

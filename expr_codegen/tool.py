@@ -12,7 +12,7 @@ from sympy.logic import boolalg
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
-from expr_codegen.model import dag_start, dag_end, dag_middle
+from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_
 
 try:
     from pandas import DataFrame as _pd_DataFrame
@@ -232,6 +232,7 @@ class ExprTool:
 
         # 子表达式在前，原表式在最后
         exprs_dst, syms_dst = self.merge(date, asset, **exprs_src)
+        syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())

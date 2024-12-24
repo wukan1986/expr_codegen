@@ -125,6 +125,7 @@ class RenameTransformer(ast.NodeTransformer):
     def __init__(self, funcs_map, targets_map, args_map=None):
 
         if args_map is None:
+            # 保留字
             args_map = {'True': "_TRUE_", 'False': "_FALSE_", 'None': "_NONE_"}
         self.funcs_old = set()
         self.args_old = set()
