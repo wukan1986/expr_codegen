@@ -2,6 +2,7 @@ import ast
 import re
 from ast import expr
 
+from black import Mode, format_str
 from sympy import Add, Mul, Pow, Eq, Not, Xor
 
 from expr_codegen.expr import register_symbols, dict_to_exprs
@@ -316,6 +317,9 @@ def source_replace(source: str) -> str:
         # break
     # 或、与
     source = source.replace('||', '|').replace('&&', '&')
+    # IndentationError: unexpected indent
+    # 嵌套函数前有空格，会报错
+    source = format_str(source, mode=Mode(line_length=600, magic_trailing_comma=True))
     return source
 
 
