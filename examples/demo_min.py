@@ -22,7 +22,7 @@ from expr_codegen import codegen_exec  # noqa
 np.random.seed(42)
 
 ASSET_COUNT = 500
-DATE_COUNT = 250 * 24 * 60 * 1
+DATE_COUNT = 250 * 24 * 10 * 1
 DATE = pd.date_range(datetime(2020, 1, 1), periods=DATE_COUNT, freq='1min').repeat(ASSET_COUNT)
 ASSET = [f'A{i:04d}' for i in range(ASSET_COUNT)] * DATE_COUNT
 
@@ -66,8 +66,23 @@ df = codegen_exec(df, """OPEN_RANK = cs_rank(OPEN[1]) # 仅演示""",
                   # !!!使用时一定要分清分组是用哪个字段
                   date='datetime', asset='_asset_date')
 # ---
+logger.info('1分钟转15分钟线开始')
+df1 = df.sort('asset', 'datetime').group_by_dynamic('datetime', every="15m", closed='left', label="left", group_by=['asset', 'trading_day']).agg(
+    open_dt=pl.first("datetime"),
+    close_dt=pl.last("datetime"),
+    OPEN=pl.first("OPEN"),
+    HIGH=pl.max("HIGH"),
+    LOW=pl.min("LOW"),
+    CLOSE=pl.last("CLOSE"),
+    VOLUME=pl.sum("VOLUME"),
+    OPEN_INTEREST=pl.last("OPEN_INTEREST"),
+)
+logger.info('1分钟转15分钟线结束')
+print(df1)
+# ---
 logger.info('1分钟转日线开始')
-df = df.sort('asset', 'datetime').group_by('asset', 'trading_day', maintain_order=True).agg(
+# 也可以使用group_by_dynamic，只是日线隐含了label="left"
+df1 = df.sort('asset', 'datetime').group_by('asset', 'trading_day', maintain_order=True).agg(
     open_dt=pl.first("datetime"),
     close_dt=pl.last("datetime"),
     OPEN=pl.first("OPEN"),
@@ -78,5 +93,4 @@ df = df.sort('asset', 'datetime').group_by('asset', 'trading_day', maintain_orde
     OPEN_INTEREST=pl.last("OPEN_INTEREST"),
 )
 logger.info('1分钟转日线结束')
-print(df)
-# df.write_csv('output.csv')
+print(df1)
