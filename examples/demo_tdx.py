@@ -100,11 +100,15 @@ if __name__ == '__main__':
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, output_file=sys.stdout)
+    df = codegen_exec(df, _code_block_1, _code_block_2, output_file='1_out.py', run_file=False)
     t2 = time.perf_counter()
-    print(t2 - t1)
+    df = codegen_exec(df, _code_block_1, _code_block_2, output_file='1_out.py', run_file=True)
+    t3 = time.perf_counter()
+    df = codegen_exec(df, _code_block_1, _code_block_2, output_file='1_out.py', run_file=True)
+    t4 = time.perf_counter()
+    print(t2 - t1, t3 - t2, t4 - t3)
     logger.info('计算结束')
     df = df.filter(
         ~pl.col('is_st'),
     )
-    print(df.collect())
+    print(df)

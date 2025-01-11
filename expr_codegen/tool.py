@@ -299,25 +299,29 @@ class ExprTool:
         return code
 
 
-def _exec_code(code: str, df_input):
-    globals_ = {'df_input': df_input}
+@lru_cache(maxsize=64, typed=True)
+def _get_func_from_code(code: str):
+    globals_ = {}
     exec(code, globals_)
-    return globals_['df_output']
+    return globals_['main']
 
 
-def _exec_file(file, df_input):
-    file = pathlib.Path(file)
-    logger.info(f'run file "{file.absolute()}"')
-    with open(file, 'r', encoding='utf-8') as f:
-        code = f.read()
-        return _exec_code(code, df_input)
-
-
-def _exec_module(module: str, df_input):
+@lru_cache(maxsize=64, typed=True)
+def _get_func_from_module(module: str):
     """"可下断点调试"""
     m = __import__(module, fromlist=['*'])
     logger.info(f'run module {m}')
-    return m.main(df_input)
+    return m.main
+
+
+@lru_cache(maxsize=64, typed=True)
+def _get_func_from_file(file: str):
+    file = pathlib.Path(file)
+    logger.info(f'run file "{file.absolute()}"')
+    with open(file, 'r', encoding='utf-8') as f:
+        globals_ = {}
+        exec(f.read(), globals_)
+        return globals_['main']
 
 
 _TOOL_ = ExprTool()
@@ -347,7 +351,7 @@ def codegen_exec(df: Optional[DataFrame],
     output_file: str| TextIOBase
         保存生成的目标代码到文件中
     run_file: bool or str
-        是否不生成脚本，直接运行代码。
+        是否不生成脚本，直接运行代码。注意：带缓存功能，多次调用不重复生成
         - 如果是True，会自动从output_file中读取代码
         - 如果是字符串，会自动从run_file中读取代码
         - 如果是模块名，会自动从模块中读取代码(可调试)
@@ -378,13 +382,13 @@ def codegen_exec(df: Optional[DataFrame],
     if df is not None:
         if run_file is True:
             assert output_file is not None, 'output_file is required'
-            return _exec_file(output_file, df)
+            return _get_func_from_file(output_file)(df)
         if run_file is not False:
             run_file = str(run_file)
             if run_file.endswith('.py'):
-                return _exec_file(run_file, df)
+                return _get_func_from_file(run_file)(df)
             else:
-                return _exec_module(run_file, df)  # 可断点调试
+                return _get_func_from_module(run_file)(df)  # 可断点调试
 
     # 此代码来自于sympy.var
     frame = inspect.currentframe().f_back
@@ -407,4 +411,4 @@ def codegen_exec(df: Optional[DataFrame],
     if df is None:
         return None
     else:
-        return _exec_code(code, df)
+        return _get_func_from_code(code)(df)
