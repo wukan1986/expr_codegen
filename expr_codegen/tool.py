@@ -257,6 +257,8 @@ class ExprTool:
                         extra_codes=extra_codes,
                         **kwargs)
 
+        logger.info(f'code is generated')
+
         if format:
             # 格式化。在遗传算法中没有必要
             codes = format_str(codes, mode=Mode(line_length=600, magic_trailing_comma=True))
@@ -301,6 +303,7 @@ class ExprTool:
 
 @lru_cache(maxsize=64, typed=True)
 def _get_func_from_code(code: str):
+    logger.info(f'get func from code')
     globals_ = {}
     exec(code, globals_)
     return globals_['main']
@@ -310,14 +313,14 @@ def _get_func_from_code(code: str):
 def _get_func_from_module(module: str):
     """"可下断点调试"""
     m = __import__(module, fromlist=['*'])
-    logger.info(f'run module {m}')
+    logger.info(f'get func from module {m}')
     return m.main
 
 
 @lru_cache(maxsize=64, typed=True)
 def _get_func_from_file(file: str):
     file = pathlib.Path(file)
-    logger.info(f'run file "{file.absolute()}"')
+    logger.info(f'get func from file "{file.absolute()}"')
     with open(file, 'r', encoding='utf-8') as f:
         globals_ = {}
         exec(f.read(), globals_)
@@ -378,8 +381,16 @@ def codegen_exec(df: Optional[DataFrame],
     -------
     DataFrame
 
+    Notes
+    -----
+    处处都有缓存，所以在公式研发阶段要留意日志输出。以免一直调试的旧公式
+
+    1. 确保重新生成了代码  `code is generated`
+    2. 通过代码得到了函数 `get func from code`
+
     """
     if df is not None:
+        # 以下代码都带缓存功能
         if run_file is True:
             assert output_file is not None, 'output_file is required'
             return _get_func_from_file(output_file)(df)
@@ -411,4 +422,5 @@ def codegen_exec(df: Optional[DataFrame],
     if df is None:
         return None
     else:
+        # 代码一样时就从缓存中取出函数
         return _get_func_from_code(code)(df)
