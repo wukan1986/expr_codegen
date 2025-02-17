@@ -31,7 +31,7 @@ _NONE_ = None
 _TRUE_ = True
 _FALSE_ = False
 
-def unpack(x: Expr, idx: int = 0) -> Expr:
+def unpack(x: pl.Expr, idx: int = 0) -> pl.Expr:
     return x.struct[idx]
 
 {%-for row in extra_codes %}
