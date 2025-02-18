@@ -137,6 +137,7 @@ def chain_create(nested_list):
     last_min = float('inf')
     # 最小不重复的一行记录
     last_row = None
+    last_rows = set()
     for row in product(*neighbor_inter):
         # 判断两两是否重复，重复为1，反之为0
         result = sum([x == y for x, y in zip(row[:-1], row[1:])])
@@ -144,6 +145,19 @@ def chain_create(nested_list):
             last_min = result
             last_row = row
         if result == 0:
+            last_rows.add(last_row)
+            last_min = float('inf')
+            continue
+    last_rows.add(last_row)
+    last_rows = list(last_rows)
+
+    # last_rows中有多个满足条件的，优先保证最后一组ts在最前，ts后可提前filter减少计算量
+    last_row = last_rows[0]
+    for row in last_rows:
+        if row[-1] is None:
+            continue
+        if row[-1][0] == 'ts':
+            last_row = row
             break
 
     # 如何移动才是难点 如果两个连续 ts/ts，那么如何移动
