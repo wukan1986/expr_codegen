@@ -82,9 +82,6 @@ class ExprTool:
         表达式列表
 
         """
-        # 抽取前先化简
-        expr = simplify2(expr)
-
         exprs = []
         syms = []
         get_children(self.get_current_func, self.get_current_func_kwargs,
@@ -110,6 +107,9 @@ class ExprTool:
         -------
         表达式列表
         """
+        # 抽取前先化简
+        kwargs = {k: simplify2(v) for k, v in kwargs.items()}
+
         exprs_syms = [self.extract(v, date, asset) for v in kwargs.values()]
         exprs = []
         syms = []
@@ -120,6 +120,7 @@ class ExprTool:
         syms = sorted(set(syms), key=syms.index)
         # 如果目标有重复表达式，这里会混乱
         exprs = sorted(set(exprs), key=exprs.index)
+        # 这里不能合并简化与未简化的表达式，会导致cse时失败，需要简化表达式合并
         exprs = exprs + list(kwargs.values())
 
         # print(exprs)
