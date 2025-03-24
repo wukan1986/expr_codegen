@@ -154,6 +154,9 @@ def chain_create(nested_list):
     # last_rows中有多个满足条件的，优先保证最后一组ts在最前，ts后可提前filter减少计算量
     last_row = last_rows[0]
     for row in last_rows:
+        if len(row) == 0:
+            # 一行表达式
+            continue
         if row[-1] is None:
             continue
         if row[-1][0] == 'ts':
