@@ -448,9 +448,9 @@ def _meaningless__ts_xxx_1(e):
     """ts_xxx部分函数如果参数为1，可直接丢弃"""
     for node in preorder_traversal(e):
         if len(node.args) >= 2:
-            if node.args[-1] == 1:
+            if node.args[1].is_Number and node.args[1] <= 1:
                 node_name = get_node_name(node)
-                if node_name in ('ts_delay', 'ts_delta', 'max_', 'min_'):
+                if node_name in ('ts_delay', 'ts_delta'):
                     return False
                 else:
                     # 其它算子，参数1都认为无意义
