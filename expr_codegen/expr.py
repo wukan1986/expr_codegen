@@ -97,6 +97,12 @@ def get_symbols(expr, syms=None, return_str=True):
                 syms.append(arg.name)
             else:
                 syms.append(arg)
+        elif arg.is_Number:
+            # alpha_001 = log(1)+1
+            if return_str:
+                syms.append(str(arg))
+            else:
+                syms.append(arg)
         else:
             get_symbols(arg, syms, return_str)
     return syms
@@ -436,33 +442,34 @@ def _replace__ts_delay__to__ts_delta(e):
     return e
 
 
-def is_meaningless(e):
-    if _meaningless__ts_xxx_1(e):
-        return True
-    if _meaningless__xx_xx(e):
-        return True
-    return False
-
-
-def _meaningless__ts_xxx_1(e):
-    """ts_xxx部分函数如果参数为1，可直接丢弃"""
-    for node in preorder_traversal(e):
-        if len(node.args) >= 2:
-            if node.args[1].is_Number and node.args[1] <= 1:
-                node_name = get_node_name(node)
-                if node_name in ('ts_delay', 'ts_delta'):
-                    return False
-                else:
-                    # 其它算子，参数1都认为无意义
-                    return True
-
-    return False
-
-
-def _meaningless__xx_xx(e):
-    """部分函数如果两参数完全一样，可直接丢弃"""
-    for node in preorder_traversal(e):
-        if len(node.args) >= 2:
-            if node.args[0] == node.args[1]:
-                return True
-    return False
+# def is_meaningless(e):
+#     if _meaningless__ts_xxx_1(e):
+#         return True
+#     if _meaningless__xx_xx(e):
+#         return True
+#     return False
+#
+#
+# def _meaningless__ts_xxx_1(e):
+#     """ts_xxx部分函数如果参数为1，可直接丢弃"""
+#     for node in preorder_traversal(e):
+#         if len(node.args) >= 2:
+#             node_name = get_node_name(node)
+#             if node_name in ('ts_delay', 'ts_delta'):
+#                 if not node.args[1].is_Integer:
+#                     return True
+#             if node_name.startswith('ts_'):
+#                 if not node.args[-1].is_Number:
+#                     return True
+#                 if node.args[-1] <= 1:
+#                     return True
+#     return False
+#
+#
+# def _meaningless__xx_xx(e):
+#     """部分函数如果两参数完全一样，可直接丢弃"""
+#     for node in preorder_traversal(e):
+#         if len(node.args) >= 2:
+#             if node.args[0] == node.args[1]:
+#                 return True
+#     return False
