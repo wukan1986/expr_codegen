@@ -160,6 +160,32 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 2. `over_null='order_by'`。分到一个区域，`null`排在前面
 3. `over_null=None`。不处理，直接调用，速度更快。如果确信不会中段产生`null`建议使用此参数
 
+`codegen_exec(over_null='partition_by')`为全局使用`partition_by`。但遇到`ts_count_nulls`这类`null`
+函数就得使用`over_null=None`，所以本工具还新添了注释功能来指定单行表达式参数
+
+1. `# --over_null partition_by`。单行`over_null='partition_by'`
+2. `# --over_null=order_by`。单行`over_null='order_by'`
+3. `# --over_null`。单行`over_null=None`
+4. `# `。取`codegen_exec`参数传入的`over_null`值
+
+注意：
+
+1. `# --over_null`传参注释只能写在单行表达式的后面，不能独立成一行，否则会被忽略
+2. `# --over_null # --over_null=order_by`多个`#`时，只取第一个有效
+3. 只对最外层`ts`函数有效。如果`ts`函数不在外层，需要人工提炼。例如：
+   ```python
+   X1 = cs_rank(ts_mean(CLOSE, 3)) # --over_null=order_by # 应用在cs_rank上，没有意义
+   X2 = ts_rank(ts_mean(CLOSE, 3), 5) # --over_null=order_by # 本以为应用在ts_rank(ts_mean)上，但由于出现了公共ts_mean，其实是应用在ts_rank(_x_0)上
+   ```
+   
+   需写成
+
+   ```python
+   _x_0 = ts_mean(CLOSE, 3)  # --over_null=order_by 
+   X1 = cs_rank(_x_0)
+   X2 = ts_rank(_x_0, 5)
+   ```
+
 ## `expr_codegen`局限性
 
 1. `DAG`只能增加列无法删除。增加列时，遇到同名列会覆盖
@@ -169,7 +195,8 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 
 ## 特别语法
 
-1. 支持`C?T:F`三元表达式（仅可字符串中使用），底层会先转成`C or True if( T )else F`，然后修正成`T if C else F`，最后转成`if_else(C,T,F)`。支持与`if else`混用
+1. 支持`C?T:F`三元表达式（仅可字符串中使用），底层会先转成`C or True if( T )else F`，然后修正成`T if C else F`
+   ，最后转成`if_else(C,T,F)`。支持与`if else`混用
 2. `(A<B)*-1`,底层将转换成`int_(A<B)*-1`
 3. 为防止`A==B`被`sympy`替换成`False`，底层会换成`Eq(A,B)`
 4. `A^B`的含义与`convert_xor`参数有关，`convert_xor=True`底层会转换成`Pow(A,B)`，反之为`Xor(A,B)`。默认为`False`，用`**`表示乘方
@@ -179,6 +206,7 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 8. 支持`~A`,底层会转换成`Not(A)`
 9. `gp_`开头的函数都会返回对应的`cs_`函数。如`gp_func(A,B,C)`会替换成`cs_func(B,C)`,其中`A`用在了`groupby([date, A])`
 10. 支持`A,B,C=MACD()`元组解包，在底层会替换成
+11. 单行注释支持参数输入，如：`# --over_null`、`# --over_null=order_by`、`# --over_null=partition_by`
 
 ```python
 _x_0 = MACD()
@@ -191,7 +219,8 @@ C = unpack(_x_0, 2)
 
 1. 输出的数据，所有以`_`开头的列，最后会被自动删除。所以需要保留的变量一定不要以`_`开头
 2. 为减少重复计算，自动添加了了中间变量，以`_x_`开头，如`_x_0`，`_x_1`等。最后会被自动删除
-3. 单行表达式过长，或有重复计算，可以通过中间变量，将单行表达式改成多行。如果中间变量使用`_`开头，将会自动添加数字后缀，形成不同的变量，如`_A`会替换成`_A_0_`、`_A_1_`等。使用场景如下：
+3. 单行表达式过长，或有重复计算，可以通过中间变量，将单行表达式改成多行。如果中间变量使用`_`
+   开头，将会自动添加数字后缀，形成不同的变量，如`_A`会替换成`_A_0_`、`_A_1_`等。使用场景如下：
     1. 同一变量名，重复使用。本质是不同的变量
     2. 循环赋值，但`DAG`不支持有环。`=`号左右的同名变量其实是不同变量
 

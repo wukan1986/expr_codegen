@@ -62,7 +62,7 @@ logger.info('时间戳调整完成')
 # _asset_date以下划线开头，会自动删除，如要保留，可去了下划线
 # 股票用action_day，期货用trading_day
 df = df.with_columns(_asset_date=pl.struct("asset", "trading_day"))
-df = codegen_exec(df, """OPEN_RANK = cs_rank(OPEN[1]) # 仅演示""",
+df = codegen_exec(df, """OPEN_RANK = cs_rank(OPEN[1]) # 仅演示""", over_null='partition_by',
                   # !!!使用时一定要分清分组是用哪个字段
                   date='datetime', asset='_asset_date')
 # ---

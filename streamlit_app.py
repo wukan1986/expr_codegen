@@ -53,7 +53,7 @@ LABEL_CC_1=CLOSE[-1]/CLOSE-1 # 每天收盘交易
 if st.button('生成代码'):
     with st.spinner('生成中，请等待...'):
         code = StringIO()
-        codegen_exec(None, exprs_src, output_file=code, convert_xor=convert_xor, style=style, over_null=over_null)
+        codegen_exec(None, exprs_src, over_null=over_null, output_file=code, convert_xor=convert_xor, style=style)
         code.seek(0)
         res = code.read()
         b64 = base64.b64encode(res.encode('utf-8'))

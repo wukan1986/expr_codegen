@@ -32,12 +32,12 @@ def _code_block_2():
 code = StringIO()
 
 df = None  # 替换成真实的polars数据
-df = codegen_exec(df, _code_block_1, _code_block_2, output_file=sys.stdout)  # 打印代码
-df = codegen_exec(df, _code_block_1, _code_block_2, output_file="output.py")  # 保存到文件
-df = codegen_exec(df, _code_block_1, _code_block_2)  # 只执行，不保存代码
-df = codegen_exec(df, _code_block_1, _code_block_2, output_file=code)  # 保存到字符串
+df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file=sys.stdout)  # 打印代码
+df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file="output.py")  # 保存到文件
+df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by')  # 只执行，不保存代码
+df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file=code)  # 保存到字符串
 code.seek(0)
 code.read()  # 读取代码
 
-df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect()  # Lazy CPU
-df = codegen_exec(df.lazy(), _code_block_1, _code_block_2).collect(engine="gpu")  # Lazy GPU
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect()  # Lazy CPU
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect(engine="gpu")  # Lazy GPU

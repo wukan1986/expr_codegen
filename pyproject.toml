@@ -22,6 +22,7 @@ dependencies = [
     'networkx',
     'loguru',
     'sympy',
+    'ast-comments',
     # 'polars_ta',
 ]
 dynamic = ["version"]

@@ -42,8 +42,8 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 """
 
 """
-{%-for key, value in exprs_src.items() %}
-{{ key }} = {{ value-}}
+{%-for a,b,c in exprs_src %}
+{{ a }} = {{ b}} {{c-}}
 {% endfor %}
 """
 

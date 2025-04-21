@@ -67,9 +67,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     func_code.append(f"    # " + '=' * 40)
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
-                    va, ex, sym = kv
+                    va, ex, sym, comment = kv
                     func_code.append(f"    # {va} = {ex}\n    g[{va}] = {p.doprint(ex)}")
-                    exprs_dst.append(f"{va} = {ex}")
+                    exprs_dst.append(f"{va} = {ex} {comment}")
                     if va not in syms_dst:
                         syms_out.append(va)
 

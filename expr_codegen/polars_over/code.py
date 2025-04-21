@@ -1,3 +1,4 @@
+import argparse
 import os
 from typing import Sequence, Dict, Literal
 
@@ -43,6 +44,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             **kwargs):
     """基于模板的代码生成"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--over_null", type=str, nargs="?", default=over_null)
+
     # 打印Polars风格代码
     p = PolarsStrPrinter()
 
@@ -71,7 +75,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     func_code.append(f"    df = df.with_columns(")
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
-                    va, ex, sym = kv
+                    va, ex, sym, comment = kv
+                    # 多个#时，只取第一个#后的参数
+                    args, argv = parser.parse_known_args(args=comment.split("#")[1].split(" "))
                     s1 = str(ex)
                     s2 = p.doprint(ex)
                     if s1 != s2:
@@ -84,9 +90,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                             _sym = f"pl.all_horizontal({','.join(_sym)})"
                         else:
                             _sym = ','.join(_sym)
-                        if over_null == 'partition_by':
+                        if args.over_null == 'partition_by':
                             func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
-                        elif over_null == 'order_by':
+                        elif args.over_null == 'order_by':
                             func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
                         else:
                             func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
@@ -96,7 +102,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         func_code.append(f"{va}=({s2}).over(_DATE_, '{k[2]}'),")
                     else:
                         func_code.append(f"{va}={s2},")
-                    exprs_dst.append(f"{va} = {s1}")
+                    exprs_dst.append(f"{va} = {s1} {comment}")
                     if va not in syms_dst:
                         syms_out.append(va)
             func_code.append(f"    )")

@@ -61,7 +61,7 @@ class ExprTool:
     def __init__(self):
         self.get_current_func = get_current_by_prefix
         self.get_current_func_kwargs = {}
-        self.exprs_dict = {}
+        self.exprs_list = {}
         self.exprs_names = []
         self.globals_ = {}
 
@@ -92,7 +92,7 @@ class ExprTool:
         # print(exprs)
         return exprs, syms
 
-    def merge(self, date, asset, **kwargs):
+    def merge(self, date, asset, args):
         """合并多个表达式
 
         1. 先抽取分割子公式
@@ -100,28 +100,31 @@ class ExprTool:
 
         Parameters
         ----------
-        kwargs
-            表达式字典
+        args
+            表达式列表
 
         Returns
         -------
         表达式列表
         """
         # 抽取前先化简
-        kwargs = {k: simplify2(v) for k, v in kwargs.items()}
+        args = [(a, simplify2(b), c) for a, b, c in args]
 
-        exprs_syms = [self.extract(v, date, asset) for v in kwargs.values()]
+        # 保留了注释信息
+        exprs_syms = [(self.extract(b, date, asset), c) for a, b, c in args]
         exprs = []
         syms = []
-        for e, s in exprs_syms:
-            exprs.extend(e)
+        for (e, s), c in exprs_syms:
             syms.extend(s)
+            for _ in e:
+                # 抽取的表达式添加注释
+                exprs.append((_, c))
 
         syms = sorted(set(syms), key=syms.index)
         # 如果目标有重复表达式，这里会混乱
         exprs = sorted(set(exprs), key=exprs.index)
         # 这里不能合并简化与未简化的表达式，会导致cse时失败，需要简化表达式合并
-        exprs = exprs + list(kwargs.values())
+        exprs = exprs + [(b, c) for a, b, c in args]
 
         # print(exprs)
         syms = [str(s) for s in syms]
@@ -130,18 +133,18 @@ class ExprTool:
     def reduce(self, repl, redu):
         """减少中间变量数量，有利用减少内存占用"""
 
-        exprs_dict = {}
+        exprs_list = []
 
         # cse前简化一次，cse后不再简化
         # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
-        for variable, expr in repl:
-            exprs_dict[variable] = expr
-        for variable, expr in redu:
-            exprs_dict[variable] = expr
+        for a, b in repl:
+            exprs_list.append((a, b, "#"))
+        for a, b, c in redu:
+            exprs_list.append((a, b, c))
 
-        return exprs_dict
+        return exprs_list
 
-    def cse(self, exprs, symbols_repl=None, symbols_redu=None):
+    def cse(self, exprs, symbols_repl=None, exprs_src=None):
         """多个子公式+长公式，提取公共公式
 
         Parameters
@@ -150,7 +153,7 @@ class ExprTool:
             表达式列表
         symbols_repl
             中间字段名迭代器
-        symbols_redu
+        exprs_src
             最终字段名列表
 
         Returns
@@ -163,34 +166,38 @@ class ExprTool:
             表达式
 
         """
-        self.exprs_names = list(symbols_redu)
+        self.exprs_names = [a for a, b, c in exprs_src]
+        # 包含了注释信息
+        _exprs = [a for a, b in exprs]
 
-        repl, redu = cse(exprs, symbols_repl, optimizations="basic")
-        outputs_len = len(symbols_redu)
+        # 注意：对于表达式右边相同，左边不同的情况，会当成一个处理
+        repl, redu = cse(_exprs, symbols_repl, optimizations="basic")
+        outputs_len = len(exprs_src)
 
         new_redu = []
-        symbols_redu = iter(symbols_redu)
+        symbols_redu = iter(exprs_src)
         for expr in redu[-outputs_len:]:
             # 可能部分表达式只在之前出现过，后面完全用不到如，ts_rank(ts_decay_linear(x_147, 11.4157), 6.72611)
             variable = next(symbols_redu)
-            variable = symbols(variable)
-            new_redu.append((variable, expr))
+            a = symbols(variable[0])
+            new_redu.append((a, expr, variable[2]))
 
-        self.exprs_dict = self.reduce(repl, new_redu)
+        self.exprs_list = self.reduce(repl, new_redu)
 
         # with open("exprs.pickle", "wb") as file:
         #     pickle.dump(exprs_dict, file)
 
-        return self.exprs_dict
+        return self.exprs_list
 
     def dag(self, merge: bool, date, asset):
         """生成DAG"""
-        G = dag_start(self.exprs_dict, self.get_current_func, self.get_current_func_kwargs, date, asset)
+        G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
+    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
+            template_file: str = 'template.py.j2',
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
@@ -200,8 +207,8 @@ class ExprTool:
 
         Parameters
         ----------
-        exprs_src: dict
-            表达式字典
+        exprs_src: list
+            表达式列表
         style: str
             代码风格。可选值 ('polars_group', 'polars_over', 'pandas')
         template_file: str
@@ -232,11 +239,11 @@ class ExprTool:
             exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
-        exprs_dst, syms_dst = self.merge(date, asset, **exprs_src)
+        exprs_dst, syms_dst = self.merge(date, asset, exprs_src)
         syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
-        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), symbols_redu=exprs_src.keys())
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src)
         # 有向无环图流转
         exprs_ldl, G = self.dag(True, date, asset)
 
@@ -272,14 +279,15 @@ class ExprTool:
                   extra_codes: str,
                   output_file: str,
                   convert_xor: bool,
-                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over', template_file: str = 'template.py.j2',
+                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
+                  template_file: str = 'template.py.j2',
                   date: str = 'date', asset: str = 'asset',
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
-        raw, exprs_dict = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
+        raw, exprs_list = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
 
         # 生成代码
-        code, G = _TOOL_.all(exprs_dict, style=style, template_file=template_file,
+        code, G = _TOOL_.all(exprs_list, style=style, template_file=template_file,
                              replace=True, regroup=True, format=True,
                              date=date, asset=asset,
                              # 复制了需要使用的函数，还复制了最原始的表达式
@@ -333,6 +341,7 @@ _TOOL_ = ExprTool()
 
 def codegen_exec(df: Optional[DataFrame],
                  *codes,
+                 over_null: Literal['partition_by', 'order_by', None],
                  extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
                  output_file: Union[str, TextIOBase, None] = None,
                  run_file: Union[bool, str] = False,
@@ -340,7 +349,7 @@ def codegen_exec(df: Optional[DataFrame],
                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
                  template_file: str = 'template.py.j2',
                  date: str = 'date', asset: str = 'asset',
-                 over_null: Literal['partition_by', 'order_by', None] = 'partition_by',
+
                  **kwargs) -> Optional[DataFrame]:
     """快速转换源代码并执行
 

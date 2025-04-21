@@ -4,7 +4,7 @@ from itertools import product
 import networkx as nx
 from sympy import symbols
 
-from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
+from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree, zero_outdegree
 from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
 
 _RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
@@ -196,15 +196,15 @@ def create_dag_exprs(exprs):
     # 创建有向无环图
     G = nx.DiGraph()
 
-    for symbol, expr in exprs.items():
+    for symbol, expr, comment in exprs:
         # if symbol.name == 'GP_0':
         #     test = 1
         if expr.is_Symbol:
-            G.add_node(symbol.name, symbol=symbol, expr=expr)
+            G.add_node(symbol.name, symbol=symbol, expr=expr, comment=comment)
             G.add_edge(expr.name, symbol.name)
         else:
             # 添加中间节点
-            G.add_node(symbol.name, symbol=symbol, expr=expr)
+            G.add_node(symbol.name, symbol=symbol, expr=expr, comment=comment)
             syms = get_symbols(expr, return_str=True)
             for sym in syms:
                 # 由于边的原因，这里会主动生成一些源节点
@@ -221,6 +221,10 @@ def create_dag_exprs(exprs):
         s = symbols(node)
         G.nodes[node]['symbol'] = s
         G.nodes[node]['expr'] = s
+        G.nodes[node]['comment'] = "#"
+    #
+    # for node in zero_outdegree(G):
+    #     print(11, G.nodes[node]['comment'])
     return G
 
 
@@ -380,9 +384,9 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
     return G
 
 
-def dag_start(exprs_dict, func, func_kwargs, date, asset):
+def dag_start(exprs_list, func, func_kwargs, date, asset):
     """初始生成DAG"""
-    G = create_dag_exprs(exprs_dict)
+    G = create_dag_exprs(exprs_list)
     G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
     # 分层输出
@@ -413,11 +417,12 @@ def dag_end(G):
         for node in generation:
             key = G.nodes[node]['key']
             expr = G.nodes[node]['expr']
+            comment = G.nodes[node]['comment']
             symbols = G.nodes[node]['symbols']
             # 这几个特殊的不算成字段名
             symbols = list(set(symbols) - _RESERVED_WORD_)
 
-            exprs_ldl.append(key, (node, expr, symbols))
+            exprs_ldl.append(key, (node, expr, symbols, comment))
 
     exprs_ldl._list = exprs_ldl.values()[1:]
 

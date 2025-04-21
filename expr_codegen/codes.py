@@ -2,10 +2,11 @@ import ast
 import re
 from ast import expr
 
+import ast_comments
 from black import Mode, format_str
 from sympy import Add, Mul, Pow, Eq, Not, Xor
 
-from expr_codegen.expr import register_symbols, dict_to_exprs
+from expr_codegen.expr import register_symbols, list_to_exprs
 
 
 class SyntaxTransformer(ast.NodeTransformer):
@@ -108,7 +109,8 @@ class SyntaxTransformer(ast.NodeTransformer):
     def visit_Subscript(self, node):
         if isinstance(node.slice, ast.Constant) and node.slice.value == 0:
             node = node.value
-        elif isinstance(node.slice, ast.UnaryOp) and isinstance(node.slice.operand, ast.Constant) and node.slice.operand.value == 0:
+        elif isinstance(node.slice, ast.UnaryOp) and isinstance(node.slice.operand,
+                                                                ast.Constant) and node.slice.operand.value == 0:
             node = node.value
         else:
             node = ast.Call(
@@ -328,6 +330,21 @@ def assigns_to_dict(assigns):
     return {ast.unparse(a.targets): ast.unparse(a.value) for a in assigns}
 
 
+def assigns_to_list(assigns):
+    """赋值表达式转成列表"""
+    outputs = []
+    for i, a in enumerate(assigns):
+        comment = "#"
+        if i + 1 < len(assigns):
+            b = assigns[i + 1]
+            if isinstance(b, ast_comments.Comment):
+                # comment = ast_comments.unparse(b)
+                comment = b.value
+        if isinstance(a, ast.Assign):
+            outputs.append((ast.unparse(a.targets), ast.unparse(a.value), comment))
+    return outputs
+
+
 def raw_to_code(raw):
     """导入语句转字符列表"""
     return '\n'.join([ast.unparse(a) for a in raw])
@@ -338,7 +355,7 @@ def sources_to_asts(*sources, convert_xor: bool):
 
     def _source_to_asts(source):
         """源代码"""
-        tree = ast.parse(source_replace(source))
+        tree = ast_comments.parse(source_replace(source))
 
         if isinstance(tree.body[0], ast.FunctionDef):
             body = tree.body[0].body
@@ -347,7 +364,7 @@ def sources_to_asts(*sources, convert_xor: bool):
 
         return body
 
-    tree = ast.parse("")
+    tree = ast_comments.parse("")
     for arg in sources:
         tree.body.extend(_source_to_asts(arg))
 
@@ -359,16 +376,21 @@ def sources_to_asts(*sources, convert_xor: bool):
     raw = []
     assigns = []
 
-    for node in tree.body:
+    for i, node in enumerate(tree.body):
         # 特殊处理的节点
         if isinstance(node, ast.Assign):
             assigns.append(node)
             continue
+        if isinstance(node, ast_comments.Comment):
+            # 添加注释
+            if node.inline and isinstance(assigns[-1], ast.Assign):
+                assigns.append(node)
+                continue
         # TODO 是否要把其它语句也加入？是否有安全问题？
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raw.append(node)
             continue
-    return raw_to_code(raw), assigns_to_dict(assigns), t.funcs_new, t.args_new, t.targets_new
+    return raw_to_code(raw), assigns_to_list(assigns), t.funcs_new, t.args_new, t.targets_new
 
 
 def _add_default_type(globals_):
@@ -394,5 +416,4 @@ def sources_to_exprs(globals_, *sources, convert_xor: bool):
     register_symbols(funcs_new, globals_, is_function=True)
     register_symbols(args_new, globals_, is_function=False)
     register_symbols(targets_new, globals_, is_function=False)
-    exprs_dict = dict_to_exprs(assigns, globals_)
-    return raw, exprs_dict
+    return raw, list_to_exprs(assigns, globals_)

@@ -3,6 +3,7 @@ Jinja2
 loguru
 sympy
 networkx
+ast-comments
 streamlit
 streamlit-ace
 more_itertools
