@@ -47,7 +47,7 @@ def register_symbols(syms, globals_, is_function: bool):
 
 
 def list_to_exprs(exprs_src, globals_):
-    return [(a, sympify(b, globals_, evaluate=False), c) for a, b, c in exprs_src]
+    return [(k, sympify(v, globals_, evaluate=False), c) for k, v, c in exprs_src]
 
 
 def append_node(node, output_exprs):
@@ -289,15 +289,15 @@ def get_key(children):
 def replace_exprs(exprs):
     """使用替换的方式简化表达式"""
     # Alpha101中大量ts_sum(x, 10)/10, 转成ts_mean(x, 10)
-    exprs = [(a, _replace__ts_sum__to__ts_mean(b), c) for a, b, c in exprs]
+    exprs = [(k, _replace__ts_sum__to__ts_mean(v), c) for k, v, c in exprs]
     # alpha_031中大量cs_rank(cs_rank(x)) 转成cs_rank(x)
-    exprs = [(a, _replace__repeat(b), c) for a, b, c in exprs]
+    exprs = [(k, _replace__repeat(v), c) for k, v, c in exprs]
     # 1.0*VWAP转VWAP
-    exprs = [(a, _replace__one_mul(b), c) for a, b, c in exprs]
+    exprs = [(k, _replace__one_mul(v), c) for k, v, c in exprs]
     # 将部分参数为1的ts函数进行简化
-    exprs = [(a, _replace__ts_xxx_1(b), c) for a, b, c in exprs]
+    exprs = [(k, _replace__ts_xxx_1(v), c) for k, v, c in exprs]
     # ts_delay转成ts_delta
-    exprs = [(a, _replace__ts_delay__to__ts_delta(b), c) for a, b, c in exprs]
+    exprs = [(k, _replace__ts_delay__to__ts_delta(v), c) for k, v, c in exprs]
 
     return exprs
 

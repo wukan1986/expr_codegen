@@ -108,10 +108,10 @@ class ExprTool:
         表达式列表
         """
         # 抽取前先化简
-        args = [(a, simplify2(b), c) for a, b, c in args]
+        args = [(k, simplify2(v), c) for k, v, c in args]
 
         # 保留了注释信息
-        exprs_syms = [(self.extract(b, date, asset), c) for a, b, c in args]
+        exprs_syms = [(self.extract(v, date, asset), c) for k, v, c in args]
         exprs = []
         syms = []
         for (e, s), c in exprs_syms:
@@ -124,7 +124,7 @@ class ExprTool:
         # 如果目标有重复表达式，这里会混乱
         exprs = sorted(set(exprs), key=exprs.index)
         # 这里不能合并简化与未简化的表达式，会导致cse时失败，需要简化表达式合并
-        exprs = exprs + [(b, c) for a, b, c in args]
+        exprs = exprs + [(v, c) for k, v, c in args]
 
         # print(exprs)
         syms = [str(s) for s in syms]
@@ -137,10 +137,10 @@ class ExprTool:
 
         # cse前简化一次，cse后不再简化
         # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
-        for a, b in repl:
-            exprs_list.append((a, b, "#"))
-        for a, b, c in redu:
-            exprs_list.append((a, b, c))
+        for k, v in repl:
+            exprs_list.append((k, v, "#"))
+        for k, v, c in redu:
+            exprs_list.append((k, v, c))
 
         return exprs_list
 
@@ -166,9 +166,9 @@ class ExprTool:
             表达式
 
         """
-        self.exprs_names = [a for a, b, c in exprs_src]
+        self.exprs_names = [k for k, v, c in exprs_src]
         # 包含了注释信息
-        _exprs = [a for a, b in exprs]
+        _exprs = [k for k, v in exprs]
 
         # 注意：对于表达式右边相同，左边不同的情况，会当成一个处理
         repl, redu = cse(_exprs, symbols_repl, optimizations="basic")

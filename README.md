@@ -207,14 +207,13 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 8. 支持`~A`,底层会转换成`Not(A)`
 9. `gp_`开头的函数都会返回对应的`cs_`函数。如`gp_func(A,B,C)`会替换成`cs_func(B,C)`,其中`A`用在了`groupby([date, A])`
 10. 支持`A,B,C=MACD()`元组解包，在底层会替换成
+   ```python
+   _x_0 = MACD()
+   A = unpack(_x_0, 0)
+   B = unpack(_x_0, 1)
+   C = unpack(_x_0, 2)
+   ```
 11. 单行注释支持参数输入，如：`# --over_null`、`# --over_null=order_by`、`# --over_null=partition_by`
-
-```python
-_x_0 = MACD()
-A = unpack(_x_0, 0)
-B = unpack(_x_0, 1)
-C = unpack(_x_0, 2)
-```
 
 ## 下划线开头的变量
 
