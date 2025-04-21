@@ -177,7 +177,7 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
    X1 = cs_rank(ts_mean(CLOSE, 3)) # --over_null=order_by # 应用在cs_rank上，没有意义
    X2 = ts_rank(ts_mean(CLOSE, 3), 5) # --over_null=order_by # 本以为应用在ts_rank(ts_mean)上，但由于出现了公共ts_mean，其实是应用在ts_rank(_x_0)上
    ```
-   
+
    需写成
 
    ```python
@@ -185,6 +185,7 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
    X1 = cs_rank(_x_0)
    X2 = ts_rank(_x_0, 5)
    ```
+4. 由于很容易搞错，强烈建议生成`output_file`,检查生成的代码是否正确。
 
 ## `expr_codegen`局限性
 
