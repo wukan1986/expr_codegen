@@ -35,12 +35,15 @@ def symbols_to_code(syms, alias):
 
 
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
-            filename='template.py.j2',
+            filename,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
             extra_codes: Sequence[str] = (),
             **kwargs):
     """基于模板的代码生成"""
+    if filename is None:
+        filename = 'template.py.j2'
+
     # 打印Pandas风格代码
     p = PandasStrPrinter()
 

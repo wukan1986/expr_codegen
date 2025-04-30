@@ -85,12 +85,13 @@ class ListDictList:
                 last_v = v
                 last_k = k
 
-    def optimize(self):
+    def optimize(self, merge: bool):
         """将多组groupby根据规则进行合并，减少运行时间"""
         # 接龙。groupby的数量没少，首尾接龙数据比较整齐
         self._list = chain_create(self._list)
-        # 首尾一样，接上去
-        self.back_merge()
+        if merge:
+            # 首尾一样，接上去
+            self.back_merge()
         # 出现了空行，删除
         self.filter_empty()
 

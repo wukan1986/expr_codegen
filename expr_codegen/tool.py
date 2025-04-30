@@ -196,8 +196,8 @@ class ExprTool:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
-            template_file: str = 'template.py.j2',
+    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+            template_file: Optional[str] = None,
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             alias: Dict[str, str] = {},
@@ -210,7 +210,7 @@ class ExprTool:
         exprs_src: list
             表达式列表
         style: str
-            代码风格。可选值 ('polars_group', 'polars_over', 'pandas')
+            代码风格。可选值 ('polars_group', 'polars_over', 'pandas', 'sql')
         template_file: str
             根据需求可定制模板
         replace:bool
@@ -233,7 +233,7 @@ class ExprTool:
         代码字符串
 
         """
-        assert style in ('pandas', 'polars_group', 'polars_over')
+        assert style in ('pandas', 'polars_group', 'polars_over', 'sql')
 
         if replace:
             exprs_src = replace_exprs(exprs_src)
@@ -248,14 +248,19 @@ class ExprTool:
         exprs_ldl, G = self.dag(True, date, asset)
 
         if regroup:
-            exprs_ldl.optimize()
+            exprs_ldl.optimize(merge=style != 'sql')
 
         if style == 'polars_group':
             from expr_codegen.polars_group.code import codegen
         elif style == 'polars_over':
             from expr_codegen.polars_over.code import codegen
-        else:
+        elif style == 'pandas':
             from expr_codegen.pandas.code import codegen
+        elif style == 'sql':
+            from expr_codegen.sql.code import codegen
+            format = False
+        else:
+            raise ValueError(f'unknown style {style}')
 
         extra_codes = [c if isinstance(c, str) else inspect.getsource(c) for c in extra_codes]
 
@@ -279,8 +284,8 @@ class ExprTool:
                   extra_codes: str,
                   output_file: str,
                   convert_xor: bool,
-                  style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
-                  template_file: str = 'template.py.j2',
+                  style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+                  template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
@@ -346,8 +351,8 @@ def codegen_exec(df: Optional[DataFrame],
                  output_file: Union[str, TextIOBase, None] = None,
                  run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
-                 style: Literal['pandas', 'polars_group', 'polars_over'] = 'polars_over',
-                 template_file: str = 'template.py.j2',
+                 style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+                 template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
 
                  **kwargs) -> Optional[DataFrame]:
@@ -372,9 +377,10 @@ def codegen_exec(df: Optional[DataFrame],
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
-        代码风格。可选值 'pandas', 'polars_group', 'polars_over'
+        代码风格。可选值 'pandas', 'polars_group', 'polars_over', 'sql'
         - polars_group: 不支持Lazy
         - pandas: 不支持struct
+        - sql: 只生成sql语句，不执行
     template_file: str
         代码模板
     date: str
