@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import polars as pl
 from polars_ta.prefix.wq import *
@@ -25,16 +24,16 @@ df = pl.from_pandas(df)
 
 def _code_block_1():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
+
     A1 = floor(log1p(ceiling(abs_(CLOSE * 100) * 2)))
 
 
 df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file='1_out.sql', style='sql',
-                  table_name='df')  # 打印代码
+                  table_name='self')  # 打印代码
 
-print(df.collect())
+print(df)
 
 code = codegen_exec(None, _code_block_1, over_null='partition_by', output_file='1_out.sql', style='sql',
-                    date='date1', asset='asset2',
-                    table_name='df')  # 打印代码
+                    date='date1', asset='asset2', table_name='df3')  # 打印代码
 
 print(code)

@@ -6,19 +6,35 @@ from sympy.printing.precedence import precedence, PRECEDENCE
 
 class SQLStrPrinter(StrPrinter):
     # https://docs.pola.rs/api/python/stable/reference/sql/functions/index.html
-    convert_math = {
+    # https://github.com/pola-rs/polars/blob/main/crates/polars-sql/src/functions.rs
+    # 将polars_ta中的函数转换成SQL中的函数
+    convert_funcs = {
+        # Math functions
         'abs_': 'ABS',
         'ceiling': 'CEIL',
+        'div': 'DIV',
         'exp': 'EXP',
         'floor': 'FLOOR',
         'log': 'LN',
-        'log2': 'LOG2',
         'log10': 'LOG10',
         'log1p': 'LOG1P',
+        'log2': 'LOG2',
+        'mod': 'MOD',
         'sign': 'SIGN',
         'sqrt': 'SQRT',
         'power': 'POW',
         'round_': 'ROUND',
+        # Trig functions
+        'arc_cos': 'ACOS',
+        'arc_sin': 'ASIN',
+        'arc_tan': 'ATAN',
+        'arc_tan2': 'ATAN2',
+        'cot': 'COT',
+        'cos': 'COS',
+        'degrees': 'DEGREES',
+        'radians': 'RADIANS',
+        'sin': 'SIN',
+        'tan': 'TAN',
     }
 
     def _print(self, expr, **kwargs) -> str:
@@ -62,8 +78,8 @@ class SQLStrPrinter(StrPrinter):
                     printmethodname = "_print_gp_"
 
                 # polars_ta中的函数转换成SQL函数
-                if cls.__name__ in self.convert_math:
-                    return self._print_Rename(expr, self.convert_math[cls.__name__])
+                if cls.__name__ in self.convert_funcs:
+                    return self._print_Rename_(expr, self.convert_funcs[cls.__name__])
 
                 printmethod = getattr(self, printmethodname, None)
                 if printmethod is not None:
@@ -102,6 +118,6 @@ class SQLStrPrinter(StrPrinter):
         func_name = expr.func.__name__[3:]
         return "cs_%s(%s)" % (func_name, ",".join(new_args))
 
-    def _print_Rename(self, expr, new_name):
+    def _print_Rename_(self, expr, new_name):
         l = [self._print(o) for o in expr.args]
         return new_name + "(%s)" % ", ".join(l)
