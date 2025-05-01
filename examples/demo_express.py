@@ -1,6 +1,8 @@
 import sys
 from io import StringIO
 
+import polars as pl
+
 from expr_codegen import codegen_exec
 
 
@@ -29,15 +31,16 @@ def _code_block_2():
     CPV = cs_zscore(_corr) + cs_zscore(_beta)
 
 
-code = StringIO()
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file=sys.stdout)  # 打印代码
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file="output.py")  # 保存到文件
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by')  # 只执行，不保存代码
 
-df = None  # 替换成真实的polars数据
-df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file=sys.stdout)  # 打印代码
-df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file="output.py")  # 保存到文件
-df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by')  # 只执行，不保存代码
-df = codegen_exec(df, _code_block_1, _code_block_2, over_null='partition_by', output_file=code)  # 保存到字符串
+code = StringIO()
+codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file=code)  # 保存到字符串
 code.seek(0)
 code.read()  # 读取代码
 
+# TODO 替换成合适的数据
+df = pl.DataFrame()
 df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect()  # Lazy CPU
 df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect(engine="gpu")  # Lazy GPU
