@@ -2,8 +2,9 @@ import inspect
 import pathlib
 from functools import lru_cache
 from io import TextIOBase
-from typing import Sequence, Dict, Union, TypeVar, Optional, Literal
+from typing import Sequence, Union, TypeVar, Optional, Literal
 
+import polars as pl
 from black import Mode, format_str
 from loguru import logger
 from sympy import simplify, cse, symbols, numbered_symbols
@@ -200,8 +201,8 @@ class ExprTool:
             template_file: Optional[str] = None,
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
-            alias: Dict[str, str] = {},
             extra_codes: Sequence[object] = (),
+            table_name: str = 'self',
             **kwargs):
         """功能集成版，将几个功能写到一起方便使用
 
@@ -223,8 +224,6 @@ class ExprTool:
             日期字段名
         asset:str
             资产字段名
-        alias: Dict[str,str]
-            符号别名。可以变通的传入正则符号名
         extra_codes: Sequence[object]
             需要复制到模板中的额外代码
 
@@ -266,11 +265,11 @@ class ExprTool:
 
         codes = codegen(exprs_ldl, exprs_src, syms_dst,
                         filename=template_file, date=date, asset=asset,
-                        alias=alias,
                         extra_codes=extra_codes,
+                        table_name=table_name,
                         **kwargs)
 
-        logger.info(f'code is generated')
+        logger.info(f'{style} code is generated')
 
         if format:
             # 格式化。在遗传算法中没有必要
@@ -287,6 +286,7 @@ class ExprTool:
                   style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
+                  table_name: str = 'self',
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_list = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
@@ -300,6 +300,7 @@ class ExprTool:
                                           # 传入多个列的方法
                                           extra_codes,
                                           ),
+                             table_name=table_name,
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
@@ -316,8 +317,8 @@ class ExprTool:
 
 
 @lru_cache(maxsize=64, typed=True)
-def _get_func_from_code(code: str):
-    logger.info(f'get func from code')
+def _get_func_from_code_py(code: str):
+    logger.info(f'get func from code py')
     globals_ = {}
     exec(code, globals_)
     return globals_['main']
@@ -332,13 +333,21 @@ def _get_func_from_module(module: str):
 
 
 @lru_cache(maxsize=64, typed=True)
-def _get_func_from_file(file: str):
+def _get_func_from_file_py(file: str):
     file = pathlib.Path(file)
     logger.info(f'get func from file "{file.absolute()}"')
     with open(file, 'r', encoding='utf-8') as f:
         globals_ = {}
         exec(f.read(), globals_)
         return globals_['main']
+
+
+@lru_cache(maxsize=64, typed=True)
+def _get_code_from_file(file: str):
+    file = pathlib.Path(file)
+    logger.info(f'get code from file "{file.absolute()}"')
+    with open(file, 'r', encoding='utf-8') as f:
+        return f.read()
 
 
 _TOOL_ = ExprTool()
@@ -354,14 +363,15 @@ def codegen_exec(df: Optional[DataFrame],
                  style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
                  template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
-
-                 **kwargs) -> Optional[DataFrame]:
+                 table_name: str = 'self',
+                 **kwargs) -> Union[DataFrame, str, None]:
     """快速转换源代码并执行
 
     Parameters
     ----------
-    df: pl.DataFrame, pd.DataFrame, pl.LazyFrame
-        输入DataFrame
+    df: pl.DataFrame, pd.DataFrame, pl.LazyFrame,None
+        输入DataFrame，输出DataFrame
+        输入None，输出代码
     codes:
         函数体。此部分中的表达式会被翻译成目标代码
     extra_codes: str
@@ -392,10 +402,15 @@ def codegen_exec(df: Optional[DataFrame],
         - partition_by: 空值划分到不同分区
         - order_by: 空值排同一分区的前排
         - None: 不做处理
+    table_name:str
+        表名。style=sql时有效
 
     Returns
     -------
     DataFrame
+        输出DataFrame
+    str
+        输出代码
 
     Notes
     -----
@@ -406,16 +421,23 @@ def codegen_exec(df: Optional[DataFrame],
 
     """
     if df is not None:
+        input_file = None
         # 以下代码都带缓存功能
         if run_file is True:
             assert output_file is not None, 'output_file is required'
-            return _get_func_from_file(output_file)(df)
-        if run_file is not False:
-            run_file = str(run_file)
-            if run_file.endswith('.py'):
-                return _get_func_from_file(run_file)(df)
+            input_file = str(output_file)
+        elif run_file is not False:
+            input_file = str(run_file)
+
+        if input_file is not None:
+            if input_file.endswith('.py'):
+                return _get_func_from_file_py(input_file)(df)
+            elif input_file.endswith('.sql'):
+                return pl.sql(_get_code_from_file(input_file))
             else:
-                return _get_func_from_module(run_file)(df)  # 可断点调试
+                return _get_func_from_module(input_file)(df)  # 可断点调试
+    else:
+        pass
 
     # 此代码来自于sympy.var
     frame = inspect.currentframe().f_back
@@ -432,11 +454,15 @@ def codegen_exec(df: Optional[DataFrame],
         style=style, template_file=template_file,
         date=date, asset=asset,
         over_null=over_null,
+        table_name=table_name,
         **kwargs
     )
 
     if df is None:
-        return None
+        # 如果df为空，直接返回代码
+        return code
+    elif style == 'sql':
+        return pl.sql(code)
     else:
         # 代码一样时就从缓存中取出函数
-        return _get_func_from_code(code)(df)
+        return _get_func_from_code_py(code)(df)

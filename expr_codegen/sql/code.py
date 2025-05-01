@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import Sequence, Dict, Literal
+from typing import Sequence, Literal
 
 import jinja2
 from jinja2 import FileSystemLoader, TemplateNotFound
@@ -13,9 +13,9 @@ from expr_codegen.sql.printer import SQLStrPrinter
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename,
             date='date', asset='asset',
-            alias: Dict[str, str] = {},
             extra_codes: Sequence[str] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+            table_name: str = 'self',
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -37,7 +37,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
     drop_symbols = exprs_ldl.drop_symbols()
     j = -1
-    last_func_name = "self"
+    last_func_name = table_name
     for i, row in enumerate(exprs_ldl.values()):
         for k, vv in row.items():
             j += 1
@@ -63,18 +63,16 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                             _sym = f"({' AND '.join(_sym)})"
                         else:
                             _sym = ','.join(_sym)
-                        # TODO 以后要修复
-                        # args.over_null = None
                         if args.over_null == 'partition_by':
-                            func_code.append(f"{s2} OVER(PARTITION BY {_sym},`asset` ORDER BY `date`) AS {va},")
+                            func_code.append(f"{s2} OVER(PARTITION BY {_sym},`{asset}` ORDER BY `{date}`) AS {va},")
                         elif args.over_null == 'order_by':
-                            func_code.append(f"{s2} OVER(PARTITION BY `asset` ORDER BY {_sym},`date`) AS {va},")
+                            func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY {_sym},`{date}`) AS {va},")
                         else:
-                            func_code.append(f"{s2} OVER(PARTITION BY `asset` ORDER BY `date`) AS {va},")
+                            func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY `{date}`) AS {va},")
                     elif k[0] == CS:
-                        func_code.append(f"{s2} OVER(PARTITION BY `date`) AS {va},")
+                        func_code.append(f"{s2} OVER(PARTITION BY `{date}`) AS {va},")
                     elif k[0] == GP:
-                        func_code.append(f"{s2} OVER(PARTITION BY `date`,`{k[2]}`) AS {va},")
+                        func_code.append(f"{s2} OVER(PARTITION BY `{date}`,`{k[2]}`) AS {va},")
                     else:
                         func_code.append(f"{s2} AS {va},")
                     exprs_dst.append(f"{va} = {s1} {comment}")

@@ -1,13 +1,9 @@
-import sys
-from io import StringIO
-
-from expr_codegen import codegen_exec
-
-from polars_ta.prefix.wq import *
-
-import polars as pl
 import numpy as np
 import pandas as pd
+import polars as pl
+from polars_ta.prefix.wq import *
+
+from expr_codegen import codegen_exec
 
 _N = 250 * 1
 _K = 500  # TODO 如要单资产，改此处为1即可
@@ -29,13 +25,16 @@ df = pl.from_pandas(df)
 
 def _code_block_1():
     # 因子编辑区，可利用IDE的智能提示在此区域编辑因子
-    A1 = floor(log1p(ceiling(abs_(CLOSE * 100))))
+    A1 = floor(log1p(ceiling(abs_(CLOSE * 100) * 2)))
 
 
-code = StringIO()
+df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file='1_out.sql', style='sql',
+                  table_name='df')  # 打印代码
 
-codegen_exec(None, _code_block_1, over_null='partition_by', output_file=code, style='sql')  # 打印代码
+print(df.collect())
 
-code.seek(0)
-sql = code.read()
-print(df.sql(sql))
+code = codegen_exec(None, _code_block_1, over_null='partition_by', output_file='1_out.sql', style='sql',
+                    date='date1', asset='asset2',
+                    table_name='df')  # 打印代码
+
+print(code)

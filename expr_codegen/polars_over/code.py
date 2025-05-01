@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import Sequence, Dict, Literal
+from typing import Sequence, Literal
 
 import jinja2
 from jinja2 import FileSystemLoader, TemplateNotFound
@@ -28,10 +28,9 @@ def get_groupby_from_tuple(tup, func_name, drop_cols):
     return f'df = {func_name}(df).drop(*{drop_cols})'
 
 
-def symbols_to_code(syms, alias):
+def symbols_to_code(syms):
     a = [f"{s}" for s in syms]
-    b = [f"r'{alias.get(s, s)}'" for s in syms]  #
-    b = [f"'{alias.get(s, s)}'" for s in syms]
+    b = [f"'{s}'" for s in syms]
     return f"""_ = [{','.join(b)}]
 [{','.join(a)}] = [pl.col(i) for i in _]"""
 
@@ -39,7 +38,6 @@ def symbols_to_code(syms, alias):
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename,
             date='date', asset='asset',
-            alias: Dict[str, str] = {},
             extra_codes: Sequence[str] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             **kwargs):
@@ -118,8 +116,8 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name, ds)
 
-    syms1 = symbols_to_code(syms_dst, alias)
-    syms2 = symbols_to_code(syms_out, alias)
+    syms1 = symbols_to_code(syms_dst)
+    syms2 = symbols_to_code(syms_out)
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
