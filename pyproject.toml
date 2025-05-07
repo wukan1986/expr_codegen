@@ -41,12 +41,14 @@ packages = [
     "expr_codegen.pandas",
     "expr_codegen.polars_group",
     "expr_codegen.polars_over",
+    "expr_codegen.sql",
 ]
 
 [tool.setuptools.package-data]
 "expr_codegen.pandas" = ["*.j2"]
 "expr_codegen.polars_group" = ["*.j2"]
 "expr_codegen.polars_over" = ["*.j2"]
+"expr_codegen.sql" = ["*.j2"]
 
 [tool.setuptools.dynamic]
 version = { attr = "expr_codegen._version.__version__" }
