@@ -7,7 +7,7 @@ from jinja2 import FileSystemLoader, TemplateNotFound
 
 from expr_codegen.expr import TS, CS, GP
 from expr_codegen.model import ListDictList
-from expr_codegen.polars_over.printer import PolarsStrPrinter
+from expr_codegen.polars.printer import PolarsStrPrinter
 
 
 def get_groupby_from_tuple(tup, func_name, drop_cols):

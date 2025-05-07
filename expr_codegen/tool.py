@@ -197,7 +197,7 @@ class ExprTool:
             G = dag_middle(G, self.exprs_names, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+    def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql'] = 'polars',
             template_file: Optional[str] = None,
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
@@ -211,7 +211,7 @@ class ExprTool:
         exprs_src: list
             表达式列表
         style: str
-            代码风格。可选值 ('polars_group', 'polars_over', 'pandas', 'sql')
+            代码风格。可选值 ('polars', 'pandas', 'sql')
         template_file: str
             根据需求可定制模板
         replace:bool
@@ -232,7 +232,7 @@ class ExprTool:
         代码字符串
 
         """
-        assert style in ('pandas', 'polars_group', 'polars_over', 'sql')
+        assert style in ('pandas', 'polars', 'sql')
 
         if replace:
             exprs_src = replace_exprs(exprs_src)
@@ -249,10 +249,8 @@ class ExprTool:
         if regroup:
             exprs_ldl.optimize(merge=style != 'sql')
 
-        if style == 'polars_group':
-            from expr_codegen.polars_group.code import codegen
-        elif style == 'polars_over':
-            from expr_codegen.polars_over.code import codegen
+        if style == 'polars':
+            from expr_codegen.polars.code import codegen
         elif style == 'pandas':
             from expr_codegen.pandas.code import codegen
         elif style == 'sql':
@@ -283,7 +281,7 @@ class ExprTool:
                   extra_codes: str,
                   output_file: str,
                   convert_xor: bool,
-                  style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+                  style: Literal['pandas', 'polars', 'sql'] = 'polars',
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
                   table_name: str = 'self',
@@ -360,7 +358,7 @@ def codegen_exec(df: Optional[DataFrame],
                  output_file: Union[str, TextIOBase, None] = None,
                  run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
-                 style: Literal['pandas', 'polars_group', 'polars_over', 'sql'] = 'polars_over',
+                 style: Literal['pandas', 'polars', 'sql'] = 'polars',
                  template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
@@ -387,8 +385,7 @@ def codegen_exec(df: Optional[DataFrame],
     convert_xor: bool
         ^ 转成异或还是乘方
     style: str
-        代码风格。可选值 'pandas', 'polars_group', 'polars_over', 'sql'
-        - polars_group: 不支持Lazy
+        代码风格。可选值 'pandas', 'polars', 'sql'
         - pandas: 不支持struct
         - sql: 只生成sql语句，不执行
     template_file: str
@@ -433,8 +430,8 @@ def codegen_exec(df: Optional[DataFrame],
             if input_file.endswith('.py'):
                 return _get_func_from_file_py(input_file)(df)
             elif input_file.endswith('.sql'):
-                ctx = pl.SQLContext(frames={table_name: df})
-                return ctx.execute(_get_code_from_file(input_file), eager=isinstance(df, _pl_DataFrame))
+                with pl.SQLContext(frames={table_name: df}) as ctx:
+                    return ctx.execute(_get_code_from_file(input_file), eager=isinstance(df, _pl_DataFrame))
             else:
                 return _get_func_from_module(input_file)(df)  # 可断点调试
     else:
@@ -463,8 +460,8 @@ def codegen_exec(df: Optional[DataFrame],
         # 如果df为空，直接返回代码
         return code
     elif style == 'sql':
-        ctx = pl.SQLContext(frames={table_name: df})
-        return ctx.execute(code, eager=isinstance(df, _pl_DataFrame))
+        with pl.SQLContext(frames={table_name: df}) as ctx:
+            return ctx.execute(code, eager=isinstance(df, _pl_DataFrame))
     else:
         # 代码一样时就从缓存中取出函数
         return _get_func_from_code_py(code)(df)

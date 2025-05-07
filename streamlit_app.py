@@ -15,7 +15,7 @@ with st.sidebar:
     asset_name = st.text_input('资产字段名', 'asset')
 
     # 生成代码
-    style = st.radio('代码风格', ('polars_over', 'polars_group', 'pandas', 'sql'))
+    style = st.radio('代码风格', ('polars', 'pandas', 'sql'))
     over_null = st.radio('over_null模式', ('partition_by', 'order_by', None))
 
     convert_xor = st.checkbox('将`^`转换为`**`', True)
