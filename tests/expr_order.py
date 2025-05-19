@@ -38,7 +38,14 @@ def _code_block_2():
     alpha_031 = ((cs_rank(cs_rank(cs_rank(ts_decay_linear((-1 * cs_rank(cs_rank(ts_delta(CLOSE, 10)))), 10))))))
 
 
+def _code_block_1():
+    # 要求能将ts_提前
+    A = ts_returns(CLOSE, 5)
+    D = ts_returns(A, 10) + cs_rank(CLOSE)
+    E = A + D
+
+
 logger.info("1")
-df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file="1_out.py", style='polars', filter_last=True)
+df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file="1_out.py", style='pandas', filter_last=True)
 print(df.tail(10))
 logger.info("2")
