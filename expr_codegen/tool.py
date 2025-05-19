@@ -227,6 +227,8 @@ class ExprTool:
             资产字段名
         extra_codes: Sequence[object]
             需要复制到模板中的额外代码
+        table_name
+        filter_last
 
         Returns
         -------
@@ -306,8 +308,7 @@ class ExprTool:
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
-        if isinstance(output_file, TextIOBase):
-            # 输出到控制台
+        if hasattr(output_file, "write"):
             output_file.write(code)
         elif output_file is not None:
             output_file = pathlib.Path(output_file)
@@ -355,7 +356,7 @@ def _get_code_from_file(file: str):
 _TOOL_ = ExprTool()
 
 
-def codegen_exec(df: Optional[DataFrame],
+def codegen_exec(df: Union[DataFrame, None],
                  *codes,
                  over_null: Literal['partition_by', 'order_by', None],
                  extra_codes: str = r'CS_SW_L1 = r"^sw_l1_\d+$"',
@@ -367,7 +368,7 @@ def codegen_exec(df: Optional[DataFrame],
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
                  filter_last: bool = False,
-                 **kwargs) -> Union[DataFrame, str, None]:
+                 **kwargs) -> Union[DataFrame, str]:
     """快速转换源代码并执行
 
     Parameters
@@ -400,14 +401,14 @@ def codegen_exec(df: Optional[DataFrame],
     asset: str
         资产字段
     over_null: str
-        时序中遇到null时的处理方式
+        时序中遇到null时的处理方式。只在style参数为'polars', 'sql'时有效
         - partition_by: 空值划分到不同分区
         - order_by: 空值排同一分区的前排
         - None: 不做处理
     table_name:str
-        表名。style=sql时有效
+        表名。只在style参数为sql时有效
     filter_last:bool
-        在实盘时，只需要最后一行日期的数据，可以在最后的ts后cs前过滤有效数据，加快计算
+        在实盘时，只需要最后一天日期的数据，可以在最后一个`ts`之后过滤数据。目前只在style参数为'polars', 'pandas'时有效
 
 
     Returns
