@@ -73,6 +73,9 @@ def ts_delay(x: pd.Series, d: int = 1) -> pd.Series:
 def ts_delta(x: pd.Series, d: int = 1) -> pd.Series:
     return x.diff(d)
 
+def ts_returns(x: pd.Series, d: int = 1) -> pd.Series:
+    return x.pct_change(d)
+
 
 def ts_max(x: pd.Series, d: int = 5) -> pd.Series:
     return x.rolling(d).max()

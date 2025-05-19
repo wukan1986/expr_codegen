@@ -8,6 +8,7 @@ import polars.selectors as cs  # noqa
 # from loguru import logger  # noqa
 from polars import DataFrame as _pl_DataFrame
 from polars import LazyFrame as _pl_LazyFrame
+
 # ===================================
 # 导入优先级，例如：ts_RSI在ta与talib中都出现了，优先使用ta
 # 运行时，后导入覆盖前导入，但IDE智能提示是显示先导入的
@@ -31,6 +32,7 @@ _NONE_ = None
 _TRUE_ = True
 _FALSE_ = False
 
+
 def unpack(x: pl.Expr, idx: int = 0) -> pl.Expr:
     return x.struct[idx]
 
@@ -39,9 +41,11 @@ def unpack(x: pl.Expr, idx: int = 0) -> pl.Expr:
 {% endfor %}
 
 {% for key, value in funcs.items() %}
+
 def {{ key }}(df: DataFrame) -> DataFrame:
 {{ value }}
     return df
+
 {% endfor %}
 
 """
@@ -57,8 +61,17 @@ def {{ key }}(df: DataFrame) -> DataFrame:
 """
 
 
+def filter_last_date(df: DataFrame) -> DataFrame:
+    """过滤数据，只取最后一天。实盘时可用于减少计算量
+    前一个调用的ts,这里可以直接调用，可以认为已经排序好
+        `df = filter_last_date(df)`
+    反之
+        `df = filter_last_date(df.sort(_DATE_))`
+    """
+    return df.filter(pl.col(_DATE_) >= df.select(pl.last(_DATE_))[0, 0])
+
+
 def main(df: DataFrame) -> DataFrame:
-    # logger.info("start...")
     {% for key, value in groupbys.items() %}
     {{ value-}}
     {% endfor %}
@@ -69,15 +82,6 @@ def main(df: DataFrame) -> DataFrame:
 
     # shrink
     df = df.select(cs.all().shrink_dtype())
-    # df = df.shrink_to_fit()
-
-    # logger.info('done')
-
-    # save
-    # df.write_parquet('output.parquet')
 
     return df
 
-# if __name__ in ("__main__", "builtins"):
-#     # TODO: 数据加载或外部传入
-#     df_output = main(df_input)

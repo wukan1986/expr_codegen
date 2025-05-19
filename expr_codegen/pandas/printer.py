@@ -54,6 +54,8 @@ class PandasStrPrinter(StrPrinter):
             self._print_level -= 1
 
     def _print_Symbol(self, expr):
+        if expr.name in ('_NONE_', '_TRUE_', '_FALSE_'):
+            return expr.name
         return f"g[{expr.name}]"
 
     def _print_Equality(self, expr):
