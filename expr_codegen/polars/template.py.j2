@@ -61,12 +61,12 @@ def {{ key }}(df: DataFrame) -> DataFrame:
 """
 
 
-def filter_last_date(df: DataFrame) -> DataFrame:
+def filter_last(df: DataFrame) -> DataFrame:
     """过滤数据，只取最后一天。实盘时可用于减少计算量
     前一个调用的ts,这里可以直接调用，可以认为已经排序好
-        `df = filter_last_date(df)`
+        `df = filter_last(df)`
     反之
-        `df = filter_last_date(df.sort(_DATE_))`
+        `df = filter_last(df.sort(_DATE_))`
     """
     return df.filter(pl.col(_DATE_) >= df.select(pl.last(_DATE_))[0, 0])
 

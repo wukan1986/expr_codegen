@@ -203,6 +203,7 @@ class ExprTool:
             date='date', asset='asset',
             extra_codes: Sequence[object] = (),
             table_name: str = 'self',
+            filter_last: bool = False,
             **kwargs):
         """功能集成版，将几个功能写到一起方便使用
 
@@ -265,6 +266,7 @@ class ExprTool:
                         filename=template_file, date=date, asset=asset,
                         extra_codes=extra_codes,
                         table_name=table_name,
+                        filter_last=filter_last,
                         **kwargs)
 
         logger.info(f'{style} code is generated')
@@ -285,6 +287,7 @@ class ExprTool:
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
                   table_name: str = 'self',
+                  filter_last: bool = False,
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_list = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
@@ -299,6 +302,7 @@ class ExprTool:
                                           extra_codes,
                                           ),
                              table_name=table_name,
+                             filter_last=filter_last,
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
@@ -362,6 +366,7 @@ def codegen_exec(df: Optional[DataFrame],
                  template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
+                 filter_last: bool = False,
                  **kwargs) -> Union[DataFrame, str, None]:
     """快速转换源代码并执行
 
@@ -401,6 +406,9 @@ def codegen_exec(df: Optional[DataFrame],
         - None: 不做处理
     table_name:str
         表名。style=sql时有效
+    filter_last:bool
+        在实盘时，只需要最后一行日期的数据，可以在最后的ts后cs前过滤有效数据，加快计算
+
 
     Returns
     -------
@@ -453,6 +461,7 @@ def codegen_exec(df: Optional[DataFrame],
         date=date, asset=asset,
         over_null=over_null,
         table_name=table_name,
+        filter_last=filter_last,
         **kwargs
     )
 

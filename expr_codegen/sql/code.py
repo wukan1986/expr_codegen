@@ -16,6 +16,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             extra_codes: Sequence[str] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             table_name: str = 'self',
+            filter_last: bool = False,
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -34,7 +35,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # 处理过后的表达式
     exprs_dst = []
     syms_out = []
-
+    ts_func_name = None
     drop_symbols = exprs_ldl.drop_symbols()
     j = -1
     last_func_name = table_name
@@ -57,6 +58,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     s1 = str(ex)
                     s2 = p.doprint(ex)
                     if k[0] == TS:
+                        ts_func_name = func_name
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
                         _sym = [f"`{s}` IS NOT NULL" for s in set(sym)]
                         if len(_sym) > 1:
@@ -85,6 +87,10 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             funcs[func_name] = '\n  '.join(func_code)
             # 只有下划线开头再删除
             ds = [x for x in drop_symbols[j] if x.startswith('_')]
+
+    if filter_last:
+        # TODO 没有实现
+        pass
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
