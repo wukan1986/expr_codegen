@@ -44,6 +44,7 @@ print(df1.null_count())
 # 但部分截面因子无法在单票上得出有效值，所以还是得换成多股票版
 n = df1.null_count().max_horizontal()[0] + _K
 print("tail理论最小参数", n)
+print("理论上单支股票最小数据量", n / _K)
 
 # 这里一定要排序后再tail
 df2: pl.DataFrame = codegen_exec(df.sort('date', 'asset').tail(n), _code_block_1, over_null='partition_by')
