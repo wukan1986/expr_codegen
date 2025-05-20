@@ -1,6 +1,7 @@
+import numpy as np
 import pandas as pd
+import polars as pl
 from loguru import logger
-from polars_ta.prefix.wq import *
 
 from expr_codegen import codegen_exec
 
@@ -16,7 +17,6 @@ df = pd.DataFrame({
     'LOW': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
     'CLOSE': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
 }, index=pd.MultiIndex.from_product([date, asset], names=['date', 'asset'])).reset_index()
-
 
 # 向脚本输入数据
 # df = pl.from_pandas(df)
@@ -45,7 +45,14 @@ def _code_block_1():
     E = A + D
 
 
+def _code_block_1():
+    # 要求能将ts_提前
+    B = cs_rank(CLOSE, False)
+    C = cs_rank(CLOSE, True)
+    E = B + C
+
+
 logger.info("1")
 df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file="1_out.py", style='pandas', filter_last=True)
-print(df.tail(10))
+print(df)
 logger.info("2")

@@ -121,7 +121,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     syms1 = symbols_to_code(syms_dst)
     syms2 = symbols_to_code(syms_out)
     if filter_last:
-        _groupbys = {}
+        _groupbys = {'sort': groupbys['sort']}
+        if ts_func_name is None:
+            _groupbys['_filter_last'] = "df = filter_last(df.sort(_DATE_))"
         for k, v in groupbys.items():
             _groupbys[k] = v
             if k == ts_func_name:
