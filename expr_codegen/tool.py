@@ -202,6 +202,7 @@ class ExprTool:
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             extra_codes: Sequence[object] = (),
+            over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             table_name: str = 'self',
             filter_last: bool = False,
             **kwargs):
@@ -267,6 +268,7 @@ class ExprTool:
         codes = codegen(exprs_ldl, exprs_src, syms_dst,
                         filename=template_file, date=date, asset=asset,
                         extra_codes=extra_codes,
+                        over_null=over_null,
                         table_name=table_name,
                         filter_last=filter_last,
                         **kwargs)
@@ -288,6 +290,7 @@ class ExprTool:
                   style: Literal['pandas', 'polars', 'sql'] = 'polars',
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
+                  over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
                   table_name: str = 'self',
                   filter_last: bool = False,
                   **kwargs) -> str:
@@ -303,6 +306,7 @@ class ExprTool:
                                           # 传入多个列的方法
                                           extra_codes,
                                           ),
+                             over_null=over_null,
                              table_name=table_name,
                              filter_last=filter_last,
                              **kwargs)

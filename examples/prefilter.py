@@ -34,14 +34,19 @@ print(df1)
 # 后面只对cond2=true的计算
 
 
+
 t1 = time.perf_counter()
-# 方案1，先合并再过滤
+# 方案1
 df2 = pl.concat([df, df1], how='align_left').filter(pl.col('cond2'))
 t2 = time.perf_counter()
-# 方案2，直接过滤
-df2 = df.filter(pl.col('asset').is_in(df1['asset'].to_list()))
+# 方案2
+df2 = df.join(df1, on=['asset'], how='left').filter(pl.col('cond2'))
 t3 = time.perf_counter()
-print("耗时比较", t2 - t1, t3 - t2)
+# 方案3
+assets = set(df1['asset'].to_list())
+df2 = df.filter(pl.col('asset').is_in(assets))
+t4 = time.perf_counter()
+print("耗时比较", t2 - t1, t3 - t2, t4 - t3)
 
 
 def _code_block_2():
