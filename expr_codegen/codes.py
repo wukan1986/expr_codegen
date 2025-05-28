@@ -381,15 +381,16 @@ def sources_to_asts(*sources, convert_xor: bool):
         if isinstance(node, ast.Assign):
             assigns.append(node)
             continue
-        if isinstance(node, ast_comments.Comment):
-            # 添加注释
-            if node.inline and isinstance(assigns[-1], ast.Assign):
-                assigns.append(node)
-                continue
         # TODO 是否要把其它语句也加入？是否有安全问题？
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raw.append(node)
             continue
+        if isinstance(node, ast_comments.Comment):
+            # 添加注释
+            if node.inline and isinstance(tree.body[i - 1], ast.Assign):
+                assigns.append(node)
+                continue
+
     return raw_to_code(raw), assigns_to_list(assigns), t.funcs_new, t.args_new, t.targets_new
 
 

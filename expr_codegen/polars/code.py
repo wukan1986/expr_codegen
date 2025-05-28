@@ -40,6 +40,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             date='date', asset='asset',
             extra_codes: Sequence[str] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+            filter_last: bool = False,
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -58,7 +59,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # 处理过后的表达式
     exprs_dst = []
     syms_out = []
-
+    ts_func_name = None
     drop_symbols = exprs_ldl.drop_symbols()
     j = -1
     for i, row in enumerate(exprs_ldl.values()):
@@ -85,6 +86,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         # 不想等，打印注释，显示会更直观察
                         func_code.append(f"# {va} = {s1}")
                     if k[0] == TS:
+                        ts_func_name = func_name
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
                         _sym = [f"{s}.is_not_null()" for s in set(sym)]
                         if len(_sym) > 1:
@@ -118,6 +120,15 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
     syms1 = symbols_to_code(syms_dst)
     syms2 = symbols_to_code(syms_out)
+    if filter_last:
+        _groupbys = {'sort': groupbys['sort']}
+        if ts_func_name is None:
+            _groupbys['_filter_last'] = "df = filter_last(df.sort(_DATE_))"
+        for k, v in groupbys.items():
+            _groupbys[k] = v
+            if k == ts_func_name:
+                _groupbys[k + '_filter_last'] = "df = filter_last(df)"
+        groupbys = _groupbys
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))

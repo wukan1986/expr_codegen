@@ -38,6 +38,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename,
             date='date', asset='asset',
             extra_codes: Sequence[str] = (),
+            filter_last: bool = False,
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -53,7 +54,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # 处理过后的表达式
     exprs_dst = []
     syms_out = []
-
+    ts_func_name = None
     drop_symbols = exprs_ldl.drop_symbols()
     j = -1
     for i, row in enumerate(exprs_ldl.values()):
@@ -78,6 +79,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             if len(groupbys['sort']) == 0:
                 groupbys['sort'] = f'df = df.sort_values(by=[_ASSET_, _DATE_]).reset_index(drop=True)'
             if k[0] == TS:
+                ts_func_name = func_name
                 # 时序需要排序
                 func_code = [f'    g.df = df.sort_values(by=[_DATE_])'] + func_code
             else:
@@ -93,6 +95,15 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
     syms1 = symbols_to_code(syms_dst)
     syms2 = symbols_to_code(syms_out)
+    if filter_last:
+        _groupbys = {'sort': groupbys['sort']}
+        if ts_func_name is None:
+            _groupbys['_filter_last'] = "df = filter_last(df.sort_values(by=[_DATE_]))"
+        for k, v in groupbys.items():
+            _groupbys[k] = v
+            if k == ts_func_name:
+                _groupbys[k + '_filter_last'] = "df = filter_last(df)"
+        groupbys = _groupbys
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))

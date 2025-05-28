@@ -1,10 +1,10 @@
 from functools import reduce
-from itertools import product
+from itertools import product, permutations
 
 import networkx as nx
 from sympy import symbols
 
-from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree, zero_outdegree
+from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
 from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
 
 _RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
@@ -122,6 +122,18 @@ class ListDictList:
         return l3
 
 
+def score1(row) -> int:
+    # 首尾相连打分加1
+    lst = [None] + [key for r in row for key in dict(r).keys()]
+    return sum([x == y for x, y in zip(lst[:-1], lst[1:])])
+
+
+def score2(row) -> float:
+    # 最后一个ts越靠前，打分越高
+    lst = ['ts'] + [key[0] for r in row for key in dict(r).keys()]
+    return lst[::-1].index('ts') / len(lst)
+
+
 def chain_create(nested_list):
     """接龙。多个列表，头尾相连
 
@@ -131,63 +143,22 @@ def chain_create(nested_list):
     alpha_031 = ((cs_rank(cs_rank(cs_rank(ts_decay_linear((-1 * cs_rank(cs_rank(ts_delta(CLOSE, 10)))), 10))))))
 
     """
-    # 两两取交集，交集为{}时，添加一个{None}，防止product时出错
-    neighbor_inter = [set(x) & set(y) or {None} for x, y in zip(nested_list[:-1], nested_list[1:])]
+    perms = []
+    for d in nested_list:
+        # 每一层生成排列
+        perms.append(permutations(d.items()))
 
-    # 查找最小数字，表示两两不重复
-    last_min = float('inf')
-    # 最小不重复的一行记录
+    last_score = float('-inf')
     last_row = None
-    last_rows = set()
-    for row in product(*neighbor_inter):
-        # 判断两两是否重复，重复为1，反之为0
-        result = sum([x == y for x, y in zip(row[:-1], row[1:])])
-        if last_min > result:
-            last_min = result
+    # 生成笛卡尔积
+    for row in product(*perms):
+        result = score1(row) + score2(row)
+        # print(result, row)
+        if result > last_score:
+            last_score = result
             last_row = row
-        if result == 0:
-            last_rows.add(last_row)
-            last_min = float('inf')
-            continue
-    last_rows.add(last_row)
-    last_rows = list(last_rows)
 
-    # last_rows中有多个满足条件的，优先保证最后一组ts在最前，ts后可提前filter减少计算量
-    last_row = last_rows[0]
-    for row in last_rows:
-        if len(row) == 0:
-            # 一行表达式
-            continue
-        if row[-1] is None:
-            continue
-        if row[-1][0] == 'ts':
-            last_row = row
-            break
-
-    # 如何移动才是难点 如果两个连续 ts/ts，那么如何移动
-
-    # 调整后的第0列
-    head = [None] + list(last_row)
-    # 调整后的第-1列
-    tail = list(last_row) + [None]
-
-    # 调整新列表
-    arr = []
-    for ll, hh, tt in zip(nested_list, head, tail):
-        d = []
-        for k, v in ll.items():
-            if len(d) == 0:
-                d.append((k, v))
-                continue
-            if k == hh:
-                d.insert(0, (k, v))
-            elif k == tt:
-                d.append((k, v))
-            else:
-                d.insert(1, (k, v))
-        arr.append(dict(d))
-
-    return arr
+    return [dict(ro) for ro in last_row]
 
 
 # ==========================
@@ -425,6 +396,7 @@ def dag_end(G):
 
             exprs_ldl.append(key, (node, expr, symbols, comment))
 
+    # 第0层是CLOSE等基础因子，剔除
     exprs_ldl._list = exprs_ldl.values()[1:]
 
     return exprs_ldl, G
