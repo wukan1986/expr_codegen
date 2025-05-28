@@ -14,12 +14,12 @@ date = pd.date_range('2015-1-1', periods=_N)
 df = pd.DataFrame({
     'RETURNS': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
     'VWAP': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
-    'LOW': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
+    'OPEN': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
     'CLOSE': np.cumprod(1 + np.random.uniform(-0.1, 0.1, size=(_N, _K)), axis=0).reshape(-1),
 }, index=pd.MultiIndex.from_product([date, asset], names=['date', 'asset'])).reset_index()
 
 # 向脚本输入数据
-# df = pl.from_pandas(df)
+df = pl.from_pandas(df)
 
 
 def _code_block_1():
@@ -52,7 +52,23 @@ def _code_block_1():
     E = B + C
 
 
+def _code_block_1():
+    _OO_02 = OPEN[-3] / OPEN[-1]
+    _OO_05 = OPEN[-6] / OPEN[-1]
+    _OO_10 = OPEN[-11] / OPEN[-1]
+
+    # 几何平均
+    RETURN_OO_02 = _OO_02 ** (1 / 2) - 1
+    RETURN_OO_05 = _OO_05 ** (1 / 5) - 1
+    RETURN_OO_10 = _OO_10 ** (1 / 10) - 1
+
+
+def _code_block_1():
+    ONE = 1
+    TWO = add(CLOSE, False)
+
+
 logger.info("1")
-df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file="1_out.py", style='pandas', filter_last=True)
+df = codegen_exec(df, _code_block_1, over_null='partition_by', output_file="1_out.py", style='polars', filter_last=True)
 print(df)
 logger.info("2")
