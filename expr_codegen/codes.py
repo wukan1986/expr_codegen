@@ -385,6 +385,10 @@ def sources_to_asts(*sources, convert_xor: bool):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raw.append(node)
             continue
+        # 嵌套函数快速加入到源码中
+        if isinstance(node, ast.FunctionDef):
+            raw.append(node)
+            continue
         if isinstance(node, ast_comments.Comment):
             # 添加注释
             if node.inline and isinstance(tree.body[i - 1], ast.Assign):
