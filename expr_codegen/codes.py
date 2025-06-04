@@ -382,11 +382,7 @@ def sources_to_asts(*sources, convert_xor: bool):
             assigns.append(node)
             continue
         # TODO 是否要把其它语句也加入？是否有安全问题？
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            raw.append(node)
-            continue
-        # 嵌套函数快速加入到源码中
-        if isinstance(node, ast.FunctionDef):
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.ClassDef)):
             raw.append(node)
             continue
         if isinstance(node, ast_comments.Comment):
