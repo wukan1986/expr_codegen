@@ -44,6 +44,13 @@ def _code_block_2():
     # talib在模板中没有默认导入。这种写法可实现在生成的代码中导入
     from polars_ta.prefix.talib import ts_LINEARREG_SLOPE  # noqa
 
+    # 还支持def和class的原样导入
+    def cs_rank_if(condition, factor):
+        return cs_rank(if_else(condition, factor, None))
+
+    class Clazz:
+        pass
+
     # 1. 下划线开头的变量只是中间变量,会被自动更名，最终输出时会被剔除
     # 2. 下划线开头的变量可以重复使用。多个复杂因子多行书写时有重复中间变时不再冲突
     _avg = ts_mean(corr, 20)
@@ -218,6 +225,7 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
    C = unpack(_x_0, 2)
    ```
 11. 单行注释支持参数输入，如：`# --over_null`、`# --over_null=order_by`、`# --over_null=partition_by`
+12. 代码块中，对`import`、`def`、`class`三种语法，自动原样插入到生成的代码中
 
 ## 下划线开头的变量
 

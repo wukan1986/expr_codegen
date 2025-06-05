@@ -121,6 +121,18 @@ class SyntaxTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
+    def visit_FunctionDef(self, node):
+        return node
+
+    def visit_ClassDef(self, node):
+        return node
+
+    def visit_Import(self, node):
+        return node
+
+    def visit_ImportFrom(self, node):
+        return node
+
 
 class RenameTransformer(ast.NodeTransformer):
     """改名处理。改名前需要语法规范"""
@@ -306,6 +318,18 @@ class RenameTransformer(ast.NodeTransformer):
         self.args_new.add(node.value.id)
 
         self.generic_visit(node)
+        return node
+
+    def visit_FunctionDef(self, node):
+        return node
+
+    def visit_ClassDef(self, node):
+        return node
+
+    def visit_Import(self, node):
+        return node
+
+    def visit_ImportFrom(self, node):
         return node
 
 
