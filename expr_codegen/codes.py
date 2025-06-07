@@ -371,7 +371,7 @@ def assigns_to_list(assigns):
 
 def raw_to_code(raw):
     """导入语句转字符列表"""
-    return '\n'.join([ast.unparse(a) for a in raw])
+    return '\n'.join([ast_comments.unparse(a) for a in raw])
 
 
 def sources_to_asts(*sources, convert_xor: bool):
