@@ -49,11 +49,10 @@ Expr.diff = _diff
 # ===============================
 
 def simplify2(expr):
-    # return simplify(expr)
     try:
         expr = simplify(expr)
-    except AttributeError as e:
-        print(f'{expr} ,表达式无法简化, {e}')
+    except (AttributeError, TypeError) as e:
+        logger.warning('{}, 表达式无法简化, {}', expr, e)
     return expr
 
 
