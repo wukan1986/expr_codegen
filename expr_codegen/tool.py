@@ -52,7 +52,7 @@ def simplify2(expr):
     try:
         expr = simplify(expr)
     except (AttributeError, TypeError) as e:
-        logger.warning('{}, 表达式无法简化, {}', expr, e)
+        logger.warning('{}, 表达式无法简化, {}', expr, repr(e))
     return expr
 
 
