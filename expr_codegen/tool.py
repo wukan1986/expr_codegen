@@ -10,6 +10,7 @@ from loguru import logger
 from sympy import simplify, cse, symbols, numbered_symbols
 from sympy.core.expr import Expr
 from sympy.logic import boolalg
+from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
@@ -48,7 +49,10 @@ Expr.diff = _diff
 
 # ===============================
 
-def simplify2(expr):
+def simplify2(expr, skip_simplify: bool):
+    # OPEN/OPEN会被简化成1，遗传算法中常出现，可以跳过简化
+    if skip_simplify:
+        return expr
     try:
         expr = simplify(expr)
     except (AttributeError, TypeError) as e:
@@ -92,7 +96,7 @@ class ExprTool:
         # print(exprs)
         return exprs, syms
 
-    def merge(self, date, asset, args):
+    def merge(self, date, asset, args, skip_simplify):
         """合并多个表达式
 
         1. 先抽取分割子公式
@@ -108,7 +112,7 @@ class ExprTool:
         表达式列表
         """
         # 抽取前先化简
-        args = [(k, simplify2(v), c) for k, v, c in args]
+        args = [(k, simplify2(v, skip_simplify), c) for k, v, c in args]
 
         # 保留了注释信息
         exprs_syms = [(self.extract(v, date, asset), c) for k, v, c in args]
@@ -171,7 +175,7 @@ class ExprTool:
         _exprs = [k for k, v in exprs]
 
         # 注意：对于表达式右边相同，左边不同的情况，会当成一个处理
-        repl, redu = cse(_exprs, symbols_repl, optimizations="basic")
+        repl, redu = cse(_exprs, symbols_repl, optimizations=[(cse_opts.sub_pre, cse_opts.sub_post), ])
         outputs_len = len(exprs_src)
 
         new_redu = []
@@ -204,6 +208,7 @@ class ExprTool:
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             table_name: str = 'self',
             filter_last: bool = False,
+            skip_simplify: bool = False,
             **kwargs):
         """功能集成版，将几个功能写到一起方便使用
 
@@ -229,6 +234,7 @@ class ExprTool:
             需要复制到模板中的额外代码
         table_name
         filter_last
+        skip_simplify
 
         Returns
         -------
@@ -241,7 +247,7 @@ class ExprTool:
             exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
-        exprs_dst, syms_dst = self.merge(date, asset, exprs_src)
+        exprs_dst, syms_dst = self.merge(date, asset, exprs_src, skip_simplify)
         syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
@@ -292,6 +298,7 @@ class ExprTool:
                   over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
                   table_name: str = 'self',
                   filter_last: bool = False,
+                  skip_simplify: bool = False,
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_list = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
@@ -308,6 +315,7 @@ class ExprTool:
                              over_null=over_null,
                              table_name=table_name,
                              filter_last=filter_last,
+                             skip_simplify=skip_simplify,
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
@@ -371,6 +379,7 @@ def codegen_exec(df: Union[DataFrame, None],
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
                  filter_last: bool = False,
+                 skip_simplify: bool = False,
                  **kwargs) -> Union[DataFrame, str]:
     """快速转换源代码并执行
 
@@ -412,6 +421,8 @@ def codegen_exec(df: Union[DataFrame, None],
         表名。只在style参数为sql时有效
     filter_last:bool
         在实盘时，只需要最后一天日期的数据，可以在最后一个`ts`之后过滤数据。目前只在style参数为'polars', 'pandas'时有效
+    skip_simplify:bool
+        遗传算法时很有可能出现OPEN/OPEN，可以跳过化简步骤
 
 
     Returns
@@ -466,6 +477,7 @@ def codegen_exec(df: Union[DataFrame, None],
         over_null=over_null,
         table_name=table_name,
         filter_last=filter_last,
+        skip_simplify=skip_simplify,
         **kwargs
     )
 
