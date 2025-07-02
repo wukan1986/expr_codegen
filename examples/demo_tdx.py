@@ -14,11 +14,12 @@ import polars as pl
 from expr_codegen import codegen_exec
 from loguru import logger
 from polars_ta.prefix.wq import *
+from polars_ta.prefix.tdx import *
 
 
 def _code_block_1():
     # 基础字段准备===================
-    涨跌幅 = CLOSE / CLOSE[1] - 1
+    涨跌幅 = ts_returns(CLOSE)
     振幅 = (HIGH - LOW) / CLOSE[1]
 
     开盘涨停 = open >= high_limit - 0.001
@@ -87,24 +88,49 @@ def _code_block_2():
     低价股 = close <= 3
 
 
+def _code_block_3():
+    大涨 = 涨跌幅 > 0.05
+    中涨 = 涨跌幅 > 0.02
+    小涨 = 涨跌幅 > 0
+    大跌 = 涨跌幅 < -0.05
+    中跌 = 涨跌幅 < -0.02
+    小跌 = 涨跌幅 < 0
+    缩量 = ts_returns(volume) < -0.1
+    放量 = ts_returns(volume) > 0.2
+    长上影 = ((HIGH - LOW) / CLOSE[1] > 0.01) & ((HIGH - max_(OPEN, CLOSE)) / (HIGH - LOW) > 0.51)
+    开盘低走 = (CLOSE - OPEN) / CLOSE[1] < -0.02  # 含高开低走
+    最高回落 = (CLOSE - HIGH) / CLOSE[1] > -0.02
+    最低反弹 = (CLOSE - LOW) / CLOSE[1] > 0.02
+    反包实体 = (CLOSE > max_(OPEN, CLOSE)[1]) & (OPEN < ((OPEN + CLOSE) / 2)[1])
+    反包最高 = (CLOSE > HIGH[1]) & (OPEN < max_(OPEN, CLOSE)[1])
+
+    预期收益 = (OPEN[-1] / CLOSE - 0.001) ** (1 / 1) - 1
+
+
 # 由于读写多，推荐放到内存盘，加快速度
-PATH_INPUT1 = r'M:\preprocessing\data2.parquet'
+PATH_INPUT1 = r'F:\preprocessing\data2.parquet'
 # 去除停牌后的基础数据
 PATH_OUTPUT = r'M:\preprocessing\out1.parquet'
 
 if __name__ == '__main__':
     logger.info('数据准备开始')
     df = pl.read_parquet(PATH_INPUT1)
+    print(df.columns)
+    print(df.tail())
+    df = df.filter(
+        ~pl.col('asset').str.starts_with('68'),  # 过滤科创板
+        # ~pl.col('asset').str.starts_with('30'),  # 过滤创业板
+    )
 
     logger.info('数据准备完成')
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, over_null=None, output_file='1_out.py', run_file=False)
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=False)
     t2 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, over_null=None, output_file='1_out.py', run_file=True)
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=True)
     t3 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, over_null=None, output_file='1_out.py', run_file=True)
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=True)
     t4 = time.perf_counter()
     print(t2 - t1, t3 - t2, t4 - t3)
     logger.info('计算结束')
