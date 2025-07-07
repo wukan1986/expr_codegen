@@ -51,12 +51,15 @@ def {{ key }}(df: pd.DataFrame) -> pd.DataFrame:
 """
 
 
-def filter_last(df: pd.DataFrame) -> pd.DataFrame:
+def _filter_last(df: pd.DataFrame, filter_last: bool) -> pd.DataFrame:
     """过滤数据，只取最后一天。实盘时可用于减少计算量"""
-    return df[df[_DATE_] >= df[_DATE_].iloc[-1]]
+    if filter_last:
+        return df[df[_DATE_] >= df[_DATE_].iloc[-1]]
+    else:
+        return df
 
 
-def main(df: pd.DataFrame) -> pd.DataFrame:
+def main(df: pd.DataFrame, filter_last: bool) -> pd.DataFrame:
     {% for key, value in groupbys.items() %}
     {{ value-}}
     {% endfor %}

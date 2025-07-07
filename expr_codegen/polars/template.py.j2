@@ -62,17 +62,20 @@ def {{ key }}(df: DataFrame) -> DataFrame:
 """
 
 
-def filter_last(df: DataFrame) -> DataFrame:
+def _filter_last(df: DataFrame, filter_last: bool) -> DataFrame:
     """过滤数据，只取最后一天。实盘时可用于减少计算量
     前一个调用的ts,这里可以直接调用，可以认为已经排序好
         `df = filter_last(df)`
     反之
         `df = filter_last(df.sort(_DATE_))`
     """
-    return df.filter(pl.col(_DATE_) >= df.select(pl.last(_DATE_))[0, 0])
+    if filter_last:
+        return df.filter(pl.col(_DATE_) >= df.select(pl.last(_DATE_))[0, 0])
+    else:
+        return df
 
 
-def main(df: DataFrame) -> DataFrame:
+def main(df: DataFrame, filter_last: bool) -> DataFrame:
     {% for key, value in groupbys.items() %}
     {{ value-}}
     {% endfor %}

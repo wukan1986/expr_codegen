@@ -95,14 +95,16 @@ def _code_block_3():
     大跌 = 涨跌幅 < -0.05
     中跌 = 涨跌幅 < -0.02
     小跌 = 涨跌幅 < 0
+    最高中涨 = HIGH / CLOSE[1] > 1.02
     缩量 = ts_returns(volume) < -0.1
     放量 = ts_returns(volume) > 0.2
     长上影 = ((HIGH - LOW) / CLOSE[1] > 0.01) & ((HIGH - max_(OPEN, CLOSE)) / (HIGH - LOW) > 0.51)
     开盘低走 = (CLOSE - OPEN) / CLOSE[1] < -0.02  # 含高开低走
     最高回落 = (CLOSE - HIGH) / CLOSE[1] > -0.02
     最低反弹 = (CLOSE - LOW) / CLOSE[1] > 0.02
-    反包实体 = (CLOSE > max_(OPEN, CLOSE)[1]) & (OPEN < ((OPEN + CLOSE) / 2)[1])
-    反包最高 = (CLOSE > HIGH[1]) & (OPEN < max_(OPEN, CLOSE)[1])
+    收盘反包实体 = (CLOSE > max_(OPEN, CLOSE)[1]) & (OPEN < ((OPEN + CLOSE) / 2)[1])
+    最高反包实体 = (HIGH > max_(OPEN, CLOSE)[1]) & (OPEN < ((OPEN + CLOSE) / 2)[1])  # 入场了可能走低亏损
+    收盘反包昨高 = (CLOSE > HIGH[1]) & (OPEN < max_(OPEN, CLOSE)[1])
 
     预期收益 = (OPEN[-1] / CLOSE - 0.001) ** (1 / 1) - 1
 

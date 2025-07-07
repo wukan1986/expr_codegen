@@ -95,15 +95,15 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
     syms1 = symbols_to_code(syms_dst)
     syms2 = symbols_to_code(syms_out)
-    if filter_last:
-        _groupbys = {'sort': groupbys['sort']}
-        if ts_func_name is None:
-            _groupbys['_filter_last'] = "df = filter_last(df.sort_values(by=[_DATE_]))"
-        for k, v in groupbys.items():
-            _groupbys[k] = v
-            if k == ts_func_name:
-                _groupbys[k + '_filter_last'] = "df = filter_last(df)"
-        groupbys = _groupbys
+    # filter_last处理
+    _groupbys = {'sort': groupbys['sort']}
+    if ts_func_name is None:
+        _groupbys['_filter_last'] = "df = _filter_last(df.sort_values(by=[_DATE_]), filter_last)"
+    for k, v in groupbys.items():
+        _groupbys[k] = v
+        if k == ts_func_name:
+            _groupbys[k + '_filter_last'] = "df = _filter_last(df, filter_last)"
+    groupbys = _groupbys
 
     try:
         env = jinja2.Environment(loader=FileSystemLoader(os.path.dirname(__file__)))

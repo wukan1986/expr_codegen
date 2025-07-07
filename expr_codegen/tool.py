@@ -451,12 +451,12 @@ def codegen_exec(df: Union[DataFrame, None],
 
         if input_file is not None:
             if input_file.endswith('.py'):
-                return _get_func_from_file_py(input_file)(df)
+                return _get_func_from_file_py(input_file)(df, filter_last)
             elif input_file.endswith('.sql'):
                 with pl.SQLContext(frames={table_name: df}) as ctx:
                     return ctx.execute(_get_code_from_file(input_file), eager=isinstance(df, _pl_DataFrame))
             else:
-                return _get_func_from_module(input_file)(df)  # 可断点调试
+                return _get_func_from_module(input_file)(df, filter_last)  # 可断点调试
     else:
         pass
 
@@ -489,4 +489,4 @@ def codegen_exec(df: Union[DataFrame, None],
             return ctx.execute(code, eager=isinstance(df, _pl_DataFrame))
     else:
         # 代码一样时就从缓存中取出函数
-        return _get_func_from_code_py(code)(df)
+        return _get_func_from_code_py(code)(df, filter_last)
