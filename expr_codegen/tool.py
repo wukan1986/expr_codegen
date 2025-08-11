@@ -193,11 +193,11 @@ class ExprTool:
 
         return self.exprs_list
 
-    def dag(self, merge: bool, columns, date, asset):
+    def dag(self, merge: bool, skip_columns, date, asset):
         """生成DAG"""
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
-            G = dag_middle(G, self.exprs_names, columns, self.get_current_func, self.get_current_func_kwargs, date, asset)
+            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql'] = 'polars',
@@ -209,7 +209,7 @@ class ExprTool:
             table_name: str = 'self',
             filter_last: bool = False,
             skip_simplify: bool = False,
-            columns: Iterable[str] = (),
+            skip_columns: Iterable[str] = (),
             **kwargs):
         """功能集成版，将几个功能写到一起方便使用
 
@@ -236,7 +236,7 @@ class ExprTool:
         table_name
         filter_last
         skip_simplify
-        columns
+        skip_columns
             数据中已经存在的列不再参与计算，直接使用历史值
 
         Returns
@@ -256,7 +256,7 @@ class ExprTool:
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src)
         # 有向无环图流转
-        exprs_ldl, G = self.dag(True, columns, date, asset)
+        exprs_ldl, G = self.dag(True, skip_columns, date, asset)
 
         if regroup:
             exprs_ldl.optimize(merge=style != 'sql')
@@ -302,7 +302,7 @@ class ExprTool:
                   table_name: str = 'self',
                   filter_last: bool = False,
                   skip_simplify: bool = False,
-                  columns: Iterable[str] = (),
+                  skip_columns: Iterable[str] = (),
                   **kwargs) -> str:
         """通过字符串生成代码， 加了缓存，多次调用不重复生成"""
         raw, exprs_list = sources_to_exprs(self.globals_, source, *more_sources, convert_xor=convert_xor)
@@ -320,7 +320,7 @@ class ExprTool:
                              table_name=table_name,
                              filter_last=filter_last,
                              skip_simplify=skip_simplify,
-                             columns=columns,
+                             skip_columns=skip_columns,
                              **kwargs)
 
         # 移回到cache，防止多次调用多次保存
@@ -385,7 +385,7 @@ def codegen_exec(df: Union[DataFrame, None],
                  table_name: str = 'self',
                  filter_last: bool = False,
                  skip_simplify: bool = False,
-                 columns: Iterable[str] = (),
+                 skip_columns: Iterable[str] = (),
                  **kwargs) -> Union[DataFrame, str]:
     """快速转换源代码并执行
 
@@ -429,7 +429,7 @@ def codegen_exec(df: Union[DataFrame, None],
         在实盘时，只需要最后一天日期的数据，可以在最后一个`ts`之后过滤数据。目前只在style参数为'polars', 'pandas'时有效
     skip_simplify:bool
         遗传算法时很有可能出现OPEN/OPEN，可以跳过化简步骤
-    columns:
+    skip_columns:
         已经存在的列不参与计算。可用于加快计算速度。只在计算耗时久时再用，否则没有必要
         例如：在研发阶段，第一次计算100个因子，第二次，只改动了其中的5个，所以只要将这5个从df.columns中排除即可。
         注意：生成的源代码有差异。
@@ -449,7 +449,7 @@ def codegen_exec(df: Union[DataFrame, None],
     2. 通过代码得到了函数 `get func from code`
 
     """
-    columns = tuple(columns)
+    skip_columns = tuple(skip_columns)
 
     if df is not None:
         input_file = None
@@ -489,7 +489,7 @@ def codegen_exec(df: Union[DataFrame, None],
         table_name=table_name,
         filter_last=filter_last,
         skip_simplify=skip_simplify,
-        columns=columns,
+        skip_columns=skip_columns,
         **kwargs
     )
 

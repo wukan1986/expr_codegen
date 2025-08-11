@@ -128,9 +128,9 @@ if __name__ == '__main__':
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='out1.py', columns=df.columns)
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='out1.py', skip_columns=df.columns)
     t2 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='out2.py', columns=set(df.columns) - {'预期收益', '长上影'})
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='out2.py', skip_columns=set(df.columns) - {'预期收益', '长上影'})
     t3 = time.perf_counter()
     print(t2 - t1, t3 - t2)
     logger.info('计算结束')
