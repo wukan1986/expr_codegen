@@ -110,13 +110,13 @@ def _code_block_3():
 
 
 # 由于读写多，推荐放到内存盘，加快速度
-PATH_INPUT1 = r'F:\preprocessing\data2.parquet'
+PATH_INPUT1 = r'D:\preprocessing\data2.parquet'
 # 去除停牌后的基础数据
 PATH_OUTPUT = r'M:\preprocessing\out1.parquet'
 
 if __name__ == '__main__':
     logger.info('数据准备开始')
-    df = pl.read_parquet(PATH_INPUT1)
+    df = pl.read_parquet(PATH_INPUT1).filter(pl.col('date') > pl.date(2025, 7, 1))
     print(df.columns)
     print(df.tail())
     df = df.filter(
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     # =====================================
     logger.info('计算开始')
     t1 = time.perf_counter()
-    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=False)
+    df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=False, ge_date_idx=-2)
     t2 = time.perf_counter()
     df = codegen_exec(df, _code_block_1, _code_block_2, _code_block_3, over_null=None, output_file='1_out.py', run_file=True)
     t3 = time.perf_counter()

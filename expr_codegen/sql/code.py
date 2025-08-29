@@ -16,7 +16,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             extra_codes: Sequence[str] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             table_name: str = 'self',
-            filter_last: bool = False,
+            ge_date_idx: int = 0,
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -88,7 +88,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             # 只有下划线开头再删除
             ds = [x for x in drop_symbols[j] if x.startswith('_')]
 
-    if filter_last:
+    if ge_date_idx:
         # TODO 没有实现
         pass
 

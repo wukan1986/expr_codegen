@@ -9,7 +9,7 @@ from polars_ta.prefix.wq import *
 
 from expr_codegen import codegen_exec
 
-_N = 500
+_N = 50
 _K = 5000
 
 asset = [f's_{i:04d}' for i in range(_K)]
@@ -29,10 +29,10 @@ def _code_block_1():
     cond2 = cond1 > 0
 
 
-df1 = codegen_exec(df, _code_block_1, over_null='partition_by', filter_last=True).select('asset', 'cond2').filter(pl.col('cond2'))
+df1 = codegen_exec(df, _code_block_1, over_null='partition_by', ge_date_idx=-1).select('asset', 'cond2').filter(
+    pl.col('cond2'))
 print(df1)
 # 后面只对cond2=true的计算
-
 
 
 t1 = time.perf_counter()
@@ -55,5 +55,5 @@ def _code_block_2():
     MA3 = ts_mean(CLOSE, 20)
 
 
-df3 = codegen_exec(df2, _code_block_2, over_null='partition_by', filter_last=True)
+df3 = codegen_exec(df2, _code_block_2, over_null='partition_by', ge_date_idx=-1)
 print(df3)

@@ -197,7 +197,8 @@ class ExprTool:
         """生成DAG"""
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
-            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset)
+            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date,
+                           asset)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql'] = 'polars',
@@ -207,7 +208,7 @@ class ExprTool:
             extra_codes: Sequence[object] = (),
             over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
             table_name: str = 'self',
-            filter_last: bool = False,
+            ge_date_idx: int = 0,
             skip_simplify: bool = False,
             skip_columns: Iterable[str] = (),
             **kwargs):
@@ -234,7 +235,7 @@ class ExprTool:
         extra_codes: Sequence[object]
             需要复制到模板中的额外代码
         table_name
-        filter_last
+        ge_date_idx
         skip_simplify
         skip_columns
             数据中已经存在的列不再参与计算，直接使用历史值
@@ -278,7 +279,7 @@ class ExprTool:
                         extra_codes=extra_codes,
                         over_null=over_null,
                         table_name=table_name,
-                        filter_last=filter_last,
+                        ge_date_idx=ge_date_idx,
                         **kwargs)
 
         logger.info(f'{style} code is generated')
@@ -300,7 +301,7 @@ class ExprTool:
                   date: str = 'date', asset: str = 'asset',
                   over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
                   table_name: str = 'self',
-                  filter_last: bool = False,
+                  ge_date_idx: int = 0,
                   skip_simplify: bool = False,
                   skip_columns: Iterable[str] = (),
                   **kwargs) -> str:
@@ -318,7 +319,7 @@ class ExprTool:
                                           ),
                              over_null=over_null,
                              table_name=table_name,
-                             filter_last=filter_last,
+                             ge_date_idx=ge_date_idx,
                              skip_simplify=skip_simplify,
                              skip_columns=skip_columns,
                              **kwargs)
@@ -383,7 +384,7 @@ def codegen_exec(df: Union[DataFrame, None],
                  template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
-                 filter_last: bool = False,
+                 ge_date_idx: int = 0,
                  skip_simplify: bool = False,
                  skip_columns: Iterable[str] = (),
                  **kwargs) -> Union[DataFrame, str]:
@@ -425,8 +426,11 @@ def codegen_exec(df: Union[DataFrame, None],
         - None: 不做处理
     table_name:str
         表名。只在style参数为sql时有效
-    filter_last:bool
-        在实盘时，只需要最后一天日期的数据，可以在最后一个`ts`之后过滤数据。目前只在style参数为'polars', 'pandas'时有效
+    ge_date_idx:int
+        在实盘时，只需要最后一两天日期的数据，可以在最后一个`ts`之后过滤数据。目前只在style参数为'polars', 'pandas'时有效
+        0 表示不过滤 >=date[0]
+        -1 表示最新一天 >=date[-1]
+        -2 表示最近两天 >=date[-2]
     skip_simplify:bool
         遗传算法时很有可能出现OPEN/OPEN，可以跳过化简步骤
     skip_columns:
@@ -462,12 +466,12 @@ def codegen_exec(df: Union[DataFrame, None],
 
         if input_file is not None:
             if input_file.endswith('.py'):
-                return _get_func_from_file_py(input_file)(df, filter_last)
+                return _get_func_from_file_py(input_file)(df, ge_date_idx)
             elif input_file.endswith('.sql'):
                 with pl.SQLContext(frames={table_name: df}) as ctx:
                     return ctx.execute(_get_code_from_file(input_file), eager=isinstance(df, _pl_DataFrame))
             else:
-                return _get_func_from_module(input_file)(df, filter_last)  # 可断点调试
+                return _get_func_from_module(input_file)(df, ge_date_idx)  # 可断点调试
     else:
         pass
 
@@ -487,7 +491,7 @@ def codegen_exec(df: Union[DataFrame, None],
         date=date, asset=asset,
         over_null=over_null,
         table_name=table_name,
-        filter_last=filter_last,
+        ge_date_idx=ge_date_idx,
         skip_simplify=skip_simplify,
         skip_columns=skip_columns,
         **kwargs
@@ -501,4 +505,4 @@ def codegen_exec(df: Union[DataFrame, None],
             return ctx.execute(code, eager=isinstance(df, _pl_DataFrame))
     else:
         # 代码一样时就从缓存中取出函数
-        return _get_func_from_code_py(code)(df, filter_last)
+        return _get_func_from_code_py(code)(df, ge_date_idx)

@@ -38,7 +38,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename,
             date='date', asset='asset',
             extra_codes: Sequence[str] = (),
-            filter_last: bool = False,
+            ge_date_idx: int = 0,
             **kwargs):
     """基于模板的代码生成"""
     if filename is None:
@@ -98,11 +98,11 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
     # filter_last处理
     _groupbys = {'sort': groupbys['sort']}
     if ts_func_name is None:
-        _groupbys['_filter_last'] = "df = _filter_last(df.sort_values(by=[_DATE_]), filter_last)"
+        _groupbys['_filter_last'] = "df = _filter_last(df, ge_date_idx)"
     for k, v in groupbys.items():
         _groupbys[k] = v
         if k == ts_func_name:
-            _groupbys[k + '_filter_last'] = "df = _filter_last(df, filter_last)"
+            _groupbys[k + '_filter_last'] = "df = _filter_last(df, ge_date_idx)"
     groupbys = _groupbys
 
     try:
