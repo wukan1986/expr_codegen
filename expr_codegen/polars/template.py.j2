@@ -77,11 +77,10 @@ def main(df: DataFrame, ge_date_idx: int) -> DataFrame:
     {% endfor %}
 
     # drop intermediate columns
-    # df = df.select(pl.exclude(r'^_x_\d+$'))
     df = df.select(~cs.starts_with("_"))
 
     # shrink
-    df = df.select(cs.all().shrink_dtype())
+    # df = df.select(col.shrink_dtype() for col in df)
 
     return df
 
