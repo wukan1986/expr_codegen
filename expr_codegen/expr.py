@@ -1,6 +1,7 @@
 from functools import reduce
 
 from sympy import Mul, preorder_traversal, symbols, Function, simplify, Add, Basic, Symbol, sympify, FunctionClass
+from loguru import logger
 
 # 预定义前缀，算子用前缀进行区分更方便。
 # 当然也可以用是否在某容器中进行分类
@@ -329,7 +330,7 @@ def _replace__ts_sum__to__ts_mean(e):
                 if node.args[1].args[1] == node.args[0].q and node.args[0].p == 1:
                     replacements.append((node, ts_mean(node.args[1].args[0], node.args[1].args[1])))
     for node, replacement in replacements:
-        print(node, '  ->  ', replacement)
+        logger.debug("{} -> {}", node, replacement)
         e = e.xreplace({node: replacement})
     return e
 
@@ -353,7 +354,7 @@ def _replace__repeat(e):
             if node_name in ('cs_rank', 'sign', 'Abs', 'abs_'):
                 replacements.append((node, node.args[0]))
     for node, replacement in replacements:
-        print(node, '  ->  ', replacement)
+        logger.debug("{} -> {}", node, replacement)
         e = e.xreplace({node: replacement})
     return e
 
@@ -372,7 +373,7 @@ def _replace__one_mul(e):
             else:
                 replacements.append((node, node.args[1]))
     for node, replacement in replacements:
-        print(node, '  ->  ', replacement)
+        logger.debug("{} -> {}", node, replacement)
         e = e.xreplace({node: replacement})
     return e
 
@@ -391,12 +392,10 @@ def _replace__ts_xxx_1(e):
             try:
                 if node.args[1] <= 1:
                     replacements.append((node, node.args[0]))
-            except:
-                print(node_name)
-                print(e)
-                raise
+            except Exception as ex:
+                logger.warning("{} | {}: {}", e, node_name, ex)
     for node, replacement in replacements:
-        print(node, '  ->  ', replacement)
+        logger.debug("{} -> {}", node, replacement)
         e = e.xreplace({node: replacement})
     return e
 
@@ -436,38 +435,6 @@ def _replace__ts_delay__to__ts_delta(e):
                 if len(tmp_args.args) < len(new_args):
                     replacements.append((node, tmp_args))
     for node, replacement in replacements:
-        print(node, '  ->  ', replacement)
+        logger.debug("{} -> {}", node, replacement)
         e = e.xreplace({node: replacement})
     return e
-
-# def is_meaningless(e):
-#     if _meaningless__ts_xxx_1(e):
-#         return True
-#     if _meaningless__xx_xx(e):
-#         return True
-#     return False
-#
-#
-# def _meaningless__ts_xxx_1(e):
-#     """ts_xxx部分函数如果参数为1，可直接丢弃"""
-#     for node in preorder_traversal(e):
-#         if len(node.args) >= 2:
-#             node_name = get_node_name(node)
-#             if node_name in ('ts_delay', 'ts_delta'):
-#                 if not node.args[1].is_Integer:
-#                     return True
-#             if node_name.startswith('ts_'):
-#                 if not node.args[-1].is_Number:
-#                     return True
-#                 if node.args[-1] <= 1:
-#                     return True
-#     return False
-#
-#
-# def _meaningless__xx_xx(e):
-#     """部分函数如果两参数完全一样，可直接丢弃"""
-#     for node in preorder_traversal(e):
-#         if len(node.args) >= 2:
-#             if node.args[0] == node.args[1]:
-#                 return True
-#     return False
