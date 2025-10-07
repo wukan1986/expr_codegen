@@ -51,7 +51,7 @@ LABEL_CC_1=CLOSE[-1]/CLOSE-1 # 每天收盘交易
 
 if st.button('生成代码'):
     with st.spinner('生成中，请等待...'):
-        res = codegen_exec(None, exprs_src, over_null=over_null, convert_xor=convert_xor, style=style)
+        res = codegen_exec(None, exprs_src, over_null=over_null, convert_xor=convert_xor, style=style, date=date_name, asset=asset_name)
         b64 = base64.b64encode(res.encode('utf-8'))
         st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>',
                     unsafe_allow_html=True)
