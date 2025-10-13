@@ -201,7 +201,7 @@ class ExprTool:
                            asset)
         return dag_end(G)
 
-    def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql'] = 'polars',
+    def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
             template_file: Optional[str] = None,
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
@@ -245,7 +245,7 @@ class ExprTool:
         代码字符串
 
         """
-        assert style in ('pandas', 'polars', 'sql')
+        assert style in ('pandas', 'polars', 'sql', 'rust')
 
         if replace:
             exprs_src = replace_exprs(exprs_src)
@@ -268,6 +268,9 @@ class ExprTool:
             from expr_codegen.pandas.code import codegen
         elif style == 'sql':
             from expr_codegen.sql.code import codegen
+            format = False
+        elif style == 'rust':
+            from expr_codegen.rust.code import codegen
             format = False
         else:
             raise ValueError(f'unknown style {style}')
@@ -296,7 +299,7 @@ class ExprTool:
                   extra_codes: str,
                   output_file: str,
                   convert_xor: bool,
-                  style: Literal['pandas', 'polars', 'sql'] = 'polars',
+                  style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
                   over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
@@ -380,7 +383,7 @@ def codegen_exec(df: Union[DataFrame, None],
                  output_file: Union[str, TextIOBase, None] = None,
                  run_file: Union[bool, str] = False,
                  convert_xor: bool = False,
-                 style: Literal['pandas', 'polars', 'sql'] = 'polars',
+                 style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
                  template_file: Optional[str] = None,
                  date: str = 'date', asset: str = 'asset',
                  table_name: str = 'self',
