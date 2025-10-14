@@ -1,7 +1,6 @@
 import inspect
 
 from sympy import Basic, Function, StrPrinter
-from sympy.printing.precedence import precedence, PRECEDENCE
 
 
 # TODO: 如有新添加函数，但表达式有变更才需要在此补充对应的打印代码，否则可以省略
@@ -61,24 +60,23 @@ class RustStrPrinter(StrPrinter):
         return f'col("{expr.name}")'
 
     def _print_Equality(self, expr):
-        PREC = precedence(expr)
-        return "%s==%s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
+        new_args = [f"eq({self._print(arg)})" for arg in expr.args]
+        return ".".join(new_args)[2:]
 
     def _print_Or(self, expr):
-        PREC = PRECEDENCE["Mul"]
-        return " | ".join(self.parenthesize(arg, PREC) for arg in expr.args)
+        new_args = [f"or({self._print(arg)})" for arg in expr.args]
+        return ".".join(new_args)[2:]
 
     def _print_Xor(self, expr):
-        PREC = PRECEDENCE["Mul"]
-        return " ^ ".join(self.parenthesize(arg, PREC) for arg in expr.args)
+        new_args = [f"xor({self._print(arg)})" for arg in expr.args]
+        return ".".join(new_args)[3:]
 
     def _print_And(self, expr):
-        PREC = PRECEDENCE["Mul"]
-        return " & ".join(self.parenthesize(arg, PREC) for arg in expr.args)
+        new_args = [f"and({self._print(arg)})" for arg in expr.args]
+        return ".".join(new_args)[3:]
 
     def _print_Not(self, expr):
-        PREC = PRECEDENCE["Mul"]
-        return "~%s" % self.parenthesize(expr.args[0], PREC)
+        return "(%s).not()" % self._print(expr.args[0])
 
     def _print_gp_(self, expr):
         """gp_函数都转换成cs_函数，但要丢弃第一个参数"""
@@ -89,7 +87,7 @@ class RustStrPrinter(StrPrinter):
     def _print_Integer(self, expr):
         caller_frame = inspect.stack()[2]
         caller_name = caller_frame.function
-        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul"):
+        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul", "_print_Relational"):
             return "lit(%s)" % super()._print_Integer(expr)
         else:
             return super()._print_Integer(expr)
@@ -97,7 +95,21 @@ class RustStrPrinter(StrPrinter):
     def _print_Float(self, expr):
         caller_frame = inspect.stack()[2]
         caller_name = caller_frame.function
-        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul"):
+        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul", "_print_Relational"):
             return "lit(%s)" % super()._print_Float(expr)
         else:
             return super()._print_Float(expr)
+
+    def _print_Relational(self, expr):
+
+        charmap = {
+            "<": "lt",
+            ">": "gt",
+            ">=": "gt_eq",
+            "<=": "lt_eq",
+        }
+
+        if expr.rel_op in charmap:
+            return '(%s).%s(%s)' % (self._print(expr.lhs), charmap[expr.rel_op], self._print(expr.rhs))
+
+        return super()._print_Relational(expr)
