@@ -1,3 +1,5 @@
+import inspect
+
 from sympy import Basic, Function, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
 
@@ -83,3 +85,19 @@ class RustStrPrinter(StrPrinter):
         new_args = [self._print(arg) for arg in expr.args[1:]]
         func_name = expr.func.__name__[3:]
         return "cs_%s(%s)" % (func_name, ",".join(new_args))
+
+    def _print_Integer(self, expr):
+        caller_frame = inspect.stack()[2]
+        caller_name = caller_frame.function
+        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul"):
+            return "lit(%s)" % super()._print_Integer(expr)
+        else:
+            return super()._print_Integer(expr)
+
+    def _print_Float(self, expr):
+        caller_frame = inspect.stack()[2]
+        caller_name = caller_frame.function
+        if caller_name in ("_print_Pow", "_print_Add", "_print_Mul"):
+            return "lit(%s)" % super()._print_Float(expr)
+        else:
+            return super()._print_Float(expr)

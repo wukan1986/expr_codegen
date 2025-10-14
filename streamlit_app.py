@@ -14,7 +14,7 @@ with st.sidebar:
     asset_name = st.text_input('资产字段名', 'asset')
 
     # 生成代码
-    style = st.radio('代码风格', ('polars', 'pandas', 'sql'))
+    style = st.radio('代码风格', ('polars', 'pandas', 'sql', 'rust'))
     over_null = st.radio('over_null模式', ('partition_by', 'order_by', None))
 
     convert_xor = st.checkbox('将`^`转换为`**`', True)
@@ -51,7 +51,7 @@ LABEL_CC_1=CLOSE[-1]/CLOSE-1 # 每天收盘交易
 
 if st.button('生成代码'):
     with st.spinner('生成中，请等待...'):
-        res = codegen_exec(None, exprs_src, over_null=over_null, convert_xor=convert_xor, style=style, date=date_name, asset=asset_name)
+        res = codegen_exec(None, exprs_src, over_null=over_null, convert_xor=convert_xor, style=style, date=date_name, asset=asset_name, extra_codes="")
         b64 = base64.b64encode(res.encode('utf-8'))
         st.markdown(f'<a href="data:file/plain;base64,{b64.decode()}" download="results.py">下载代码</a>',
                     unsafe_allow_html=True)
@@ -61,6 +61,8 @@ if st.button('生成代码'):
         language = "python"
         if style == 'sql':
             language = "sql"
+        if style == 'rust':
+            language = "rust"
 
         with st.expander(label="预览代码"):
             st.code(res, language=language)

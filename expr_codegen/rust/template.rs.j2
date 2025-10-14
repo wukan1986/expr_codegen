@@ -3,6 +3,10 @@
 // 此段代码由 expr_codegen 自动生成，欢迎提交 issue 或 pull request
 use polars::prelude::*;
 
+pub fn ts_delay(x: Expr, n: i16) -> Expr {
+    x.shift(lit(n))
+}
+
 pub fn ts_mean(x: Expr, d: usize) -> Expr {
     x.rolling_mean(RollingOptionsFixedWindow {
         window_size: d,
@@ -59,34 +63,62 @@ fn {{ key }}(mut df: LazyFrame) -> LazyFrame{
 {% endfor %}
 */
 
-pub fn main_(df: LazyFrame) -> LazyFrame {
-
-
-
-
-    df
-
-}
-
-def _filter_last(df: DataFrame, ge_date_idx: int) -> DataFrame:
-    """过滤数据，只取最后几天。实盘时可用于减少计算量
-    """
-    if ge_date_idx == 0:
-        return df
-    else:
-        return df.filter(pl.col(_DATE_) >= df.select(pl.col(_DATE_).unique().sort())[ge_date_idx, 0])
-
-
-def main(df: DataFrame, ge_date_idx: int) -> DataFrame:
+pub fn main_(mut df: LazyFrame, ge_date_idx: i64) -> LazyFrame {
     {% for key, value in groupbys.items() %}
     {{ value-}}
     {% endfor %}
 
-    # drop intermediate columns
-    df = df.select(~cs.starts_with("_"))
+    df
+}
 
-    # shrink
-    # df = df.select(col.shrink_dtype() for col in df)
+pub fn _filter_last(df: LazyFrame, ge_date_idx: i64) -> LazyFrame {
+    if ge_date_idx == 0 {
+        df
+    } else {
+        let date_expr = col(_DATE_)
+            .unique()
+            .sort(SortOptions::default())
+            .slice(ge_date_idx, 1)
+            .first();
 
-    return df
+        df.filter(col(_DATE_).gt_eq(date_expr))
+    }
+}
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut df = df! (
+        "date" => [1, 2, 3, 4, 5, 1, 2, 3, 4],
+        "asset" => [1, 2, 3, 1, 2, 3, 1, 2, 3],
+        "OPEN" => [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "HIGH" => [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "LOW" => [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "CLOSE" => [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    )?;
+
+    df = main_(df.lazy(), 0)
+        .drop(Selector::Matches("^_.*$".into()))
+        .collect()?;
+    println!("{:?}", df);
+
+    Ok(())
+}
+
+/*
+# Cargo.toml
+# https://docs.pola.rs/user-guide/installation/
+
+[package]
+name = "expr_codegen_rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+polars = { version = "0.51.0", features = [
+    "lazy",
+    "round_series",
+    "strings",
+    "regex",
+    "rolling_window",
+] }
+
+*/

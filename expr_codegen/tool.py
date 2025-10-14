@@ -503,6 +503,8 @@ def codegen_exec(df: Union[DataFrame, None],
     if df is None:
         # 如果df为空，直接返回代码
         return code
+    elif style == 'rust':
+        return code
     elif style == 'sql':
         with pl.SQLContext(frames={table_name: df}) as ctx:
             return ctx.execute(code, eager=isinstance(df, _pl_DataFrame))

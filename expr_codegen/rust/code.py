@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from typing import Sequence, Literal
 
@@ -13,26 +14,31 @@ from expr_codegen.rust.printer import RustStrPrinter
 def get_groupby_from_tuple(tup, func_name, drop_cols):
     """从传入的元组中生成分组运行代码"""
     prefix2, *_ = tup
+    if len(drop_cols)>0:
+        drop_cols = [f'"{c}".into()' for c in drop_cols]
+        drop_str = f'.drop(Selector::ByName {{ names: Arc::new([{','.join(drop_cols)}]), strict: true }})'
+    else:
+        drop_str = ""
 
     if prefix2 == TS:
         # 组内需要按时间进行排序，需要维持顺序
         prefix2, asset = tup
-        return f'df = {func_name}(df.sort(_ASSET_, _DATE_)).drop(*{drop_cols})'
+        return f'df = {func_name}(df.sort([_ASSET_, _DATE_], SortMultipleOptions::default())){drop_str};'
     if prefix2 == CS:
         prefix2, date = tup
-        return f'df = {func_name}(df.sort(_DATE_)).drop(*{drop_cols})'
+        return f'df = {func_name}(df.sort([_DATE_], SortMultipleOptions::default())){drop_str};'
     if prefix2 == GP:
         prefix2, date, group = tup
-        return f'df = {func_name}(df.sort(_DATE_, "{group}")).drop(*{drop_cols})'
+        return f'df = {func_name}(df.sort([_DATE_, "{group}"], SortMultipleOptions::default())){drop_str};'
 
-    return f'df = {func_name}(df).drop(*{drop_cols})'
+    return f'df = {func_name}(df){drop_str};'
 
 
-def symbols_to_code(syms):
-    a = [f"{s}" for s in syms]
-    b = [f"'{s}'" for s in syms]
-    return f"""_ = [{','.join(b)}]
-[{','.join(a)}] = [pl.col(i) for i in _]"""
+# def symbols_to_code(syms):
+#     a = [f"{s}" for s in syms]
+#     b = [f"'{s}'" for s in syms]
+#     return f"""_ = [{','.join(b)}]
+# [{','.join(a)}] = [pl.col(i) for i in _]"""
 
 
 def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
@@ -72,7 +78,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             func_code = []
             for kv in vv:
                 if kv is None:
-                    func_code.append(f"    )")
+                    func_code.append(f"    ]);")
                     func_code.append(f"// " + '=' * 40)
                     func_code.append(f"    df = df.with_columns([")
                     exprs_dst.append(f"//" + '=' * 40 + func_name)
@@ -90,7 +96,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
                         _sym = [f'col("{s}").is_not_null()' for s in set(sym)]
                         if len(_sym) > 1:
-                            _sym = f"pl.all_horizontal({','.join(_sym)})"
+                            _sym = f"all_horizontal([{','.join(_sym)}]).unwrap()"
                         else:
                             _sym = ','.join(_sym)
                         if args.over_null == 'partition_by':
@@ -104,7 +110,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     elif k[0] == GP:
                         func_code.append(f'({s2}).over([_DATE_, "{k[2]}"]).alias("{va}"),')
                     else:
-                        func_code.append(f'{s2}.alias("{va}"),')
+                        func_code.append(f'({s2}).alias("{va}"),')
                     exprs_dst.append(f"{va} = {s1} {comment}")
                     if va not in syms_dst:
                         syms_out.append(va)
@@ -118,16 +124,16 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             # 分组应用代码
             groupbys[func_name] = get_groupby_from_tuple(k, func_name, ds)
 
-    syms1 = symbols_to_code(syms_dst)
-    syms2 = symbols_to_code(syms_out)
+    # syms1 = symbols_to_code(syms_dst)
+    # syms2 = symbols_to_code(syms_out)
     # filter_last处理
     _groupbys = {'sort': groupbys['sort']}
     if ts_func_name is None:
-        _groupbys['_filter_last'] = "df = _filter_last(df, ge_date_idx)"
+        _groupbys['_filter_last'] = "df = _filter_last(df, ge_date_idx);"
     for k, v in groupbys.items():
         _groupbys[k] = v
         if k == ts_func_name:
-            _groupbys[k + '_filter_last'] = "df = _filter_last(df, ge_date_idx)"
+            _groupbys[k + '_filter_last'] = "df = _filter_last(df, ge_date_idx);"
     groupbys = _groupbys
 
     try:
@@ -139,6 +145,6 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
 
     return template.render(funcs=funcs, groupbys=groupbys,
                            exprs_src=exprs_src, exprs_dst=exprs_dst,
-                           syms1=syms1, syms2=syms2,
+                           # syms1=syms1, syms2=syms2,
                            date=date, asset=asset,
                            extra_codes=extra_codes)
