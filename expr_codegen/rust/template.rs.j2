@@ -86,6 +86,7 @@ pub fn _filter_last(df: LazyFrame, ge_date_idx: i64) -> LazyFrame {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 目前生成的代码还需要调整才能投入使用，还有更多的函数需要补充
     let mut df = df! (
         "date" => [1, 2, 3, 4, 5, 1, 2, 3, 4],
         "asset" => [1, 2, 3, 1, 2, 3, 1, 2, 3],

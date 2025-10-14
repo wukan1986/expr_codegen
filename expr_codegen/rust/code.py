@@ -81,7 +81,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     func_code.append(f"    ]);")
                     func_code.append(f"// " + '=' * 40)
                     func_code.append(f"    df = df.with_columns([")
-                    exprs_dst.append(f"//" + '=' * 40 + func_name)
+                    exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
                     va, ex, sym, comment = kv
                     # 多个#时，只取第一个#后的参数
