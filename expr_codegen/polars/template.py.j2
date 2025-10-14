@@ -63,12 +63,11 @@ def {{ key }}(df: DataFrame) -> DataFrame:
 
 
 def _filter_last(df: DataFrame, ge_date_idx: int) -> DataFrame:
-    """过滤数据，只取最后几天。实盘时可用于减少计算量
-    """
+    """过滤数据，只取最后几天。实盘时可用于减少计算量"""
     if ge_date_idx == 0:
         return df
     else:
-        return df.filter(pl.col(_DATE_) >= df.select(pl.col(_DATE_).unique().sort())[ge_date_idx, 0])
+        return df.filter(pl.col(_DATE_) >= pl.col(_DATE_).unique().sort().slice(ge_date_idx, 1).first())
 
 
 def main(df: DataFrame, ge_date_idx: int) -> DataFrame:
