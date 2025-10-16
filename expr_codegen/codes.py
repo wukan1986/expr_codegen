@@ -1,4 +1,5 @@
 import ast
+import inspect
 import re
 from ast import expr
 
@@ -333,6 +334,63 @@ class RenameTransformer(ast.NodeTransformer):
         return node
 
 
+class KeywordToPositionalTransformer(ast.NodeTransformer):
+    def __init__(self, function_mapping):
+        self.function_mapping = function_mapping  # 函数名到实际函数的映射
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and node.keywords:
+            func_name = node.func.id
+            if func_name in self.function_mapping:
+                return self.transform_call(node, self.function_mapping[func_name])
+        return node
+
+    def transform_call(self, node, target_func):
+        try:
+            # 获取函数参数签名
+            sig = inspect.signature(target_func)
+            param_names = list(sig.parameters.keys())
+
+            # 构建参数映射
+            arg_mapping = {}
+            # 处理现有位置参数
+            for i, arg in enumerate(node.args):
+                if i < len(param_names):
+                    arg_mapping[param_names[i]] = arg
+
+            # 处理关键字参数
+            for keyword in node.keywords:
+                if keyword.arg in param_names:
+                    arg_mapping[keyword.arg] = keyword.value
+
+            # 按参数顺序构建新的位置参数列表
+            new_args = []
+            for param_name in param_names:
+                if param_name in arg_mapping:
+                    new_args.append(arg_mapping[param_name])
+                else:
+                    # 对于没有提供的参数，需要处理默认值
+                    param = sig.parameters[param_name]
+                    if param.default != inspect.Parameter.empty:
+                        # 使用默认值
+                        new_args.append(ast.Constant(value=param.default))
+                    else:
+                        # 必需参数缺失，保持原样或报错
+                        return node
+
+            # 创建新的调用节点
+            new_node = ast.Call(
+                func=node.func,
+                args=new_args,
+                keywords=[]
+            )
+            return new_node
+
+        except Exception as e:
+            # 转换失败时返回原节点
+            return node
+
+
 def source_replace(source: str) -> str:
     # 三元表达式转换成 错误版if( )else，一定得在Transformer中修正
     num = 1
@@ -374,7 +432,7 @@ def raw_to_code(raw):
     return '\n'.join([ast_comments.unparse(a) for a in raw])
 
 
-def sources_to_asts(*sources, convert_xor: bool):
+def sources_to_asts(*sources, convert_xor: bool, function_mapping):
     """输入多份源代码"""
 
     def _source_to_asts(source):
@@ -394,6 +452,8 @@ def sources_to_asts(*sources, convert_xor: bool):
 
     t1 = SyntaxTransformer(convert_xor)
     t1.visit(tree)
+    t2 = KeywordToPositionalTransformer(function_mapping)
+    t2.visit(tree)
     t = RenameTransformer({}, {})
     t.visit(tree)
 
@@ -429,12 +489,12 @@ def _add_default_type(globals_):
     return globals_
 
 
-def sources_to_exprs(globals_, *sources, convert_xor: bool):
+def sources_to_exprs(globals_, *sources, convert_xor: bool, function_mapping):
     """将源代码转换成表达式"""
 
     globals_ = _add_default_type(globals_)
 
-    raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources, convert_xor=convert_xor)
+    raw, assigns, funcs_new, args_new, targets_new = sources_to_asts(*sources, convert_xor=convert_xor, function_mapping=function_mapping)
     # 支持OPEN[1]转ts_delay(OPEN,1)
     funcs_new.add('ts_delay')
 

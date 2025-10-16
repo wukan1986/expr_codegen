@@ -226,6 +226,7 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
    ```
 11. 单行注释支持参数输入，如：`# --over_null`、`# --over_null=order_by`、`# --over_null=partition_by`
 12. 代码块中，对`import`、`def`、`class`三种语法，自动原样插入到生成的代码中
+13. 由于`sympy`的限制不支持关键字参数，但如果`from polars_ta.prefix.wq import *`,然后`codegen_exec(function_mapping=globals())`，底层会试着将关键字参数转成位置参数使用
 
 ## 下划线开头的变量
 
