@@ -66,6 +66,43 @@ class PolarsStrPrinter(StrPrinter):
         p, q = int(expr.p), int(expr.q)
         return f"pl.lit({p}/{q})"
 
+    def _print_Function(self, expr) -> str:
+        func_name = expr.func.__name__
+        if func_name.startswith("ts_"):
+            # For ts_* functions, numeric trailing args are usually window sizes / params
+            # that must be plain Python scalars (not `pl.lit(...)`).
+            args = list(expr.args)
+
+            last_non_num_idx = -1
+            for i, arg in enumerate(args):
+                if not isinstance(arg, (Integer, Float, Rational)):
+                    last_non_num_idx = i
+
+            numeric_start = 1 if last_non_num_idx < 0 else last_non_num_idx + 1
+
+            def _print_ts_param(arg) -> str:
+                if isinstance(arg, Integer):
+                    return str(int(arg))
+                if isinstance(arg, Float):
+                    return repr(float(arg))
+                if isinstance(arg, Rational):
+                    p, q = int(arg.p), int(arg.q)
+                    if q == 1:
+                        return str(p)
+                    return repr(p / q)
+                return self._print(arg)
+
+            printed_args: list[str] = []
+            for i, arg in enumerate(args):
+                if i >= numeric_start and isinstance(arg, (Integer, Float, Rational)):
+                    printed_args.append(_print_ts_param(arg))
+                else:
+                    printed_args.append(self._print(arg))
+
+            return f"{func_name}({','.join(printed_args)})"
+
+        return super()._print_Function(expr)
+
     def _print_Equality(self, expr):
         PREC = precedence(expr)
         return "%s == %s" % (self.parenthesize(expr.args[0], PREC), self.parenthesize(expr.args[1], PREC))
