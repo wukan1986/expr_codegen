@@ -67,14 +67,18 @@ class PolarsStrPrinter(StrPrinter):
             #   `min_samples or ...` and trigger Expr.__bool__ errors.
             args = list(expr.args)
 
-            last_non_num_idx = -1
-            for i, arg in enumerate(args):
-                if not isinstance(arg, (Integer, Float, Rational)):
-                    last_non_num_idx = i
+            def _is_numeric(arg: object) -> bool:
+                if isinstance(arg, (Integer, Float, Rational)):
+                    return True
+                if isinstance(arg, Basic):
+                    try:
+                        if getattr(arg, "is_number", False) and not getattr(arg, "free_symbols", set()):
+                            return True
+                    except Exception:
+                        return False
+                return False
 
-            numeric_start = 1 if last_non_num_idx < 0 else last_non_num_idx + 1
-
-            def _print_scalar(arg) -> str:
+            def _scalar_str(arg: object) -> str:
                 if isinstance(arg, Integer):
                     return str(int(arg))
                 if isinstance(arg, Float):
@@ -84,17 +88,37 @@ class PolarsStrPrinter(StrPrinter):
                     if q == 1:
                         return str(p)
                     return repr(p / q)
+                if isinstance(arg, Basic) and getattr(arg, "is_number", False):
+                    # Numeric-only SymPy expressions (e.g. Mul(Integer(-1), Integer(0))).
+                    try:
+                        if getattr(arg, "is_integer", False):
+                            return str(int(arg))
+                    except Exception:
+                        pass
+                    try:
+                        return repr(float(arg))
+                    except Exception:
+                        return self._print(arg)
                 return self._print(arg)
+
+            last_non_num_idx = -1
+            for i, arg in enumerate(args):
+                if not _is_numeric(arg):
+                    last_non_num_idx = i
+
+            numeric_start = 1 if last_non_num_idx < 0 else last_non_num_idx + 1
 
             printed_args: list[str] = []
             for i, arg in enumerate(args):
-                if isinstance(arg, (Integer, Float, Rational)):
+                if _is_numeric(arg):
                     if i >= numeric_start:
                         # Trailing numeric parameters: keep them as scalars.
-                        printed_args.append(_print_scalar(arg))
+                        printed_args.append(_scalar_str(arg))
                     else:
                         # Series position numeric constants: lift to Expr.
-                        printed_args.append(f"pl.lit({_print_scalar(arg)})")
+                        # Important: numeric-only SymPy expressions must also be lifted,
+                        # otherwise Python will evaluate them as scalars before calling ts_*.
+                        printed_args.append(f"pl.lit({_scalar_str(arg)})")
                 else:
                     printed_args.append(self._print(arg))
 
