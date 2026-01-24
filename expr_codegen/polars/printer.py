@@ -1,4 +1,4 @@
-from sympy import Basic, Function, StrPrinter
+from sympy import Basic, Float, Function, Integer, Rational, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
 
 
@@ -55,6 +55,16 @@ class PolarsStrPrinter(StrPrinter):
 
     def _print_Symbol(self, expr):
         return expr.name
+
+    def _print_Integer(self, expr: Integer) -> str:
+        return f"pl.lit({int(expr)})"
+
+    def _print_Float(self, expr: Float) -> str:
+        return f"pl.lit({float(expr)!r})"
+
+    def _print_Rational(self, expr: Rational) -> str:
+        p, q = int(expr.p), int(expr.q)
+        return f"pl.lit({p}/{q})"
 
     def _print_Equality(self, expr):
         PREC = precedence(expr)

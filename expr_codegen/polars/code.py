@@ -99,9 +99,15 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         else:
                             _sym = ','.join(_sym)
                         if args.over_null == 'partition_by':
-                            func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
+                            if _sym:
+                                func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
+                            else:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
                         elif args.over_null == 'order_by':
-                            func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
+                            if _sym:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
+                            else:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
                         else:
                             func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
                     elif k[0] == CS:
