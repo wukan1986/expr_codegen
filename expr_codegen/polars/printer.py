@@ -56,21 +56,15 @@ class PolarsStrPrinter(StrPrinter):
     def _print_Symbol(self, expr):
         return expr.name
 
-    def _print_Integer(self, expr: Integer) -> str:
-        return f"pl.lit({int(expr)})"
-
-    def _print_Float(self, expr: Float) -> str:
-        return f"pl.lit({float(expr)!r})"
-
-    def _print_Rational(self, expr: Rational) -> str:
-        p, q = int(expr.p), int(expr.q)
-        return f"pl.lit({p}/{q})"
-
     def _print_Function(self, expr) -> str:
         func_name = expr.func.__name__
         if func_name.startswith("ts_"):
-            # For ts_* functions, numeric trailing args are usually window sizes / params
-            # that must be plain Python scalars (not `pl.lit(...)`).
+            # For ts_* functions:
+            # - The "series" args must be polars expressions (so numeric constants
+            #   there should be wrapped as `pl.lit(...)`).
+            # - The trailing numeric params (window sizes, etc.) must remain plain
+            #   Python scalars (ints/floats), otherwise downstream libs may do
+            #   `min_samples or ...` and trigger Expr.__bool__ errors.
             args = list(expr.args)
 
             last_non_num_idx = -1
@@ -80,7 +74,7 @@ class PolarsStrPrinter(StrPrinter):
 
             numeric_start = 1 if last_non_num_idx < 0 else last_non_num_idx + 1
 
-            def _print_ts_param(arg) -> str:
+            def _print_scalar(arg) -> str:
                 if isinstance(arg, Integer):
                     return str(int(arg))
                 if isinstance(arg, Float):
@@ -94,8 +88,13 @@ class PolarsStrPrinter(StrPrinter):
 
             printed_args: list[str] = []
             for i, arg in enumerate(args):
-                if i >= numeric_start and isinstance(arg, (Integer, Float, Rational)):
-                    printed_args.append(_print_ts_param(arg))
+                if isinstance(arg, (Integer, Float, Rational)):
+                    if i >= numeric_start:
+                        # Trailing numeric parameters: keep them as scalars.
+                        printed_args.append(_print_scalar(arg))
+                    else:
+                        # Series position numeric constants: lift to Expr.
+                        printed_args.append(f"pl.lit({_print_scalar(arg)})")
                 else:
                     printed_args.append(self._print(arg))
 
