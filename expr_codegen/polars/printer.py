@@ -1,4 +1,4 @@
-from sympy import Basic, Float, Function, Integer, Rational, StrPrinter
+from sympy import Add, Basic, Float, Function, Integer, Mul, Pow, Rational, StrPrinter
 from sympy.printing.precedence import precedence, PRECEDENCE
 
 
@@ -101,6 +101,115 @@ class PolarsStrPrinter(StrPrinter):
                         return self._print(arg)
                 return self._print(arg)
 
+            def _scalar_str_from_value(v: object) -> str:
+                if isinstance(v, bool):
+                    return "1" if v else "0"
+                if isinstance(v, int):
+                    return str(v)
+                if isinstance(v, float):
+                    return repr(float(v))
+                return repr(v)
+
+            def _try_const_value(node: object) -> int | float | bool | None:
+                # Only evaluate constant-only expressions to avoid accidentally
+                # executing user-defined code.
+                if isinstance(node, (int, float, bool)):
+                    return node
+                if isinstance(node, Integer):
+                    return int(node)
+                if isinstance(node, Float):
+                    return float(node)
+                if isinstance(node, Rational):
+                    p, q = int(node.p), int(node.q)
+                    if q == 0:
+                        return None
+                    v = p / q
+                    if float(v).is_integer():
+                        return int(v)
+                    return float(v)
+                if not isinstance(node, Basic):
+                    return None
+                try:
+                    if getattr(node, "free_symbols", set()):
+                        return None
+                except Exception:
+                    return None
+
+                # Native numeric-only SymPy expressions.
+                if getattr(node, "is_number", False):
+                    try:
+                        if getattr(node, "is_integer", False):
+                            return int(node)
+                    except Exception:
+                        pass
+                    try:
+                        return float(node)
+                    except Exception:
+                        return None
+
+                # Basic arithmetic on constant subexpressions.
+                if isinstance(node, Add):
+                    vals = [_try_const_value(a) for a in node.args]
+                    if any(v is None for v in vals):
+                        return None
+                    return float(sum(float(v) for v in vals))
+                if isinstance(node, Mul):
+                    vals = [_try_const_value(a) for a in node.args]
+                    if any(v is None for v in vals):
+                        return None
+                    out = 1.0
+                    for v in vals:
+                        out *= float(v)
+                    return float(out)
+                if isinstance(node, Pow):
+                    base = _try_const_value(node.args[0])
+                    exp = _try_const_value(node.args[1])
+                    if base is None or exp is None:
+                        return None
+                    try:
+                        return float(float(base) ** float(exp))
+                    except Exception:
+                        return None
+
+                # Safe subset of constant function evaluation.
+                if getattr(node, "is_Function", False):
+                    fn = getattr(node.func, "__name__", "")
+                    vals = [_try_const_value(a) for a in node.args]
+                    if any(v is None for v in vals):
+                        return None
+                    xs = [float(v) for v in vals]
+                    try:
+                        if fn in ("abs_", "abs") and len(xs) == 1:
+                            return abs(xs[0])
+                        if fn in ("sign", "sign_") and len(xs) == 1:
+                            x = xs[0]
+                            return 0.0 if x == 0.0 else (1.0 if x > 0.0 else -1.0)
+                        if fn in ("neg_", "neg") and len(xs) == 1:
+                            return -xs[0]
+                        if fn in ("log", "log_") and len(xs) == 1:
+                            import math
+
+                            return float(math.log(xs[0]))
+                        if fn in ("min_", "min") and len(xs) >= 1:
+                            return float(min(xs))
+                        if fn in ("max_", "max") and len(xs) >= 1:
+                            return float(max(xs))
+                        if fn == "clip_" and len(xs) == 3:
+                            x, lo, hi = xs
+                            return float(min(max(x, lo), hi))
+                        if fn in ("if_else", "where_") and len(vals) == 3:
+                            cond = vals[0]
+                            if isinstance(cond, bool):
+                                return _try_const_value(node.args[1] if cond else node.args[2])
+                            # Treat numeric condition as truthy/falsy (0 => False).
+                            try:
+                                return _try_const_value(node.args[1] if float(cond) != 0.0 else node.args[2])
+                            except Exception:
+                                return None
+                    except Exception:
+                        return None
+                return None
+
             last_non_num_idx = -1
             for i, arg in enumerate(args):
                 if not _is_numeric(arg):
@@ -120,6 +229,11 @@ class PolarsStrPrinter(StrPrinter):
                         # otherwise Python will evaluate them as scalars before calling ts_*.
                         printed_args.append(f"pl.lit({_scalar_str(arg)})")
                 else:
+                    if i < numeric_start:
+                        v = _try_const_value(arg)
+                        if v is not None:
+                            printed_args.append(f"pl.lit({_scalar_str_from_value(v)})")
+                            continue
                     printed_args.append(self._print(arg))
 
             return f"{func_name}({','.join(printed_args)})"
