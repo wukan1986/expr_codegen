@@ -58,6 +58,131 @@ class PolarsStrPrinter(StrPrinter):
 
     def _print_Function(self, expr) -> str:
         func_name = expr.func.__name__
+
+        def _lit(v: object) -> str:
+            if isinstance(v, bool):
+                return "pl.lit(True)" if v else "pl.lit(False)"
+            if isinstance(v, int):
+                return f"pl.lit({v})"
+            if isinstance(v, float):
+                if v != v:  # NaN
+                    return "pl.lit(float('nan'))"
+                if v == float("inf"):
+                    return "pl.lit(float('inf'))"
+                if v == float("-inf"):
+                    return "pl.lit(float('-inf'))"
+                return f"pl.lit({repr(float(v))})"
+            return f"pl.lit({repr(v)})"
+
+        def _const_scalar(node: object) -> int | float | bool | None:
+            # Only fold constant-only expressions to avoid accidental execution of
+            # user-defined code. This is deliberately conservative.
+            if isinstance(node, (int, float, bool)):
+                return node
+            if isinstance(node, Integer):
+                return int(node)
+            if isinstance(node, Float):
+                return float(node)
+            if isinstance(node, Rational):
+                p, q = int(node.p), int(node.q)
+                if q == 0:
+                    return None
+                v = p / q
+                if float(v).is_integer():
+                    return int(v)
+                return float(v)
+            if not isinstance(node, Basic):
+                return None
+            try:
+                if getattr(node, "free_symbols", set()):
+                    return None
+            except Exception:
+                return None
+            if getattr(node, "is_number", False):
+                try:
+                    if getattr(node, "is_integer", False):
+                        return int(node)
+                except Exception:
+                    pass
+                try:
+                    return float(node)
+                except Exception:
+                    return None
+            return None
+
+        def _fold_const_function_call(call: object) -> str | None:
+            # Fold a small set of elementwise/conditional functions when all inputs
+            # are constant-only. This avoids emitting runtime calls like `sign(0)`,
+            # which may return numpy scalars (e.g. np.int64) and break Polars Lazy
+            # type inference in some window/weights plans.
+            if not getattr(call, "is_Function", False):
+                return None
+            fn = getattr(call.func, "__name__", "")
+            args = list(getattr(call, "args", ()))
+
+            vals = [_const_scalar(a) for a in args]
+            if any(v is None for v in vals):
+                return None
+
+            try:
+                if fn in ("abs_", "abs") and len(vals) == 1:
+                    v = vals[0]
+                    if isinstance(v, bool):
+                        return _lit(1 if v else 0)
+                    if isinstance(v, int):
+                        return _lit(abs(v))
+                    return _lit(abs(float(v)))
+
+                if fn in ("sign", "sign_") and len(vals) == 1:
+                    x = float(vals[0])
+                    out = 0 if x == 0.0 else (1 if x > 0.0 else -1)
+                    return _lit(out)
+
+                if fn in ("neg_", "neg") and len(vals) == 1:
+                    v = vals[0]
+                    if isinstance(v, bool):
+                        return _lit(-1 if v else 0)
+                    if isinstance(v, int):
+                        return _lit(-v)
+                    return _lit(-float(v))
+
+                if fn in ("log", "log_") and len(vals) == 1:
+                    import math
+
+                    x = float(vals[0])
+                    return _lit(float(math.log(x)))
+
+                if fn in ("min_", "min") and len(vals) >= 1:
+                    xs = [float(v) for v in vals]
+                    return _lit(float(min(xs)))
+
+                if fn in ("max_", "max") and len(vals) >= 1:
+                    xs = [float(v) for v in vals]
+                    return _lit(float(max(xs)))
+
+                if fn == "clip_" and len(vals) == 3:
+                    x, lo, hi = (float(vals[0]), float(vals[1]), float(vals[2]))
+                    return _lit(float(min(max(x, lo), hi)))
+
+                if fn in ("if_else", "where_") and len(vals) == 3:
+                    cond = vals[0]
+                    # bool condition: choose branch directly
+                    if isinstance(cond, bool):
+                        return _lit(vals[1] if cond else vals[2])
+                    # numeric truthy/falsy: 0 => False
+                    try:
+                        return _lit(vals[1] if float(cond) != 0.0 else vals[2])
+                    except Exception:
+                        return None
+            except Exception:
+                return None
+
+            return None
+
+        folded = _fold_const_function_call(expr)
+        if folded is not None:
+            return folded
+
         if func_name.startswith("ts_"):
             # For ts_* functions:
             # - The "series" args must be polars expressions (so numeric constants
