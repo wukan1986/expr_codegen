@@ -1,10 +1,21 @@
 from sympy import Basic, Function, StrPrinter
+from sympy.core.numbers import Float, Integer, Rational
 from sympy.printing.precedence import precedence, PRECEDENCE
 
 
 # TODO: 如有新添加函数，但表达式有变更才需要在此补充对应的打印代码，否则可以省略
 
 class PolarsStrPrinter(StrPrinter):
+    @staticmethod
+    def _lit_number(expr) -> str:
+        if isinstance(expr, Integer):
+            return f"pl.lit({int(expr)})"
+        if isinstance(expr, Float):
+            return f"pl.lit({float(expr)!r})"
+        if isinstance(expr, Rational):
+            return f"pl.lit({float(expr)!r})"
+        return f"pl.lit({expr})"
+
     def _print(self, expr, **kwargs) -> str:
         """Internal dispatcher
 
@@ -85,3 +96,23 @@ class PolarsStrPrinter(StrPrinter):
         new_args = [self._print(arg) for arg in expr.args[1:]]
         func_name = expr.func.__name__[3:]
         return "cs_%s(%s)" % (func_name, ",".join(new_args))
+
+    def _print_Function(self, expr):
+        fn = expr.func.__name__
+        args = list(expr.args)
+        if fn.startswith("ts_"):
+            if len(args) >= 2:
+                series_args, scalar_tail = args[:-1], args[-1:]
+            else:
+                series_args, scalar_tail = args, []
+
+            printed = []
+            for a in series_args:
+                if getattr(a, "is_Number", False):
+                    printed.append(self._lit_number(a))
+                else:
+                    printed.append(self._print(a))
+            printed.extend(self._print(a) for a in scalar_tail)
+            return f"{fn}({', '.join(printed)})"
+
+        return super()._print_Function(expr)
