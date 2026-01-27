@@ -93,15 +93,23 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     if k[0] == TS:
                         ts_func_name = func_name
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
-                        _sym = [f"{s}.is_not_null()" for s in set(sym)]
-                        if len(_sym) > 1:
-                            _sym = f"pl.all_horizontal({','.join(_sym)})"
+                        _sym_list = [f"{s}.is_not_null()" for s in set(sym)]
+                        if len(_sym_list) == 0:
+                            _sym = None
+                        elif len(_sym_list) > 1:
+                            _sym = f"pl.all_horizontal({','.join(_sym_list)})"
                         else:
-                            _sym = ','.join(_sym)
+                            _sym = _sym_list[0]
                         if args.over_null == 'partition_by':
-                            func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
+                            if _sym is None:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
+                            else:
+                                func_code.append(f"{va}=({s2}).over({_sym}, _ASSET_, order_by=_DATE_),")
                         elif args.over_null == 'order_by':
-                            func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
+                            if _sym is None:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
+                            else:
+                                func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=[{_sym}, _DATE_]),")
                         else:
                             func_code.append(f"{va}=({s2}).over(_ASSET_, order_by=_DATE_),")
                     elif k[0] == CS:
