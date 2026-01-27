@@ -111,6 +111,24 @@ class PolarsStrPrinter(StrPrinter):
         fn = expr.func.__name__
         args = list(expr.args)
 
+        def _is_constant_expr(a) -> bool:
+            if not isinstance(a, Basic):
+                return False
+            try:
+                return not bool(getattr(a, "free_symbols", set()))
+            except Exception:
+                return False
+
+        def _is_numeric_only(a) -> bool:
+            if isinstance(a, (Integer, Float, Rational)):
+                return True
+            if isinstance(a, Basic) and getattr(a, "is_number", False):
+                try:
+                    return not bool(getattr(a, "free_symbols", set()))
+                except Exception:
+                    return False
+            return False
+
         lift_numeric_arg_positions = {
             "abs": {0},
             "abs_": {0},
@@ -122,31 +140,13 @@ class PolarsStrPrinter(StrPrinter):
         if lift_numeric_arg_positions:
             printed = []
             for i, a in enumerate(args):
-                if i in lift_numeric_arg_positions and getattr(a, "is_Number", False):
+                if i in lift_numeric_arg_positions and _is_numeric_only(a):
                     printed.append(self._lit_number(a))
                 else:
                     printed.append(self._print(a))
             return f"{fn}({', '.join(printed)})"
 
         if fn.startswith("ts_"):
-            def _is_constant_expr(a) -> bool:
-                if not isinstance(a, Basic):
-                    return False
-                try:
-                    return not bool(getattr(a, "free_symbols", set()))
-                except Exception:
-                    return False
-
-            def _is_numeric_only(a) -> bool:
-                if isinstance(a, (Integer, Float, Rational)):
-                    return True
-                if isinstance(a, Basic) and getattr(a, "is_number", False):
-                    try:
-                        return not bool(getattr(a, "free_symbols", set()))
-                    except Exception:
-                        return False
-                return False
-
             if len(args) >= 2:
                 series_args, scalar_tail = args[:-1], args[-1:]
             else:
@@ -154,6 +154,9 @@ class PolarsStrPrinter(StrPrinter):
 
             printed = []
             for a in series_args:
+                # polars_ta's ts_* expects a per-row series input for its "series args".
+                # A scalar Expr like pl.lit(1) will produce all-null results for shift/rolling.
+                # If an arg becomes a constant-only expression (e.g. RET-RET+1 -> 1), broadcast it.
                 if _is_constant_expr(a):
                     inner = self._lit_number(a) if _is_numeric_only(a) else self._print(a)
                     printed.append(f"pl.repeat({inner}, pl.len())")
