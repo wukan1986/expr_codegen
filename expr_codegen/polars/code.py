@@ -93,11 +93,9 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     if k[0] == TS:
                         ts_func_name = func_name
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
-                        _sym_list = [f"{s}.is_not_null()" for s in set(sym)]
-                        if len(_sym_list) == 0:
-                            _sym = None
-                        elif len(_sym_list) > 1:
-                            _sym = f"pl.all_horizontal({','.join(_sym_list)})"
+                        _sym = [f"{s}.is_not_null()" for s in set(sym)]
+                        if len(_sym) > 1:
+                            _sym = f"pl.all_horizontal({','.join(_sym)})"
                         else:
                             _sym = ','.join(_sym)
 
