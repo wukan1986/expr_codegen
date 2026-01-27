@@ -111,6 +111,14 @@ class PolarsStrPrinter(StrPrinter):
         fn = expr.func.__name__
         args = list(expr.args)
         if fn.startswith("ts_"):
+            def _is_constant_expr(a) -> bool:
+                if not isinstance(a, Basic):
+                    return False
+                try:
+                    return not bool(getattr(a, "free_symbols", set()))
+                except Exception:
+                    return False
+
             def _is_numeric_only(a) -> bool:
                 if isinstance(a, (Integer, Float, Rational)):
                     return True
@@ -128,8 +136,9 @@ class PolarsStrPrinter(StrPrinter):
 
             printed = []
             for a in series_args:
-                if _is_numeric_only(a):
-                    printed.append(self._lit_number(a))
+                if _is_constant_expr(a):
+                    inner = self._lit_number(a) if _is_numeric_only(a) else self._print(a)
+                    printed.append(f"pl.repeat({inner}, pl.len())")
                 else:
                     printed.append(self._print(a))
             printed.extend(self._print(a) for a in scalar_tail)
