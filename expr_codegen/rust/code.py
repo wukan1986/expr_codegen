@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 from typing import Sequence, Literal
 
@@ -14,7 +13,7 @@ from expr_codegen.rust.printer import RustStrPrinter
 def get_groupby_from_tuple(tup, func_name, drop_cols):
     """从传入的元组中生成分组运行代码"""
     prefix2, *_ = tup
-    if len(drop_cols)>0:
+    if len(drop_cols) > 0:
         drop_cols = [f'"{c}".into()' for c in drop_cols]
         drop_str = f'.drop(Selector::ByName {{ names: Arc::new([{','.join(drop_cols)}]), strict: true }})'
     else:
@@ -99,12 +98,17 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                             _sym = f"all_horizontal([{','.join(_sym)}]).unwrap()"
                         else:
                             _sym = ','.join(_sym)
-                        if args.over_null == 'partition_by':
-                            func_code.append(f'({s2}).over_with_options(Some([{_sym}, col(_ASSET_)]), Some(([col(_DATE_), lit(1)], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
-                        elif args.over_null == 'order_by':
-                            func_code.append(f'({s2}).over_with_options(Some([col(_ASSET_), lit(1)]), Some(([{_sym}, col(_DATE_)], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
-                        else:
+
+                        if len(_sym) == 0:
                             func_code.append(f'({s2}).over_with_options(Some([_ASSET_]), Some(([_DATE_], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
+                        else:
+                            if args.over_null == 'partition_by':
+                                func_code.append(f'({s2}).over_with_options(Some([{_sym}, col(_ASSET_)]), Some(([col(_DATE_), lit(1)], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
+                            elif args.over_null == 'order_by':
+                                func_code.append(f'({s2}).over_with_options(Some([col(_ASSET_), lit(1)]), Some(([{_sym}, col(_DATE_)], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
+                            else:
+                                func_code.append(f'({s2}).over_with_options(Some([_ASSET_]), Some(([_DATE_], SortOptions::default())), WindowMapping::default()).unwrap().alias("{va}"),')
+
                     elif k[0] == CS:
                         func_code.append(f'({s2}).over([_DATE_]).alias("{va}"),')
                     elif k[0] == GP:

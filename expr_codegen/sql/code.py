@@ -65,12 +65,17 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                             _sym = f"({' AND '.join(_sym)})"
                         else:
                             _sym = ','.join(_sym)
-                        if args.over_null == 'partition_by':
-                            func_code.append(f"{s2} OVER(PARTITION BY {_sym},`{asset}` ORDER BY `{date}`) AS {va},")
-                        elif args.over_null == 'order_by':
-                            func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY {_sym},`{date}`) AS {va},")
-                        else:
+
+                        if len(_sym) == 0:
                             func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY `{date}`) AS {va},")
+                        else:
+                            if args.over_null == 'partition_by':
+                                func_code.append(f"{s2} OVER(PARTITION BY {_sym},`{asset}` ORDER BY `{date}`) AS {va},")
+                            elif args.over_null == 'order_by':
+                                func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY {_sym},`{date}`) AS {va},")
+                            else:
+                                func_code.append(f"{s2} OVER(PARTITION BY `{asset}` ORDER BY `{date}`) AS {va},")
+
                     elif k[0] == CS:
                         func_code.append(f"{s2} OVER(PARTITION BY `{date}`) AS {va},")
                     elif k[0] == GP:

@@ -365,12 +365,14 @@ def dag_start(exprs_list, func, func_kwargs, date, asset):
     return G
 
 
-def dag_middle(G, exprs_names, skip_columns, func, func_kwargs, date, asset):
+def dag_middle(G, exprs_names, skip_columns, func, func_kwargs, date, asset, skip_simplify):
     """删除几个没有必要的节点"""
     # 以下划线开头的节点，不保留
     keep_nodes = [k for k in exprs_names if not k.startswith('_')]
 
-    G = merge_nodes_1(G, keep_nodes, *keep_nodes)
+    if not skip_simplify:
+        # ts_rank(-RET - -RET, 20),防止替换成ts_rank(0, 20)
+        G = merge_nodes_1(G, keep_nodes, *keep_nodes)
     G = merge_nodes_2(G, keep_nodes, *keep_nodes)
 
     # 移除0出度的节点，但保留部分

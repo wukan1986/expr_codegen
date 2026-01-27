@@ -149,7 +149,7 @@ class ExprTool:
 
         return exprs_list
 
-    def cse(self, exprs, symbols_repl=None, exprs_src=None):
+    def cse(self, exprs, symbols_repl=None, exprs_src=None, skip_simplify=False):
         """多个子公式+长公式，提取公共公式
 
         Parameters
@@ -176,7 +176,11 @@ class ExprTool:
         _exprs = [k for k, v in exprs]
 
         # 注意：对于表达式右边相同，左边不同的情况，会当成一个处理
-        repl, redu = cse(_exprs, symbols_repl, optimizations=[(cse_opts.sub_pre, cse_opts.sub_post), ])
+        if skip_simplify:
+            repl, redu = cse(_exprs, symbols_repl, optimizations=[])
+        else:
+            repl, redu = cse(_exprs, symbols_repl, optimizations=[(cse_opts.sub_pre, cse_opts.sub_post), ])
+
         outputs_len = len(exprs_src)
 
         new_redu = []
@@ -194,12 +198,11 @@ class ExprTool:
 
         return self.exprs_list
 
-    def dag(self, merge: bool, skip_columns, date, asset):
+    def dag(self, merge: bool, skip_columns, date, asset, skip_simplify):
         """生成DAG"""
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
-            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date,
-                           asset)
+            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
@@ -252,13 +255,13 @@ class ExprTool:
             exprs_src = replace_exprs(exprs_src)
 
         # 子表达式在前，原表式在最后
-        exprs_dst, syms_dst = self.merge(date, asset, exprs_src, skip_simplify)
+        exprs_dst, syms_dst = self.merge(date, asset, exprs_src, skip_simplify=skip_simplify)
         syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
-        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src)
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src, skip_simplify=skip_simplify)
         # 有向无环图流转
-        exprs_ldl, G = self.dag(True, skip_columns, date, asset)
+        exprs_ldl, G = self.dag(True, skip_columns, date, asset, skip_simplify=skip_simplify)
 
         if regroup:
             exprs_ldl.optimize(merge=style != 'sql')
@@ -441,6 +444,9 @@ def codegen_exec(df: Union[DataFrame, None],
         -2 表示最近两天 >=date[-2]
     skip_simplify:bool
         遗传算法时很有可能出现OPEN/OPEN，可以跳过化简步骤
+        1. 跳过cse前的simplify
+        2. 跳过cse时的optimizations
+        3. 跳过DAG中的部分merge步骤
     skip_columns:
         已经存在的列不参与计算。可用于加快计算速度。只在计算耗时久时再用，否则没有必要
         例如：在研发阶段，第一次计算100个因子，第二次，只改动了其中的5个，所以只要将这5个从df.columns中排除即可。
