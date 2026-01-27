@@ -14,6 +14,16 @@ class PolarsStrPrinter(StrPrinter):
             return f"pl.lit({float(expr)!r})"
         if isinstance(expr, Rational):
             return f"pl.lit({float(expr)!r})"
+        if isinstance(expr, Basic) and getattr(expr, "is_number", False):
+            try:
+                if getattr(expr, "is_integer", False):
+                    return f"pl.lit({int(expr)})"
+            except Exception:
+                pass
+            try:
+                return f"pl.lit({float(expr)!r})"
+            except Exception:
+                return f"pl.lit({expr})"
         return f"pl.lit({expr})"
 
     def _print(self, expr, **kwargs) -> str:
@@ -101,6 +111,16 @@ class PolarsStrPrinter(StrPrinter):
         fn = expr.func.__name__
         args = list(expr.args)
         if fn.startswith("ts_"):
+            def _is_numeric_only(a) -> bool:
+                if isinstance(a, (Integer, Float, Rational)):
+                    return True
+                if isinstance(a, Basic) and getattr(a, "is_number", False):
+                    try:
+                        return not bool(getattr(a, "free_symbols", set()))
+                    except Exception:
+                        return False
+                return False
+
             if len(args) >= 2:
                 series_args, scalar_tail = args[:-1], args[-1:]
             else:
@@ -108,7 +128,7 @@ class PolarsStrPrinter(StrPrinter):
 
             printed = []
             for a in series_args:
-                if getattr(a, "is_Number", False):
+                if _is_numeric_only(a):
                     printed.append(self._lit_number(a))
                 else:
                     printed.append(self._print(a))
