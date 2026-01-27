@@ -38,7 +38,8 @@ def test_ts_corr_lifts_numeric_series_arg() -> None:
 
 
 def test_ts_delay_numeric_only_tree_is_lifted_skip_simplify_true() -> None:
-    code = _code("f0 = ts_delay(-RET - -RET + 1, 5)", skip_simplify=True)
+    # Even with skip_simplify=True, constant-only expression trees can still appear.
+    code = _code("f0 = ts_delay(-1 * (-1), 5)", skip_simplify=True)
     assert ("ts_delay(pl.repeat(pl.lit(1), pl.len()), 5)" in code) or (
         "ts_delay(pl.repeat(pl.lit(1.0), pl.len()), 5)" in code
     )
@@ -46,7 +47,7 @@ def test_ts_delay_numeric_only_tree_is_lifted_skip_simplify_true() -> None:
 
 
 def test_ts_rank_numeric_only_tree_is_lifted_skip_simplify_true() -> None:
-    code = _code("f0 = ts_rank(-RET - -RET, 20)", skip_simplify=True)
+    code = _code("f0 = ts_rank(-1 * (-1), 20)", skip_simplify=True)
     assert "ts_rank(pl.repeat(pl.lit(" in code
     assert ", pl.len()), 20)" in code
     assert "pl.lit(20)" not in code
