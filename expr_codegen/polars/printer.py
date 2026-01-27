@@ -110,6 +110,24 @@ class PolarsStrPrinter(StrPrinter):
     def _print_Function(self, expr):
         fn = expr.func.__name__
         args = list(expr.args)
+
+        lift_numeric_arg_positions = {
+            "abs": {0},
+            "abs_": {0},
+            "sign": {0},
+            "sign_": {0},
+            "cs_rank": {0},
+            "signed_power": {0},
+        }.get(fn)
+        if lift_numeric_arg_positions:
+            printed = []
+            for i, a in enumerate(args):
+                if i in lift_numeric_arg_positions and getattr(a, "is_Number", False):
+                    printed.append(self._lit_number(a))
+                else:
+                    printed.append(self._print(a))
+            return f"{fn}({', '.join(printed)})"
+
         if fn.startswith("ts_"):
             def _is_constant_expr(a) -> bool:
                 if not isinstance(a, Basic):
