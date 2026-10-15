@@ -8,13 +8,13 @@ from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable, Dict, 
 import polars as pl
 from black import Mode, format_str
 from loguru import logger
-from sympy import simplify, cse, symbols, numbered_symbols
+from sympy import simplify, cse, symbols, numbered_symbols, preorder_traversal
 from sympy.core.expr import Expr
 from sympy.logic import boolalg
 from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
-from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
+from expr_codegen.expr import TS, get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_
 
 try:
@@ -149,7 +149,7 @@ class ExprTool:
 
         return exprs_list
 
-    def cse(self, exprs, symbols_repl=None, exprs_src=None, skip_simplify=False):
+    def cse(self, exprs, symbols_repl=None, exprs_src=None, skip_simplify=False, date='date', asset='asset'):
         """多个子公式+长公式，提取公共公式
 
         Parameters
@@ -171,31 +171,27 @@ class ExprTool:
             表达式
 
         """
-        self.exprs_names = [k for k, v, c in exprs_src]
-        # 包含了注释信息
-        _exprs = [k for k, v in exprs]
-
-        # 注意：对于表达式右边相同，左边不同的情况，会当成一个处理
-        if skip_simplify:
-            repl, redu = cse(_exprs, symbols_repl, optimizations=[])
-        else:
-            repl, redu = cse(_exprs, symbols_repl, optimizations=[(cse_opts.sub_pre, cse_opts.sub_post), ])
-
-        outputs_len = len(exprs_src)
-
-        new_redu = []
-        symbols_redu = iter(exprs_src)
-        for expr in redu[-outputs_len:]:
-            # 可能部分表达式只在之前出现过，后面完全用不到如，ts_rank(ts_decay_linear(x_147, 11.4157), 6.72611)
-            variable = next(symbols_redu)
-            a = symbols(variable[0])
-            new_redu.append((a, expr, variable[2]))
-
-        self.exprs_list = self.reduce(repl, new_redu)
-
-        # with open("exprs.pickle", "wb") as file:
-        #     pickle.dump(exprs_dict, file)
-
+        self.exprs_names = [k for k, _, _ in exprs_src]
+        # Keep generated symbols distinct from both inputs and named outputs.
+        used = {str(k) for k, _, _ in exprs_src}
+        used.update(str(s) for expr, _ in exprs for s in expr.free_symbols)
+        pool = symbols_repl if symbols_repl is not None else numbered_symbols('_x_')
+        replacements = (s for s in pool if str(s) not in used)
+        optimizations = [] if skip_simplify else [(cse_opts.sub_pre, cse_opts.sub_post)]
+        self.exprs_list = []
+        # Comments carry execution directives (e.g. --over_null). Never share
+        # a materialized window across different directive contexts.
+        for comment in dict.fromkeys(c for _, _, c in exprs_src):
+            outputs = [(k, v, c) for k, v, c in exprs_src if c == comment]
+            selected = [expr for expr, c in exprs if c == comment]
+            windows = dict.fromkeys(node for expr in selected for node in preorder_traversal(expr)
+                if self.get_current_func(node, date, asset, **self.get_current_func_kwargs)[0] == TS)
+            # Make even single-use TS calls visible to CSE. Subsequent DAG
+            # optimization must preserve the boundary between window stages.
+            repl, redu = cse([*windows, *selected], replacements, optimizations=optimizations)
+            self.exprs_list.extend((k, v, comment) for k, v in repl)
+            self.exprs_list.extend((symbols(k), expr, c)
+                for (k, _, c), expr in zip(outputs, redu[-len(outputs):]))
         return self.exprs_list
 
     def dag(self, merge: bool, skip_columns, date, asset, skip_simplify):
@@ -259,7 +255,7 @@ class ExprTool:
         syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
-        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src, skip_simplify=skip_simplify)
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src, skip_simplify=skip_simplify, date=date, asset=asset)
         # 有向无环图流转
         exprs_ldl, G = self.dag(True, skip_columns, date, asset, skip_simplify=skip_simplify)
 

@@ -66,3 +66,27 @@ def test_nested_windows_preserve_per_expression_null_policy(policy):
     expected = frame.with_columns(window(pl.col("close").rolling_mean(2), ["close"]).alias("first"))
     expected = expected.with_columns(window(pl.col("first").rolling_mean(3), ["first"]).alias("out"))
     assert_frame_equal(actual.select("asset", "date", "out"), expected.select("asset", "date", "out"))
+
+
+@pytest.mark.parametrize("skip_simplify", [False, True])
+def test_shared_windows_do_not_cross_null_directives(skip_simplify):
+    frame = pl.DataFrame({"asset": ["A"] * 10, "date": list(range(10)),
+        "close": [1., 2., None, 4., 5., 6., 7., 8., 9., 10.]})
+    sources = ["out_a = ts_mean(ts_mean(close, 2), 3)",
+               "out_b = ts_mean(ts_mean(close, 2), 3) # --over_null"]
+    def run(source):
+        return codegen_exec(frame.lazy(), source, extra_codes="", over_null="order_by",
+                            skip_simplify=skip_simplify).collect()
+    batch = run("\n".join(sources))
+    for name, source in zip(["out_a", "out_b"], sources):
+        assert_frame_equal(batch.select("asset", "date", name), run(source).select("asset", "date", name))
+    assert batch["out_a"].null_count() != batch["out_b"].null_count()
+
+
+def test_cse_symbols_do_not_shadow_input_columns():
+    frame = pl.DataFrame({"asset": ["A"] * 8, "date": list(range(8)),
+                          "_x_0": [float(i) for i in range(8)]})
+    actual = execute(frame, "out = ts_mean(ts_mean(_x_0, 2), 3)", None)
+    expected = frame.with_columns(pl.col("_x_0").rolling_mean(2).alias("inner")).with_columns(
+        pl.col("inner").rolling_mean(3).alias("out"))
+    assert_frame_equal(actual.select("asset", "date", "out"), expected.select("asset", "date", "out"))

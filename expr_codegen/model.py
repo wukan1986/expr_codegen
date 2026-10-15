@@ -359,32 +359,6 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
 
 def dag_start(exprs_list, func, func_kwargs, date, asset):
     """初始生成DAG"""
-    # CSE need not extract a window used only once. Materialize nested TS calls
-    # before DAG merging so each stage can have its own input-null partition.
-    used = {str(k) for k, _, _ in exprs_list}
-    used.update(str(s) for _, expr, _ in exprs_list for s in expr.free_symbols)
-    stages, shared = [], {}
-
-    def split(expr, comment, inside_ts=False):
-        is_ts = func(expr, date, asset, **func_kwargs)[0] == TS
-        rewritten = expr.xreplace({arg: split(arg, comment, inside_ts or is_ts) for arg in expr.args})
-        if inside_ts and is_ts:
-            stage_key = (rewritten, comment)
-            if stage_key not in shared:
-                index = len(shared)
-                while f"_ts_stage_{index}" in used:
-                    index += 1
-                symbol = symbols(f"_ts_stage_{index}")
-                used.add(str(symbol))
-                shared[stage_key] = symbol
-                stages.append((symbol, rewritten, comment))
-            return shared[stage_key]
-        return rewritten
-
-    expanded = []
-    for key, expr, comment in exprs_list:
-        expanded.append((key, split(expr, comment), comment))
-    exprs_list = stages + expanded
     G = create_dag_exprs(exprs_list)
     G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
