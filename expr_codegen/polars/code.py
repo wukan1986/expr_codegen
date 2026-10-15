@@ -3,11 +3,32 @@ import os
 from typing import Sequence, Literal
 
 import jinja2
+from sympy import Symbol, preorder_traversal
 from jinja2 import FileSystemLoader, TemplateNotFound
 
 from expr_codegen.expr import TS, CS, GP
 from expr_codegen.model import ListDictList
 from expr_codegen.polars.printer import PolarsStrPrinter
+
+
+def _time_windows(expr, printer, over_null):
+    """Group each time-series call by its own inputs, independently of CSE."""
+    replacements = {}
+    traversal = preorder_traversal(expr)
+    for node in traversal:
+        if not getattr(node.func, "__name__", "").startswith("ts_"):
+            continue
+        traversal.skip()
+        inputs = sorted(str(s) for s in node.free_symbols if str(s) not in {"_NONE_", "_TRUE_", "_FALSE_"})
+        mask = "pl.all_horizontal(" + ",".join(f"{s}.is_not_null()" for s in inputs) + ")"
+        if inputs and over_null == "partition_by":
+            window = f"{mask}, _ASSET_, order_by=_DATE_"
+        elif inputs and over_null == "order_by":
+            window = f"_ASSET_, order_by=[{mask}, _DATE_]"
+        else:
+            window = "_ASSET_, order_by=_DATE_"
+        replacements[node] = Symbol(f"({printer.doprint(node)}).over({window})")
+    return printer.doprint(expr.xreplace(replacements)) if replacements else None
 
 
 def get_groupby_from_tuple(tup, func_name, drop_cols):
@@ -92,6 +113,13 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                         func_code.append(f"# {va} = {s1}")
                     if k[0] == TS:
                         ts_func_name = func_name
+                        independent = _time_windows(ex, p, args.over_null)
+                        if independent is not None:
+                            func_code.append(f"{va}={independent},")
+                            exprs_dst.append(f"{va} = {s1} {comment}")
+                            if va not in syms_dst:
+                                syms_out.append(va)
+                            continue
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
                         _sym = [f"{s}.is_not_null()" for s in set(sym)]
                         if len(_sym) > 1:

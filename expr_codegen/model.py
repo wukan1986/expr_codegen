@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
+from expr_codegen.expr import CL, TS, get_symbols, get_children, get_key, is_simple_expr
 
 _RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
 
@@ -256,7 +256,8 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
                     d = G.nodes[p]
                     k = d['key']
                     e = d['expr']
-                    if key == k:
+                    # 窗口算子不能内联到另一个窗口：各自的空值分组必须独立。
+                    if key == k and key[0] != TS:
                         # 同类型
                         succ = G.succ[p]
                         # 下游只有一个，直接替换。
@@ -358,6 +359,32 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
 
 def dag_start(exprs_list, func, func_kwargs, date, asset):
     """初始生成DAG"""
+    # CSE need not extract a window used only once. Materialize nested TS calls
+    # before DAG merging so each stage can have its own input-null partition.
+    used = {str(k) for k, _, _ in exprs_list}
+    used.update(str(s) for _, expr, _ in exprs_list for s in expr.free_symbols)
+    stages, shared = [], {}
+
+    def split(expr, comment, inside_ts=False):
+        is_ts = func(expr, date, asset, **func_kwargs)[0] == TS
+        rewritten = expr.xreplace({arg: split(arg, comment, inside_ts or is_ts) for arg in expr.args})
+        if inside_ts and is_ts:
+            stage_key = (rewritten, comment)
+            if stage_key not in shared:
+                index = len(shared)
+                while f"_ts_stage_{index}" in used:
+                    index += 1
+                symbol = symbols(f"_ts_stage_{index}")
+                used.add(str(symbol))
+                shared[stage_key] = symbol
+                stages.append((symbol, rewritten, comment))
+            return shared[stage_key]
+        return rewritten
+
+    expanded = []
+    for key, expr, comment in exprs_list:
+        expanded.append((key, split(expr, comment), comment))
+    exprs_list = stages + expanded
     G = create_dag_exprs(exprs_list)
     G = init_dag_exprs(G, func, func_kwargs, date, asset)
 
