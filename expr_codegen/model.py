@@ -211,6 +211,10 @@ def init_dag_exprs(G, func, func_kwargs, date, asset):
             G.nodes[node]['children'] = children
             G.nodes[node]['key'] = get_key(children)
             G.nodes[node]['symbols'] = [str(s) for s in syms]
+            # Constant aliases used as window sizes must remain scalar.
+            G.nodes[node]['depends_on_data'] = bool(children) or any(
+                G.nodes[str(s)].get('depends_on_data', True)
+                for s in expr.free_symbols if str(s) not in _RESERVED_WORD_)
             G.nodes[node]['gen'] = i
             # print(G.nodes[node])
     return G
@@ -256,8 +260,7 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
                     d = G.nodes[p]
                     k = d['key']
                     e = d['expr']
-                    # 窗口算子不能内联到另一个窗口：各自的空值分组必须独立。
-                    if key == k and key[0] not in (CS, TS):
+                    if key == k:
                         # 同类型
                         succ = G.succ[p]
                         # 下游只有一个，直接替换。
@@ -346,10 +349,23 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
     expr = d['expr']
     symbol = d['symbol']
 
+    window = d['key'][0] in (CS, TS)
+    if window:
+        # Only a transparent output alias can absorb an entire window stage.
+        if any(not is_simple_expr(G.nodes[s]['expr']) for s in succ):
+            return G
+    elif d['depends_on_data'] and not is_simple_expr(expr):
+        # The null mask belongs to the computed input, not its source columns.
+        if any(G.nodes[s]['key'][0] == TS for s in succ):
+            return G
+
     for s in succ:
         e = G.nodes[s]['expr']
         e = e.xreplace({symbol: expr})
         G.nodes[s]['expr'] = e
+        if window:
+            G.nodes[s]['comment'] = d['comment']
+            G.nodes[s]['key'] = d['key']
 
     # 这里用了product生成多个关联边
     G.add_edges_from(product(pred, succ))
