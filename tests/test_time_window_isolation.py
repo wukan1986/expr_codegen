@@ -5,11 +5,51 @@ from polars.testing import assert_frame_equal
 import pytest
 
 from expr_codegen import codegen_exec
-from polars_ta.prefix.wq import ts_mean, ts_delay  # noqa: F401
+from polars_ta.prefix.wq import ts_mean, ts_delay, cs_rank, cs_demean  # noqa: F401
 
 
 def execute(frame, source, over_null):
     return codegen_exec(frame.lazy(), source, over_null=over_null, extra_codes="").collect()
+
+
+@pytest.mark.parametrize("over_null", ["partition_by", "order_by", None])
+@pytest.mark.parametrize("source", [
+    "out = cs_rank(cs_demean(close) + high)",
+    "out = cs_rank(ts_mean(close, 2) + high)",
+    "out = ts_mean(cs_rank(close) + high, 2)",
+])
+def test_nested_group_stages_match_explicit_materialization(over_null, source):
+    frame = pl.DataFrame({"asset": ["A"] * 5 + ["B"] * 5 + ["C"] * 5,
+        "date": list(range(5)) * 3,
+        "close": [1., 2., None, 4., 5., 7., 3., 2., 8., 1., 2., 8., 3., 2., 9.],
+        "high": [2., None, 4., 3., 2., 1., 3., None, 5., 4., 8., 1., 2., 3., 4.]})
+    inner = ("cs_demean(close)" if "cs_demean" in source else
+             "ts_mean(close, 2)" if "cs_rank(ts_" in source else "cs_rank(close)")
+    expected = execute(execute(frame, "stage = " + inner, over_null), source.replace(inner, "stage"), over_null)
+    actual = execute(frame, source, over_null)
+    assert_frame_equal(actual.select("asset", "date", "out"), expected.select("asset", "date", "out"))
+
+
+@pytest.mark.parametrize("prefix", ["cs", "ts", "custom"])
+def test_cse_materializes_single_use_group_stages(prefix):
+    from sympy import Function, Symbol, preorder_traversal
+    from expr_codegen.expr import CS, TS, get_current_by_prefix
+    from expr_codegen.tool import ExprTool
+    tool = ExprTool()
+    if prefix == "custom":
+        def classify(node, date, asset, **kwargs):
+            if str(node.func).startswith("custom_"):
+                return (CS, date)
+            return get_current_by_prefix(node, date, asset, **kwargs)
+        tool.get_current_func = classify
+    expr = Function(prefix + "_outer")(Function(prefix + "_inner")(Symbol("close")))
+    # Classification uses the same callback as DAG construction, not a second
+    # hard-coded name check. Even non-shared calls must become separate stages.
+    rows = tool.cse([(expr, "")], exprs_src=[("out", expr, "")], skip_simplify=True)
+    assert len(rows) >= 3
+    for _, value, _ in rows:
+        assert sum(tool.get_current_func(node, "date", "asset")[0] in (CS, TS)
+                   for node in preorder_traversal(value)) <= 1
 
 
 @pytest.mark.parametrize("over_null", ["partition_by", "order_by", None])

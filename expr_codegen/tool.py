@@ -14,7 +14,7 @@ from sympy.logic import boolalg
 from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
-from expr_codegen.expr import TS, get_current_by_prefix, get_children, replace_exprs
+from expr_codegen.expr import CS, TS, get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_
 
 try:
@@ -185,8 +185,8 @@ class ExprTool:
             outputs = [(k, v, c) for k, v, c in exprs_src if c == comment]
             selected = [expr for expr, c in exprs if c == comment]
             windows = dict.fromkeys(node for expr in selected for node in preorder_traversal(expr)
-                if self.get_current_func(node, date, asset, **self.get_current_func_kwargs)[0] == TS)
-            # Make even single-use TS calls visible to CSE. Subsequent DAG
+                if self.get_current_func(node, date, asset, **self.get_current_func_kwargs)[0] in (CS, TS))
+            # Make even single-use CS/TS calls visible to CSE. Subsequent DAG
             # optimization must preserve the boundary between window stages.
             repl, redu = cse([*windows, *selected], replacements, optimizations=optimizations)
             self.exprs_list.extend((k, v, comment) for k, v in repl)

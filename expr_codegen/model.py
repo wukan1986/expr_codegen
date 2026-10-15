@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, TS, get_symbols, get_children, get_key, is_simple_expr
+from expr_codegen.expr import CL, CS, TS, get_symbols, get_children, get_key, is_simple_expr
 
 _RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
 
@@ -257,7 +257,7 @@ def merge_nodes_1(G: nx.DiGraph, keep_nodes, *args):
                     k = d['key']
                     e = d['expr']
                     # 窗口算子不能内联到另一个窗口：各自的空值分组必须独立。
-                    if key == k and key[0] != TS:
+                    if key == k and key[0] not in (CS, TS):
                         # 同类型
                         succ = G.succ[p]
                         # 下游只有一个，直接替换。
