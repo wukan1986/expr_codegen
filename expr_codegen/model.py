@@ -407,39 +407,28 @@ def dag_end(G):
     return exprs_ldl, G
 
 
-def propagate_comment_recursive(G, max_depth=None):
-    """递归地将zero_outdegree节点的comment传播到上游节点
+def propagate_comment_recursive(G):
+    """按拓扑排序反序遍历，确保从终点开始"""
+    from collections import deque
 
-    Args:
-        G: 有向无环图
-        max_depth: 最大传播层数，None表示不限制
-    """
-    terminal_nodes = [node for node in G.nodes() if G.out_degree(node) == 0]
+    # Kahn算法求拓扑排序
+    in_degree = {node: G.in_degree(node) for node in G.nodes()}
+    queue = deque([node for node in G.nodes() if in_degree[node] == 0])
+    topo_order = []
 
-    for node in terminal_nodes:
+    while queue:
+        node = queue.popleft()
+        topo_order.append(node)
+        for succ in G.successors(node):
+            in_degree[succ] -= 1
+            if in_degree[succ] == 0:
+                queue.append(succ)
+
+    # 反序遍历拓扑排序（从终点开始）
+    for node in reversed(topo_order):
         comment = G.nodes[node]['comment']
-        visited = set()
-        # 使用队列存储(节点, 当前深度)
-        from collections import deque
-        queue = deque()
-
-        # 初始化：前驱节点深度为1
+        if comment == "#":
+            continue
         for pred in G.predecessors(node):
-            queue.append((pred, 1))
-
-        while queue:
-            current, depth = queue.popleft()
-            if current in visited:
-                continue
-            visited.add(current)
-
-            # 检查是否超过最大深度
-            if max_depth is not None and depth > max_depth:
-                continue
-
-            # 只有当comment为"#"时才覆盖
-            if G.nodes[current]['comment'] == "#":
-                G.nodes[current]['comment'] = comment
-                # 继续向上传播，深度+1
-                for pred in G.predecessors(current):
-                    queue.append((pred, depth + 1))
+            if G.nodes[pred]['comment'] == "#":
+                G.nodes[pred]['comment'] = comment
