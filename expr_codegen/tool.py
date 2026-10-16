@@ -3,7 +3,7 @@ import os
 import pathlib
 from functools import lru_cache
 from io import TextIOBase
-from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable, Dict, Tuple
+from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable
 
 import polars as pl
 from black import Mode, format_str
@@ -142,8 +142,8 @@ class ExprTool:
 
         # cse前简化一次，cse后不再简化
         # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
-        for k, v in repl:
-            exprs_list.append((k, v, "#"))
+        for k, v, c in repl:
+            exprs_list.append((k, v, c))
         for k, v, c in redu:
             exprs_list.append((k, v, c))
 
@@ -188,10 +188,16 @@ class ExprTool:
         for expr in redu[-outputs_len:]:
             # 可能部分表达式只在之前出现过，后面完全用不到如，ts_rank(ts_decay_linear(x_147, 11.4157), 6.72611)
             variable = next(symbols_redu)
-            a = symbols(variable[0])
-            new_redu.append((a, expr, variable[2]))
+            new_redu.append((symbols(variable[0]), expr, variable[2]))
 
-        self.exprs_list = self.reduce(repl, new_redu)
+        # 取comment
+        new_repl = []
+        symbols_redl = iter(exprs)
+        for expr1, expr2 in repl:
+            variable = next(symbols_redl)
+            new_repl.append((expr1, expr2, variable[1]))
+
+        self.exprs_list = self.reduce(new_repl, new_redu)
 
         # with open("exprs.pickle", "wb") as file:
         #     pickle.dump(exprs_dict, file)
