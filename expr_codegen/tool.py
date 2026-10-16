@@ -15,7 +15,7 @@ from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
-from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_
+from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_to_preds
 
 try:
     from pandas import DataFrame as _pd_DataFrame
@@ -142,8 +142,8 @@ class ExprTool:
 
         # cse前简化一次，cse后不再简化
         # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
-        for k, v, c in repl:
-            exprs_list.append((k, v, c))
+        for k, v in repl:
+            exprs_list.append((k, v, "#"))
         for k, v, c in redu:
             exprs_list.append((k, v, c))
 
@@ -190,14 +190,7 @@ class ExprTool:
             variable = next(symbols_redu)
             new_redu.append((symbols(variable[0]), expr, variable[2]))
 
-        # 取comment
-        new_repl = []
-        symbols_redl = iter(exprs)
-        for expr1, expr2 in repl:
-            variable = next(symbols_redl)
-            new_repl.append((expr1, expr2, variable[1]))
-
-        self.exprs_list = self.reduce(new_repl, new_redu)
+        self.exprs_list = self.reduce(repl, new_redu)
 
         # with open("exprs.pickle", "wb") as file:
         #     pickle.dump(exprs_dict, file)
@@ -209,6 +202,7 @@ class ExprTool:
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
             G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
+        propagate_comment_to_preds(G)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',

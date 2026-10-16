@@ -405,3 +405,35 @@ def dag_end(G):
     exprs_ldl._list = exprs_ldl.values()[1:]
 
     return exprs_ldl, G
+
+
+def propagate_comment_to_preds(G):
+    """将zero_outdegree节点的comment覆盖到前驱节点（仅当上游为#时）"""
+    terminal_nodes = [node for node in G.nodes() if G.out_degree(node) == 0]
+
+    for node in terminal_nodes:
+        comment = G.nodes[node]['comment']
+        preds = list(G.predecessors(node))
+        for pred in preds:
+            if G.nodes[pred]['comment'] == "#":
+                G.nodes[pred]['comment'] = comment
+
+
+def propagate_comment_recursive(G):
+    """递归地将zero_outdegree节点的comment传播到所有上游节点（仅当上游为#时）"""
+    terminal_nodes = [node for node in G.nodes() if G.out_degree(node) == 0]
+
+    for node in terminal_nodes:
+        comment = G.nodes[node]['comment']
+        visited = set()
+        stack = list(G.predecessors(node))
+
+        while stack:
+            current = stack.pop()
+            if current not in visited:
+                visited.add(current)
+                # 只有当comment为"#"时才覆盖
+                if G.nodes[current]['comment'] == "#":
+                    G.nodes[current]['comment'] = comment
+                    # 继续向上传播
+                    stack.extend(G.predecessors(current))
