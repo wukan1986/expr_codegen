@@ -407,33 +407,39 @@ def dag_end(G):
     return exprs_ldl, G
 
 
-def propagate_comment_to_preds(G):
-    """将zero_outdegree节点的comment覆盖到前驱节点（仅当上游为#时）"""
-    terminal_nodes = [node for node in G.nodes() if G.out_degree(node) == 0]
+def propagate_comment_recursive(G, max_depth=None):
+    """递归地将zero_outdegree节点的comment传播到上游节点
 
-    for node in terminal_nodes:
-        comment = G.nodes[node]['comment']
-        preds = list(G.predecessors(node))
-        for pred in preds:
-            if G.nodes[pred]['comment'] == "#":
-                G.nodes[pred]['comment'] = comment
-
-
-def propagate_comment_recursive(G):
-    """递归地将zero_outdegree节点的comment传播到所有上游节点（仅当上游为#时）"""
+    Args:
+        G: 有向无环图
+        max_depth: 最大传播层数，None表示不限制
+    """
     terminal_nodes = [node for node in G.nodes() if G.out_degree(node) == 0]
 
     for node in terminal_nodes:
         comment = G.nodes[node]['comment']
         visited = set()
-        stack = list(G.predecessors(node))
+        # 使用队列存储(节点, 当前深度)
+        from collections import deque
+        queue = deque()
 
-        while stack:
-            current = stack.pop()
-            if current not in visited:
-                visited.add(current)
-                # 只有当comment为"#"时才覆盖
-                if G.nodes[current]['comment'] == "#":
-                    G.nodes[current]['comment'] = comment
-                    # 继续向上传播
-                    stack.extend(G.predecessors(current))
+        # 初始化：前驱节点深度为1
+        for pred in G.predecessors(node):
+            queue.append((pred, 1))
+
+        while queue:
+            current, depth = queue.popleft()
+            if current in visited:
+                continue
+            visited.add(current)
+
+            # 检查是否超过最大深度
+            if max_depth is not None and depth > max_depth:
+                continue
+
+            # 只有当comment为"#"时才覆盖
+            if G.nodes[current]['comment'] == "#":
+                G.nodes[current]['comment'] = comment
+                # 继续向上传播，深度+1
+                for pred in G.predecessors(current):
+                    queue.append((pred, depth + 1))

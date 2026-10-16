@@ -15,7 +15,7 @@ from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
-from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_to_preds
+from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_recursive
 
 try:
     from pandas import DataFrame as _pd_DataFrame
@@ -202,7 +202,7 @@ class ExprTool:
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
             G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
-        propagate_comment_to_preds(G)
+        propagate_comment_recursive(G, max_depth=None)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
