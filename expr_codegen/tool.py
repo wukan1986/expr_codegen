@@ -3,7 +3,7 @@ import os
 import pathlib
 from functools import lru_cache
 from io import TextIOBase
-from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable, Dict, Tuple
+from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable
 
 import polars as pl
 from black import Mode, format_str
@@ -15,7 +15,7 @@ from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import CS, TS, get_current_by_prefix, get_children, replace_exprs
-from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_
+from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_recursive
 
 try:
     from pandas import DataFrame as _pd_DataFrame
@@ -204,6 +204,7 @@ class ExprTool:
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
             G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
+        propagate_comment_recursive(G, self.exprs_names)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
@@ -211,7 +212,7 @@ class ExprTool:
             replace: bool = True, regroup: bool = False, format: bool = True,
             date='date', asset='asset',
             extra_codes: Sequence[object] = (),
-            over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+            over_null: Literal['order_by', 'partition_by', None] = 'order_by',
             table_name: str = 'self',
             ge_date_idx: int = 0,
             skip_simplify: bool = False,
@@ -307,7 +308,7 @@ class ExprTool:
                   style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',
                   template_file: Optional[str] = None,
                   date: str = 'date', asset: str = 'asset',
-                  over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+                  over_null: Literal['order_by', 'partition_by', None] = 'order_by',
                   table_name: str = 'self',
                   ge_date_idx: int = 0,
                   skip_simplify: bool = False,

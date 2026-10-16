@@ -44,7 +44,7 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
             filename,
             date='date', asset='asset',
             extra_codes: Sequence[str] = (),
-            over_null: Literal['order_by', 'partition_by', None] = 'partition_by',
+            over_null: Literal['order_by', 'partition_by', None] = 'order_by',
             ge_date_idx: int = 0,
             **kwargs):
     """基于模板的代码生成"""

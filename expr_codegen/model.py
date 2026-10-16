@@ -388,7 +388,7 @@ def dag_middle(G, exprs_names, skip_columns, func, func_kwargs, date, asset, ski
     keep_nodes = [k for k in exprs_names if not k.startswith('_')]
 
     if not skip_simplify:
-        # ts_rank(-RET - -RET, 20),防止替换成ts_rank(0, 20)
+        # Window guards preserve data stages while scalar parameter aliases inline.
         G = merge_nodes_1(G, keep_nodes, *keep_nodes)
     G = merge_nodes_2(G, keep_nodes, *keep_nodes)
 
@@ -422,3 +422,31 @@ def dag_end(G):
     exprs_ldl._list = exprs_ldl.values()[1:]
 
     return exprs_ldl, G
+
+
+def propagate_comment_recursive(G, keep_nodes=()):
+    """从终点递归传播；已定义表达式保留自身的显式指令或默认策略。"""
+    from collections import deque
+
+    keep_nodes = set(keep_nodes)
+    # Kahn算法求拓扑排序
+    in_degree = {node: G.in_degree(node) for node in G.nodes()}
+    queue = deque([node for node in G.nodes() if in_degree[node] == 0])
+    topo_order = []
+
+    while queue:
+        node = queue.popleft()
+        topo_order.append(node)
+        for succ in G.successors(node):
+            in_degree[succ] -= 1
+            if in_degree[succ] == 0:
+                queue.append(succ)
+
+    # 反序遍历拓扑排序（从终点开始）
+    for node in reversed(topo_order):
+        comment = G.nodes[node]['comment']
+        if comment == "#":
+            continue
+        for pred in G.predecessors(node):
+            if pred not in keep_nodes and G.nodes[pred]['comment'] == "#":
+                G.nodes[pred]['comment'] = comment

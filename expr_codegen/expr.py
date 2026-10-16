@@ -200,7 +200,7 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, as
     expr
         表达式
     output_exprs
-        输出分割后的了表达式
+        输出分割后的子表达式
     output_symbols
         输出每个子表达式中的符号
     date
@@ -236,17 +236,21 @@ def get_children(func, func_kwargs, expr, output_exprs, output_symbols, date, as
             # 外部与内部不同，需处理
             for i, child in enumerate(children):
                 # 不在子中即表示不同
-                if curr in child:
-                    continue
+                # if curr in child:
+                #     continue
                 if expr.args[i].is_Atom:
                     # print(expr.args[i], 'is_Atom 2')
                     continue
                 output_exprs = append_node(expr.args[i], output_exprs)
         else:
-            # ts_sum(OPEN, 5)*ts_sum(RETURNS, 5) ('cl',) [{('ts', 'asset', 'date')}, {('ts', 'asset', 'date')}] 6 alpha_008
-            pass
-            # if isinstance(expr, Mul):
-            #     output_exprs = append_node(expr, output_exprs)
+            for i, child in enumerate(children):
+                if not child:  # 跳过空集合
+                    continue
+                if next(iter(child))[0] == CL:
+                    continue
+                if expr.args[i].is_Atom:
+                    continue
+                output_exprs = append_node(expr.args[i], output_exprs)
 
         # 按需返回，当前是基础算子就返回下一层信息，否则返回当前
         if curr[0] == CL:
