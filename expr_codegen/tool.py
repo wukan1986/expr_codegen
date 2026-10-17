@@ -8,13 +8,13 @@ from typing import Sequence, Union, TypeVar, Optional, Literal, Iterable
 import polars as pl
 from black import Mode, format_str
 from loguru import logger
-from sympy import simplify, cse, symbols, numbered_symbols, preorder_traversal
+from sympy import simplify, cse, symbols, numbered_symbols
 from sympy.core.expr import Expr
 from sympy.logic import boolalg
 from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
-from expr_codegen.expr import CS, TS, get_current_by_prefix, get_children, replace_exprs
+from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
 from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_recursive
 
 try:
@@ -172,28 +172,16 @@ class ExprTool:
 
         """
         self.exprs_names = [k for k, _, _ in exprs_src]
-        # Grouping columns need protection even when absent from expressions.
-        used = {str(k) for k, _, _ in exprs_src} | {date, asset} | _RESERVED_WORD_
+        used = set(self.exprs_names) | {date, asset} | _RESERVED_WORD_
         used.update(str(s) for expr, _ in exprs for s in expr.free_symbols)
         pool = symbols_repl if symbols_repl is not None else numbered_symbols('_x_')
         replacements = (s for s in pool if str(s) not in used)
         optimizations = [] if skip_simplify else [(cse_opts.sub_pre, cse_opts.sub_post)]
-        literals = {symbols(s) for s in _RESERVED_WORD_}
         self.exprs_list = []
-        # Comments carry execution directives (e.g. --over_null). Never share
-        # a materialized window across different directive contexts.
         for comment in dict.fromkeys(c for _, _, c in exprs_src):
             outputs = [(k, v, c) for k, v, c in exprs_src if c == comment]
             selected = [expr for expr, c in exprs if c == comment]
-            windows = dict.fromkeys(node for expr in selected for node in preorder_traversal(expr)
-                if self.get_current_func(node, date, asset, **self.get_current_func_kwargs)[0] in (CS, TS))
-            inputs = dict.fromkeys(arg for node in windows for arg in node.args
-                if not arg.is_Atom and (arg.free_symbols - literals
-                    or any(child in windows for child in preorder_traversal(arg))))
-            # Make even single-use CS/TS calls visible to CSE. Subsequent DAG
-            # optimization must preserve both stages and their actual inputs:
-            # fill_null(x, 0), for example, has a different null mask from x.
-            repl, redu = cse([*windows, *inputs, *selected], replacements, optimizations=optimizations)
+            repl, redu = cse(selected, replacements, optimizations=optimizations)
             self.exprs_list.extend((k, v, comment) for k, v in repl)
             self.exprs_list.extend((symbols(k), expr, c)
                 for (k, _, c), expr in zip(outputs, redu[-len(outputs):]))
@@ -204,7 +192,7 @@ class ExprTool:
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
         if merge:
             G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
-        propagate_comment_recursive(G, self.exprs_names)
+        propagate_comment_recursive(G)
         return dag_end(G)
 
     def all(self, exprs_src, style: Literal['pandas', 'polars', 'sql', 'rust'] = 'polars',

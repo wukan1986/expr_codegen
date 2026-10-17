@@ -5,7 +5,7 @@ import networkx as nx
 from sympy import symbols
 
 from expr_codegen.dag import zero_indegree, hierarchy_pos, remove_paths_by_zero_outdegree
-from expr_codegen.expr import CL, CS, TS, get_symbols, get_children, get_key, is_simple_expr
+from expr_codegen.expr import CL, get_symbols, get_children, get_key, is_simple_expr
 
 _RESERVED_WORD_ = {'_NONE_', '_TRUE_', '_FALSE_'}
 
@@ -211,10 +211,6 @@ def init_dag_exprs(G, func, func_kwargs, date, asset):
             G.nodes[node]['children'] = children
             G.nodes[node]['key'] = get_key(children)
             G.nodes[node]['symbols'] = [str(s) for s in syms]
-            # Constant aliases used as window sizes must remain scalar.
-            G.nodes[node]['depends_on_data'] = bool(children) or any(
-                G.nodes[str(s)].get('depends_on_data', True)
-                for s in expr.free_symbols if str(s) not in _RESERVED_WORD_)
             G.nodes[node]['gen'] = i
             # print(G.nodes[node])
     return G
@@ -349,23 +345,12 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
     expr = d['expr']
     symbol = d['symbol']
 
-    window = d['key'][0] in (CS, TS)
-    if window:
-        # Only a transparent output alias can absorb an entire window stage.
-        if any(not is_simple_expr(G.nodes[s]['expr']) for s in succ):
-            return G
-    elif d['depends_on_data'] and not is_simple_expr(expr):
-        # The null mask belongs to the computed input, not its source columns.
-        if any(G.nodes[s]['key'][0] == TS for s in succ):
-            return G
-
     for s in succ:
         e = G.nodes[s]['expr']
         e = e.xreplace({symbol: expr})
         G.nodes[s]['expr'] = e
-        if window:
+        if d['comment'] != "#":
             G.nodes[s]['comment'] = d['comment']
-            G.nodes[s]['key'] = d['key']
 
     # 这里用了product生成多个关联边
     G.add_edges_from(product(pred, succ))
@@ -387,9 +372,9 @@ def dag_middle(G, exprs_names, skip_columns, func, func_kwargs, date, asset, ski
     # 以下划线开头的节点，不保留
     keep_nodes = [k for k in exprs_names if not k.startswith('_')]
 
-    if not skip_simplify:
-        # Window guards preserve data stages while scalar parameter aliases inline.
-        G = merge_nodes_1(G, keep_nodes, *keep_nodes)
+    # if not skip_simplify:
+    #     # ts_rank(-RET - -RET, 20),防止替换成ts_rank(0, 20)
+    #     G = merge_nodes_1(G, keep_nodes, *keep_nodes)
     G = merge_nodes_2(G, keep_nodes, *keep_nodes)
 
     # 移除0出度的节点，但保留部分
@@ -424,11 +409,10 @@ def dag_end(G):
     return exprs_ldl, G
 
 
-def propagate_comment_recursive(G, keep_nodes=()):
-    """从终点递归传播；已定义表达式保留自身的显式指令或默认策略。"""
+def propagate_comment_recursive(G):
+    """按拓扑排序反序遍历，确保从终点开始"""
     from collections import deque
 
-    keep_nodes = set(keep_nodes)
     # Kahn算法求拓扑排序
     in_degree = {node: G.in_degree(node) for node in G.nodes()}
     queue = deque([node for node in G.nodes() if in_degree[node] == 0])
@@ -448,5 +432,5 @@ def propagate_comment_recursive(G, keep_nodes=()):
         if comment == "#":
             continue
         for pred in G.predecessors(node):
-            if pred not in keep_nodes and G.nodes[pred]['comment'] == "#":
+            if G.nodes[pred]['comment'] == "#":
                 G.nodes[pred]['comment'] = comment
