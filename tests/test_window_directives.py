@@ -94,6 +94,17 @@ def test_recursive_directive_propagation_reaches_unannotated_dependencies(bars, 
     check(bars, source, expected, ["first", "middle", "out"], policy)
 
 
+@pytest.mark.parametrize("policy, inherited", [("partition_by", None), ("order_by", None), (None, "partition_by")])
+@pytest.mark.parametrize("skip_simplify", [False, True])
+def test_inherited_directive_does_not_change_an_independent_equal_output(bars, policy, inherited, skip_simplify):
+    source = ("left = ts_mean(close, 2)\n"
+              "right = ts_mean(close, 2)\n"
+              f"out = left + 1 # --over_null={inherited}")
+    expected = mean(mean(bars, "close", inherited, "left"), "close", policy, "right")
+    expected = expected.with_columns((pl.col("left") + 1).alias("out"))
+    check(bars, source, expected, ["left", "right", "out"], policy, skip_simplify)
+
+
 def test_helper_local_window_size_is_a_python_scalar(bars):
     helper = ("def ts_local_mean(value):\n"
               "    period = 2\n"

@@ -15,7 +15,7 @@ from sympy.simplify import cse_opts
 
 from expr_codegen.codes import sources_to_exprs
 from expr_codegen.expr import get_current_by_prefix, get_children, replace_exprs
-from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_recursive
+from expr_codegen.model import dag_start, dag_end, dag_middle, _RESERVED_WORD_, propagate_comment_recursive, create_dag_exprs
 
 try:
     from pandas import DataFrame as _pd_DataFrame
@@ -244,12 +244,16 @@ class ExprTool:
         if replace:
             exprs_src = replace_exprs(exprs_src)
 
+        source_graph = create_dag_exprs((symbols(k), v, c) for k, v, c in exprs_src)
+        propagate_comment_recursive(source_graph)
+        exprs_context = [(k, v, source_graph.nodes[k]['comment']) for k, v, _ in exprs_src]
+
         # 子表达式在前，原表式在最后
-        exprs_dst, syms_dst = self.merge(date, asset, exprs_src, skip_simplify=skip_simplify)
+        exprs_dst, syms_dst = self.merge(date, asset, exprs_context, skip_simplify=skip_simplify)
         syms_dst = list(set(syms_dst) - _RESERVED_WORD_)
 
         # 提取公共表达式
-        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_src, skip_simplify=skip_simplify, date=date, asset=asset)
+        self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_context, skip_simplify=skip_simplify, date=date, asset=asset)
         # 有向无环图流转
         exprs_ldl, G = self.dag(True, skip_columns, date, asset, skip_simplify=skip_simplify)
 
