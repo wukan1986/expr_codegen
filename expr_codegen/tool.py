@@ -1,3 +1,4 @@
+import argparse
 import inspect
 import os
 import pathlib
@@ -59,6 +60,21 @@ def simplify2(expr, skip_simplify: bool):
     except (AttributeError, TypeError) as e:
         logger.warning('{}, 表达式无法简化, {}', expr, repr(e))
     return expr
+
+
+def comment_adjust(expr_src, over_null):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--over_null", type=str, nargs="?", default=over_null)
+
+    expr_dst = []
+    for k, v, c in expr_src:
+        k = symbols(k)
+        args, argv = parser.parse_known_args(args=c.split("#")[1].split(" "))
+        c = f"# --over_null={args.over_null}"
+
+        expr_dst.append((k, v, c))
+
+    return expr_dst
 
 
 class ExprTool:
@@ -135,20 +151,6 @@ class ExprTool:
         syms = [str(s) for s in syms]
         return exprs, syms
 
-    def reduce(self, repl, redu):
-        """减少中间变量数量，有利用减少内存占用"""
-
-        exprs_list = []
-
-        # cse前简化一次，cse后不再简化
-        # (~开盘涨停 & 昨收涨停) | (~收盘涨停 & 最高涨停)
-        for k, v in repl:
-            exprs_list.append((k, v, "#"))
-        for k, v, c in redu:
-            exprs_list.append((k, v, c))
-
-        return exprs_list
-
     def cse(self, exprs, symbols_repl=None, exprs_src=None, skip_simplify=False, date='date', asset='asset'):
         """多个子公式+长公式，提取公共公式
 
@@ -183,15 +185,13 @@ class ExprTool:
             selected = [expr for expr, c in exprs if c == comment]
             repl, redu = cse(selected, replacements, optimizations=optimizations)
             self.exprs_list.extend((k, v, comment) for k, v in repl)
-            self.exprs_list.extend((symbols(k), expr, c)
-                for (k, _, c), expr in zip(outputs, redu[-len(outputs):]))
+            self.exprs_list.extend((symbols(k), expr, c) for (k, _, c), expr in zip(outputs, redu[-len(outputs):]))
         return self.exprs_list
 
-    def dag(self, merge: bool, skip_columns, date, asset, skip_simplify):
+    def dag(self, skip_columns, date, asset):
         """生成DAG"""
         G = dag_start(self.exprs_list, self.get_current_func, self.get_current_func_kwargs, date, asset)
-        if merge:
-            G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset, skip_simplify)
+        G = dag_middle(G, self.exprs_names, skip_columns, self.get_current_func, self.get_current_func_kwargs, date, asset)
         propagate_comment_recursive(G)
         return dag_end(G)
 
@@ -244,7 +244,7 @@ class ExprTool:
         if replace:
             exprs_src = replace_exprs(exprs_src)
 
-        source_graph = create_dag_exprs((symbols(k), v, c) for k, v, c in exprs_src)
+        source_graph = create_dag_exprs(comment_adjust(exprs_src, over_null))
         propagate_comment_recursive(source_graph)
         exprs_context = [(k, v, source_graph.nodes[k]['comment']) for k, v, _ in exprs_src]
 
@@ -255,7 +255,7 @@ class ExprTool:
         # 提取公共表达式
         self.cse(exprs_dst, symbols_repl=numbered_symbols('_x_'), exprs_src=exprs_context, skip_simplify=skip_simplify, date=date, asset=asset)
         # 有向无环图流转
-        exprs_ldl, G = self.dag(True, skip_columns, date, asset, skip_simplify=skip_simplify)
+        exprs_ldl, G = self.dag(skip_columns, date, asset)
 
         if regroup:
             exprs_ldl.optimize(merge=style != 'sql')

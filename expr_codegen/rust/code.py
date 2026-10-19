@@ -15,7 +15,7 @@ def get_groupby_from_tuple(tup, func_name, drop_cols):
     prefix2, *_ = tup
     if len(drop_cols) > 0:
         drop_cols = [f'"{c}".into()' for c in drop_cols]
-        drop_str = f'.drop(Selector::ByName {{ names: Arc::new([{','.join(drop_cols)}]), strict: true }})'
+        drop_str = f'.drop(Selector::ByName {{ names: Arc::new([{",".join(drop_cols)}]), strict: true }})'
     else:
         drop_str = ""
 
@@ -83,14 +83,14 @@ def codegen(exprs_ldl: ListDictList, exprs_src, syms_dst,
                     exprs_dst.append(f"#" + '=' * 40 + func_name)
                 else:
                     va, ex, sym, comment = kv
-                    # 多个#时，只取第一个#后的参数
-                    args, argv = parser.parse_known_args(args=comment.split("#")[1].split(" "))
                     s1 = str(ex)
                     s2 = p.doprint(ex)
                     if s1 != s2:
                         # 不想等，打印注释，显示会更直观察
                         func_code.append(f"// {va} = {s1}")
                     if k[0] == TS:
+                        # 多个#时，只取第一个#后的参数
+                        args, argv = parser.parse_known_args(args=comment.split("#")[1].split(" "))
                         ts_func_name = func_name
                         # https://github.com/pola-rs/polars/issues/12925#issuecomment-2552764629
                         _sym = [f'col("{s}").is_not_null()' for s in set(sym)]

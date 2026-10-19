@@ -66,19 +66,19 @@ def _code_block_2():
     CPV = cs_zscore(_corr) + cs_zscore(_beta)
 
 
-code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file=sys.stdout)  # 打印代码
-code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file="output.py")  # 保存到文件
-code = codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by')  # 只执行，不保存代码
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='order_by', output_file=sys.stdout)  # 打印代码
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='order_by', output_file="output.py")  # 保存到文件
+code = codegen_exec(None, _code_block_1, _code_block_2, over_null='order_by')  # 只执行，不保存代码
 
 code = StringIO()
-codegen_exec(None, _code_block_1, _code_block_2, over_null='partition_by', output_file=code)  # 保存到字符串
+codegen_exec(None, _code_block_1, _code_block_2, over_null='order_by', output_file=code)  # 保存到字符串
 code.seek(0)
 code.read()  # 读取代码
 
 # TODO 替换成合适的数据
 df = pl.DataFrame()
-df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect()  # Lazy CPU
-df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='partition_by').collect(engine="gpu")  # Lazy GPU
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='order_by').collect()  # Lazy CPU
+df = codegen_exec(df.lazy(), _code_block_1, _code_block_2, over_null='order_by').collect(engine="gpu")  # Lazy GPU
 
 ```
 
@@ -167,11 +167,11 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 
 第2种开头的`null`区域，是否影响结果由算子所决定，特别时是多列输入时`null`区域可能有数据
 
-1. `over_null='partition_by'`。分到两个区域
-2. `over_null='order_by'`。分到一个区域，`null`排在前面
+1. `over_null='partition_by'`。分到两个区域。多`ts`嵌套时，分区导致数据区变短，输出的有效数据变得更短
+2. `over_null='order_by'`。分到一个区域，`null`排在前面。多`ts`嵌套时，数据区长度不变，输出的有效数据符合算法
 3. `over_null=None`。不处理，直接调用，速度更快。如果确信不会中段产生`null`建议使用此参数
 
-`codegen_exec(over_null='partition_by')`为全局使用`partition_by`。但遇到`ts_count_nulls`这类`null`
+`codegen_exec(over_null='order_by')`为全局使用`order_by`。但遇到`ts_count_nulls`这类`null`
 函数就得使用`over_null=None`，所以本工具还新添了注释功能来指定单行表达式参数
 
 1. `# --over_null partition_by`。单行`over_null='partition_by'`
@@ -183,18 +183,28 @@ X3 = (ts_returns(CLOSE, 3)).over(_ASSET_, order_by=_DATE_),
 
 1. `# --over_null`传参注释只能写在单行表达式的后面，不能独立成一行，否则会被忽略
 2. `# --over_null # --over_null=order_by`多个`#`时，只取第一个有效
-3. 只对最外层`ts`函数有效。如果`ts`函数不在外层，需要人工提炼。例如：
+3. 只对`ts`函数有效。并能向上游传播。例如：
    ```python
-   X1 = cs_rank(ts_mean(CLOSE, 3)) # --over_null=order_by # 应用在cs_rank上，没有意义
-   X2 = ts_rank(ts_mean(CLOSE, 3), 5) # --over_null=order_by # 本以为应用在ts_rank(ts_mean)上，但由于出现了公共ts_mean，其实是应用在ts_rank(_x_0)上
+    X1 = ts_mean(ts_mean(CLOSE, 2), 2) # --over_null order_by
+    X2 = ts_mean(CLOSE, 2) # --over_null=order_by
+    X3 = ts_mean(CLOSE, 2) # 取`codegen_exec`参数传入的`over_null`值
+    X4 = cs_rank(CLOSE) + ts_mean(CLOSE, 2) # --over_null None
    ```
 
-   需写成
+   会自动翻译成
 
    ```python
-   _x_0 = ts_mean(CLOSE, 3)  # --over_null=order_by 
-   X1 = cs_rank(_x_0)
-   X2 = ts_rank(_x_0, 5)
+    #========================================func_0_cs__date
+    _x_1 = cs_rank(CLOSE) # --over_null=None
+    #========================================func_0_ts__asset
+    _x_0 = ts_mean(CLOSE, 2) # --over_null=order_by
+    _x_2 = ts_mean(CLOSE, 2) # --over_null=None
+    #========================================func_0_ts__asset
+    X1 = ts_mean(_x_0, 2) # --over_null=order_by
+    #========================================func_1_cl
+    X2 = _x_0 # --over_null=order_by
+    X3 = _x_0 # --over_null=order_by
+    X4 = _x_1 + _x_2 # --over_null=None
    ```
 4. 由于很容易搞错，强烈建议生成`output_file`,检查生成的代码是否正确。
 
