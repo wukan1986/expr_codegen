@@ -349,6 +349,8 @@ def skip_expr_node(G: nx.DiGraph, node, keep_nodes):
         e = G.nodes[s]['expr']
         e = e.xreplace({symbol: expr})
         G.nodes[s]['expr'] = e
+        if d['comment'] != "#":
+            G.nodes[s]['comment'] = d['comment']
 
     # 这里用了product生成多个关联边
     G.add_edges_from(product(pred, succ))
