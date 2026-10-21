@@ -68,7 +68,6 @@ def comment_adjust(expr_src, over_null):
 
     expr_dst = []
     for k, v, c in expr_src:
-        k = symbols(k)
         args, argv = parser.parse_known_args(args=c.split("#")[1].split(" "))
         c = f"# --over_null={args.over_null}"
 
@@ -244,9 +243,10 @@ class ExprTool:
         if replace:
             exprs_src = replace_exprs(exprs_src)
 
-        source_graph = create_dag_exprs(comment_adjust(exprs_src, over_null))
+        source_graph = create_dag_exprs((symbols(k), v, c) for k, v, c in exprs_src)
         propagate_comment_recursive(source_graph)
         exprs_context = [(k, v, source_graph.nodes[k]['comment']) for k, v, _ in exprs_src]
+        exprs_context = comment_adjust(exprs_context, over_null)
 
         # 子表达式在前，原表式在最后
         exprs_dst, syms_dst = self.merge(date, asset, exprs_context, skip_simplify=skip_simplify)
